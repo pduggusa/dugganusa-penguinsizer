@@ -88,6 +88,30 @@
   .scard .q{font-family:var(--mono);color:var(--ok);font-size:12px;margin-top:8px}
   footer{margin-top:22px;color:var(--faint);font-size:11px;line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
   footer b{color:var(--dim)} .note{color:var(--warn);opacity:.85}
+  /* chat assistant */
+  #chatFab{position:fixed;right:22px;bottom:22px;z-index:50;background:linear-gradient(135deg,var(--cool),var(--cool-dim));color:#04222a;border:0;border-radius:999px;padding:12px 18px;font-family:var(--sans);font-weight:650;font-size:13px;cursor:pointer;box-shadow:0 8px 30px rgba(34,211,238,.25)}
+  #chatFab:hover{filter:brightness(1.08)}
+  #chatPanel{position:fixed;right:22px;bottom:22px;z-index:51;width:380px;max-width:calc(100vw - 28px);height:540px;max-height:calc(100vh - 40px);background:var(--panel);border:1px solid var(--line);border-radius:16px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  #chatPanel.open{display:flex}
+  .chatHead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#122031,var(--panel))}
+  .chatHead .t{font-size:13px;font-weight:640} .chatHead .s{font-size:10.5px;color:var(--faint);font-family:var(--mono)}
+  .chatHead button{background:none;border:0;color:var(--dim);font-size:18px;cursor:pointer;line-height:1}
+  .chatBody{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:86%;padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.5;white-space:pre-wrap}
+  .msg.u{align-self:flex-end;background:var(--cool-dim);color:#eafcff;border-bottom-right-radius:3px}
+  .msg.a{align-self:flex-start;background:#0d141d;border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:3px}
+  .msg.sys{align-self:center;color:var(--faint);font-size:11px;font-family:var(--mono);background:none;text-align:center;max-width:100%}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+  .chips button{background:#0a1119;border:1px solid var(--line);color:var(--dim);font-size:11px;padding:5px 9px;border-radius:999px;cursor:pointer;font-family:var(--sans)}
+  .chips button:hover{border-color:var(--cool-dim);color:var(--ink)}
+  .chatIn{display:flex;gap:8px;padding:11px 12px;border-top:1px solid var(--line)}
+  .chatIn textarea{flex:1;background:#0a1119;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 11px;font-family:var(--sans);font-size:12.5px;resize:none;height:40px;line-height:1.4}
+  .chatIn textarea:focus{outline:none;border-color:var(--cool-dim)}
+  .chatIn button{background:var(--cool);color:#04222a;border:0;border-radius:10px;padding:0 15px;font-weight:650;cursor:pointer}
+  .chatIn button:disabled{opacity:.5;cursor:default}
+  .dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--dim);margin:0 1px;animation:blink 1.2s infinite}
+  .dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
 </style>
 </head>
 <body>
@@ -327,6 +351,55 @@ document.querySelectorAll("[data-c]").forEach(a=>a.onclick=e=>{e.preventDefault(
 function sync(){$("tval").textContent=MODE==="exaflops"?val("target").toFixed(1):commas(val("target"));$("rackkwv").textContent=val("rackkw");$("tbgv").textContent=val("tbg");$("mfuv").textContent=val("mfu").toFixed(2);$("utilv").textContent=val("util");renderAll();}
 ["target","rackkw","kwh","pue","years","maint","capex300","capex200","tbg","util","cloud","model","tokens","mfu"].forEach(id=>$(id).addEventListener("input",sync));
 sync();
+</script>
+
+<!-- CHAT ASSISTANT -->
+<button id="chatFab">💬 Ask the AI Factory Assistant</button>
+<div id="chatPanel">
+  <div class="chatHead">
+    <div><div class="t">AI Factory Assistant</div><div class="s">Blackwell · Penguin Solutions · powered by Mistral</div></div>
+    <button id="chatClose" title="close">×</button>
+  </div>
+  <div class="chatBody" id="chatBody">
+    <div class="msg sys">Ask about Blackwell / SuperPOD sizing, Penguin Solutions Relion &amp; Altus, TCO &amp; buy-vs-rent, or reasoning / sovereignty / compliance.</div>
+  </div>
+  <div class="chips" id="chatChips">
+    <button>Relion vs DGX B300 — why?</button>
+    <button>Why is on-prem cheaper than cloud?</button>
+    <button>What's sovereign AI?</button>
+    <button>Connect me with Penguin Solutions</button>
+  </div>
+  <div class="chatIn">
+    <textarea id="chatText" placeholder="Ask a question…" rows="1"></textarea>
+    <button id="chatSend">Send</button>
+  </div>
+</div>
+
+<script>
+// Cloudflare Worker proxy (holds the Mistral key server-side — never in this page).
+const CHAT_URL = "https://penguinsizer-chat.hacksawduggan.workers.dev";
+const cBody=document.getElementById("chatBody"), cText=document.getElementById("chatText"), cSend=document.getElementById("chatSend");
+let history=[], busy=false;
+function add(role,txt,cls){const d=document.createElement("div");d.className="msg "+(cls||(role==="user"?"u":"a"));d.textContent=txt;cBody.appendChild(d);cBody.scrollTop=cBody.scrollHeight;return d;}
+function toggle(open){document.getElementById("chatPanel").classList.toggle("open",open);document.getElementById("chatFab").style.display=open?"none":"block";if(open)cText.focus();}
+document.getElementById("chatFab").onclick=()=>toggle(true);
+document.getElementById("chatClose").onclick=()=>toggle(false);
+document.querySelectorAll("#chatChips button").forEach(b=>b.onclick=()=>{cText.value=b.textContent;send();});
+async function send(){
+  const q=cText.value.trim(); if(!q||busy)return;
+  busy=true;cSend.disabled=true;cText.value="";
+  add("user",q); history.push({role:"user",content:q});
+  const typing=add("assistant","","a");typing.innerHTML='<span class="dots"><span></span><span></span><span></span></span>';
+  try{
+    const r=await fetch(CHAT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history.slice(-8)})});
+    const data=await r.json();
+    if(!r.ok||!data.reply){typing.textContent=data.error?("⚠ "+data.error):"⚠ Assistant unavailable — try again.";}
+    else{typing.textContent=data.reply;history.push({role:"assistant",content:data.reply});}
+  }catch(e){typing.textContent="⚠ Can't reach the assistant. Check connection.";}
+  cBody.scrollTop=cBody.scrollHeight;busy=false;cSend.disabled=false;cText.focus();
+}
+cSend.onclick=send;
+cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}});
 </script>
 </body>
 </html>

@@ -1,0 +1,21 @@
+name = "penguinsizer-chat"
+main = "src/worker.js"
+compatibility_date = "2024-11-01"
+workers_dev = true
+
+# Model is overridable without a code change. Cheap/near-free Mistral tiers.
+[vars]
+MODEL = "mistral-small-latest"
+
+# Per-IP rate limit (native binding — no KV needed). 15 requests / 60s.
+# If a wrangler version rejects this block, the worker still runs; the limit
+# is simply skipped (the code guards on `env.CHAT_RL` existing).
+[[unsafe.bindings]]
+name = "CHAT_RL"
+type = "ratelimit"
+namespace_id = "2001"
+simple = { limit = 15, period = 60 }
+
+# SECRET (NOT here): set at deploy with
+#   wrangler secret put MISTRAL_API_KEY
+# value pulled from Azure KV secret `mistral-key` — never committed.
