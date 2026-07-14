@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AI Factory Sizer — Blackwell / SuperPOD</title>
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#111823; --panel2:#0d141d; --line:#1e2a38;
+    --ink:#e6edf3; --dim:#8a9bb0; --faint:#5b6b7e;
+    --cool:#22d3ee; --cool-dim:#0e7490; --grace:#a78bfa;
+    --ok:#34d399; --warn:#fbbf24; --hot:#fb7185;
+    --mono:"SF Mono",ui-monospace,"Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#122031 0,var(--bg) 60%);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1360px;margin:0 auto;padding:22px 22px 60px}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px}
+  h1{font-size:19px;margin:0;letter-spacing:.2px;font-weight:650}
+  h1 .accent{color:var(--cool)}
+  .sub{color:var(--dim);font-size:12.5px;max-width:620px}
+  .tag{font-family:var(--mono);font-size:10.5px;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .controls{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px;position:sticky;top:14px}
+  @media(max-width:900px){.controls{position:static}}
+  .cgroup{margin-bottom:16px}
+  .cgroup h3{font-size:10.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--cool);margin:0 0 10px;font-weight:650}
+  .field{margin-bottom:11px}
+  .field label{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:5px}
+  .field label b{color:var(--ink);font-family:var(--mono);font-weight:600}
+  input[type=range]{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:var(--line);border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--cool);cursor:pointer;box-shadow:0 0 0 3px rgba(34,211,238,.15)}
+  input[type=number]{width:100%;background:#0a1119;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 9px;font-family:var(--mono);font-size:12.5px}
+  input[type=number]:focus{outline:none;border-color:var(--cool-dim)}
+  .seg{display:flex;gap:4px;background:#0a1119;border:1px solid var(--line);border-radius:9px;padding:3px}
+  .seg button{flex:1;background:transparent;border:0;color:var(--dim);font-size:11.5px;padding:6px 4px;border-radius:6px;cursor:pointer;font-family:var(--sans)}
+  .seg button.on{background:var(--cool);color:#04222a;font-weight:650}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:1180px){.cards{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:15px 16px;position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--edge,var(--cool))}
+  .card h2{font-size:13.5px;margin:0 0 2px;font-weight:640}
+  .card .who{font-size:11px;color:var(--faint);font-family:var(--mono);margin-bottom:12px}
+  .metric{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-top:1px solid #16212e}
+  .metric:first-of-type{border-top:0}
+  .metric .k{font-size:11.5px;color:var(--dim)}
+  .metric .v{font-family:var(--mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+  .metric .v small{color:var(--faint);font-size:11px}
+  .big{font-size:15px !important;color:var(--cool)}
+  .chip{display:inline-block;font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:999px;margin-left:6px;vertical-align:middle}
+  .chip.ok{background:rgba(52,211,153,.13);color:var(--ok)}
+  .chip.warn{background:rgba(251,191,36,.14);color:var(--warn)}
+  .chip.hot{background:rgba(251,113,133,.14);color:var(--hot)}
+  .compare{margin-top:20px;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px}
+  .compare h3{font-size:10.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--cool);margin:0 0 4px}
+  .compare .hint{color:var(--faint);font-size:11.5px;margin-bottom:12px}
+  .bar{display:grid;grid-template-columns:180px 1fr 90px;align-items:center;gap:10px;margin:7px 0;font-size:12px}
+  .bar .name{color:var(--dim)}
+  .bar .track{background:#0a1119;border-radius:6px;height:16px;overflow:hidden;border:1px solid var(--line)}
+  .bar .fill{height:100%;background:linear-gradient(90deg,var(--cool-dim),var(--cool));border-radius:6px}
+  .bar .val{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .presets{display:flex;flex-wrap:wrap;gap:5px}
+  .presets button{background:#0a1119;border:1px solid var(--line);color:var(--dim);font-size:11px;padding:5px 9px;border-radius:7px;cursor:pointer;font-family:var(--sans)}
+  .presets button:hover{border-color:var(--cool-dim);color:var(--ink)}
+  .presets button.on{background:rgba(34,211,238,.12);border-color:var(--cool-dim);color:var(--cool)}
+  .strat{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+  @media(max-width:900px){.strat{grid-template-columns:1fr}}
+  .scard{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:15px 16px}
+  .scard h4{margin:0 0 8px;font-size:13px;font-weight:640;display:flex;align-items:center;gap:8px}
+  .scard h4 .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .scard p{margin:0;font-size:12px;color:var(--dim);line-height:1.55}
+  .scard p b{color:var(--ink);font-weight:600}
+  footer{margin-top:22px;color:var(--faint);font-size:11px;line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
+  footer b{color:var(--dim)}
+  .note{color:var(--warn);opacity:.85}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>AI Factory Sizer <span class="accent">— Blackwell · SuperPOD</span></h1>
+      <div class="sub">Reasoning-era capacity planning for <b style="color:var(--ink)">sovereign, compliant, on-prem AI factories</b>. Size across four Blackwell architectures from any one target — power, cost/TCO, storage &amp; flagship-model workloads derived live.</div>
+    </div>
+    <div class="tag" id="stamp">DugganUSA · sizing-grade · FP4 dense</div>
+  </header>
+
+  <div class="grid">
+    <!-- CONTROLS -->
+    <div class="controls">
+      <div class="cgroup">
+        <h3>Target</h3>
+        <div class="seg" id="mode">
+          <button data-m="gpus" class="on">GPUs</button>
+          <button data-m="exaflops">EF FP4</button>
+          <button data-m="superpods">SuperPODs</button>
+          <button data-m="nodes">Nodes</button>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label><span id="tlabel">GPUs</span> <b id="tval">576</b></label>
+          <input type="range" id="target" min="8" max="4608" step="8" value="576"/>
+        </div>
+      </div>
+
+      <div class="cgroup">
+        <h3>Facility &amp; Cost</h3>
+        <div class="field">
+          <label>Rack power budget <b><span id="rackkwv">132</span> kW</b></label>
+          <input type="range" id="rackkw" min="20" max="150" step="2" value="132"/>
+        </div>
+        <div class="row2">
+          <div class="field"><label>$ / kWh</label><input type="number" id="kwh" value="0.10" step="0.01"/></div>
+          <div class="field"><label>PUE</label><input type="number" id="pue" value="1.2" step="0.05"/></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>TCO yrs</label><input type="number" id="years" value="3" step="1"/></div>
+          <div class="field"><label>Maint %/yr</label><input type="number" id="maint" value="0.08" step="0.01"/></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>$/B300 GPU</label><input type="number" id="capex300" value="45000" step="1000"/></div>
+          <div class="field"><label>$/B200 GPU</label><input type="number" id="capex200" value="30000" step="1000"/></div>
+        </div>
+        <div class="field"><label>Storage TB / GPU <b id="tbgv">8</b></label><input type="range" id="tbg" min="1" max="30" step="1" value="8"/></div>
+      </div>
+
+      <div class="cgroup">
+        <h3>Flagship model workload</h3>
+        <div class="presets" id="presets"></div>
+        <div class="row2" style="margin-top:9px">
+          <div class="field"><label>Model (B params)</label><input type="number" id="model" value="405" step="10"/></div>
+          <div class="field"><label>Tokens (T)</label><input type="number" id="tokens" value="15" step="1"/></div>
+        </div>
+        <div class="field"><label>MFU <b id="mfuv">0.40</b></label><input type="range" id="mfu" min="0.2" max="0.6" step="0.01" value="0.4"/></div>
+      </div>
+    </div>
+
+    <!-- CARDS -->
+    <div>
+      <div class="cards" id="cards"></div>
+      <div class="compare">
+        <h3>Compare — <span id="cmpname">3-yr TCO</span></h3>
+        <div class="hint">click a metric:
+          <a href="#" data-c="tco" style="color:var(--cool)">TCO</a> ·
+          <a href="#" data-c="capex" style="color:var(--dim)">Capex</a> ·
+          <a href="#" data-c="racks" style="color:var(--dim)">Racks</a> ·
+          <a href="#" data-c="power_kw" style="color:var(--dim)">Power kW</a> ·
+          <a href="#" data-c="perEF" style="color:var(--dim)">$/EF</a>
+        </div>
+        <div id="bars"></div>
+      </div>
+      <div class="strat">
+        <div class="scard">
+          <h4><span class="dot" style="background:var(--cool)"></span>Reasoning is an inference load</h4>
+          <p>Blackwell Ultra (B300) exists for <b>reasoning</b>. Reasoning models don't just train big — they burn compute at <b>generation time</b>: long chains of thought, test-time scaling, agentic loops. That moves the cost center from a one-off training run to a <b>permanent inference load</b> — cheapest on iron you own, not rented per-token. The 288&nbsp;GB HBM and FP4 throughput are built to serve exactly that.</p>
+        </div>
+        <div class="scard">
+          <h4><span class="dot" style="background:var(--grace)"></span>Sovereignty</h4>
+          <p><b>Sovereign AI</b> is the fastest-growing driver of on-prem GPU demand: nations and enterprises require models trained and served on infrastructure they <b>own and control, in-country</b>. A Penguin on-prem AI factory keeps weights, data, and inference inside your walls — no hyperscaler tenancy, no cross-border data flow, no waiting in someone else's capacity queue.</p>
+        </div>
+        <div class="scard">
+          <h4><span class="dot" style="background:var(--ok)"></span>Compliance by architecture</h4>
+          <p>Regulated data can't live in shared cloud. Healthcare (HIPAA), finance, and government (<b>FedRAMP High / IL5+</b>, EU AI Act, GDPR residency) need air-gap, data residency, and auditability a multi-tenant hyperscaler can't guarantee. On-prem brings <b>the model to the data</b>, not the data to the model — compliance as a property of the build, not a bolt-on.</p>
+        </div>
+      </div>
+      <footer>
+        <b>Anchors:</b> NVIDIA GB300 NVL72 / DGX B300 reference architecture + Penguin Relion/Altus datasheets (2026). B300 288GB HBM3e, 15.3 PF FP4/GPU; B200 192GB, 9 PF. GB300 rack = 72 GPU/142 kW; SuperPOD = 8 racks/576 GPU. Node builds packed at max(space, power) per rack.<br/>
+        <span class="note">⚠ Cost/TCO use editable placeholder $ — enter real per-GPU capex &amp; $/kWh to make it procurement-grade. FP4 = dense (sparse ≈ 2×). Training-days = 6·P·D ÷ (GPUs · FP8 · MFU), FP8≈FP4/2. Estimates ±, not a quote.</span>
+      </footer>
+    </div>
+  </div>
+</div>
+
+<script>
+const GPU={B300:{name:"B300 Blackwell Ultra",hbm:288,fp4:15.3,tdp:1.4,capexId:"capex300"},
+           B200:{name:"B200 Blackwell",hbm:192,fp4:9.0,tdp:1.0,capexId:"capex200"}};
+const ARCH=[
+ {key:"gb300-nvl72",label:"NVIDIA GB300 NVL72",who:"rack-scale · SuperPOD block",gpu:"B300",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:142,cool:"liquid DTC",su:8,edge:"var(--grace)"},
+ {key:"dgx-b300",label:"NVIDIA DGX B300",who:"HGX 8-GPU node · 10U",gpu:"B300",per:8,unit:"node",u:10,cpu:"Xeon 6776P",cpuper:2,nvl:8,pkw:14,cool:"air/liquid",edge:"var(--cool)"},
+ {key:"relion-xe4418",label:"Penguin Relion XE4418GT",who:"Intel Xeon 6 + B300 HGX · 4U DTC",gpu:"B300",per:8,unit:"node 4U",u:4,cpu:"Xeon 6",cpuper:2,nvl:8,pkw:14,cool:"liquid DTC",edge:"var(--ok)"},
+ {key:"altus-xe4318",label:"Penguin Altus XE4318GTS",who:"AMD EPYC Turin + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"EPYC Turin",cpuper:2,nvl:8,pkw:10.5,cool:"liquid DTC",edge:"var(--warn)"}
+];
+const $=id=>document.getElementById(id);
+const val=id=>parseFloat($(id).value)||0;
+let MODE="gpus", CMP="tco";
+const usd=n=>"$"+(n>=1e6?(n/1e6).toFixed(1)+"M":(n/1e3).toFixed(0)+"K");
+const commas=n=>Math.round(n).toLocaleString();
+
+function targetGpus(a){
+ const t=val("target");
+ if(MODE==="gpus")return t;
+ if(MODE==="exaflops")return Math.ceil(t*1000/GPU[a.gpu].fp4);
+ if(MODE==="superpods")return t*((a.su||8)*a.per);
+ if(MODE==="nodes")return t*a.per;
+ return t;
+}
+function size(a){
+ const g=GPU[a.gpu], RACK_U=42, RACK_KW=val("rackkw");
+ const tg=targetGpus(a); const units=Math.max(1,Math.ceil(tg/a.per));
+ const gpus=units*a.per, cpus=units*a.cpuper;
+ const hbm=+(gpus*g.hbm/1000).toFixed(1), fp4=+(gpus*g.fp4/1000).toFixed(2);
+ const power=+(units*a.pkw).toFixed(1);
+ let racks,limit,chip;
+ if(a.unit==="rack"){racks=units;limit="rack-scale";chip="ok";}
+ else{const byU=Math.ceil(units*a.u/RACK_U), byP=Math.ceil(power/RACK_KW);
+   racks=Math.max(byU,byP);
+   if(byP>byU){limit="POWER-limited";chip="hot";}else if(byU>byP){limit="space-limited";chip="warn";}else{limit="balanced";chip="ok";}}
+ const capexGpu=val(g.capexId), capex=gpus*capexGpu;
+ const annPower=power*8760*val("pue")*val("kwh");
+ const tco=capex+val("years")*(annPower+capex*val("maint"));
+ const perEF=fp4?Math.round(capex/fp4):0;
+ const storage=Math.round(gpus*val("tbg"));
+ const hbmB=hbm*1e12;
+ const maxInfer=Math.round(hbmB/(2*1.3)/1e9), maxTrain=Math.round(hbmB/16/1e9);
+ let trainDays=null,ckpt=null; const P=val("model"),D=val("tokens");
+ if(P>0&&D>0){const fl=6*P*1e9*D*1e12, fps=gpus*(g.fp4/2)*1e15*val("mfu");
+   trainDays=+(fl/fps/86400).toFixed(1); ckpt=+(P*1e9*14/1e12).toFixed(1);}
+ return {a,g,units,gpus,cpus,hbm,fp4,power,racks,limit,chip,capex,capexGpu,tco,perEF,storage,maxInfer,maxTrain,trainDays,ckpt};
+}
+function render(){
+ const rows=ARCH.map(size);
+ $("cards").innerHTML=rows.map(r=>`
+  <div class="card" style="--edge:${r.a.edge}">
+    <h2>${r.a.label}</h2><div class="who">${r.a.who}</div>
+    <div class="metric"><span class="k">Build</span><span class="v">${r.units} × ${r.a.unit} → <b style="color:var(--ink)">${commas(r.gpus)}</b> ${r.a.gpu} · ${commas(r.cpus)} ${r.a.cpu}</span></div>
+    <div class="metric"><span class="k">Compute</span><span class="v big">${r.fp4} EF <small>FP4 · ${(r.fp4*2).toFixed(1)} sparse</small></span></div>
+    <div class="metric"><span class="k">HBM · NVLink dom</span><span class="v">${r.hbm} TB · ${r.a.nvl} GPU</span></div>
+    <div class="metric"><span class="k">Power · footprint</span><span class="v">${commas(r.power)} kW <small>(${(r.power/1000).toFixed(2)} MW)</small> · ${r.racks} rack<span class="chip ${r.chip}">${r.limit}</span></span></div>
+    <div class="metric"><span class="k">Capex · ${$("years").value}yr TCO</span><span class="v">${usd(r.capex)} · <b class="big" style="font-size:13px">${usd(r.tco)}</b></span></div>
+    <div class="metric"><span class="k">$/EF · storage</span><span class="v">${usd(r.perEF)}/EF · ${commas(r.storage)} TB</span></div>
+    <div class="metric"><span class="k">Fits (infer / train)</span><span class="v">≤${commas(r.maxInfer)}B / ≤${commas(r.maxTrain)}B <small>in-HBM</small></span></div>
+    ${r.trainDays!=null?`<div class="metric"><span class="k">Train ${val("model")}B·${val("tokens")}T</span><span class="v" style="color:var(--cool)">${r.trainDays} days <small>· ckpt ${r.ckpt}TB</small></span></div>`:""}
+  </div>`).join("");
+ // compare bars
+ const labels={tco:"3-yr TCO",capex:"Capex",racks:"Racks",power_kw:"Power kW",perEF:"$/EF"};
+ $("cmpname").textContent=labels[CMP];
+ const pick=r=>({tco:r.tco,capex:r.capex,racks:r.racks,power_kw:r.power,perEF:r.perEF})[CMP];
+ const max=Math.max(...rows.map(pick))||1;
+ const fmt=v=>CMP==="racks"?v+" rk":CMP==="power_kw"?commas(v)+" kW":usd(v);
+ $("bars").innerHTML=rows.map(r=>{const v=pick(r);return `<div class="bar"><span class="name">${r.a.label}</span><div class="track"><div class="fill" style="width:${Math.max(3,v/max*100)}%"></div></div><span class="val">${fmt(v)}</span></div>`;}).join("");
+}
+// wire mode buttons
+document.querySelectorAll("#mode button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll("#mode button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+ MODE=b.dataset.m; const t=$("target"),lbl=$("tlabel");
+ if(MODE==="gpus"){t.min=8;t.max=4608;t.step=8;t.value=576;lbl.textContent="GPUs";}
+ if(MODE==="exaflops"){t.min=0.5;t.max=50;t.step=0.5;t.value=9;lbl.textContent="EF FP4";}
+ if(MODE==="superpods"){t.min=1;t.max=16;t.step=1;t.value=1;lbl.textContent="SuperPODs";}
+ if(MODE==="nodes"){t.min=1;t.max=512;t.step=1;t.value=64;lbl.textContent="Nodes";}
+ sync();
+});
+document.querySelectorAll("[data-c]").forEach(a=>a.onclick=e=>{
+ e.preventDefault();CMP=a.dataset.c;
+ document.querySelectorAll("[data-c]").forEach(x=>x.style.color="var(--dim)");a.style.color="var(--cool)";render();
+});
+// flagship commercial model presets (public / estimated sizes — labeled)
+const MODELS=[
+ {n:"Llama 3.1 405B",p:405,t:15,note:"open dense"},
+ {n:"DeepSeek-V3 671B",p:671,t:14.8,note:"MoE · 37B active"},
+ {n:"Mistral Large 2",p:123,t:12,note:"open dense"},
+ {n:"Frontier MoE ~1.8T",p:1800,t:13,note:"GPT-4-class (rumored)"},
+ {n:"Reasoning 671B",p:671,t:20,note:"test-time compute"}
+];
+$("presets").innerHTML=MODELS.map((m,i)=>`<button data-i="${i}" title="${m.note}">${m.n}</button>`).join("");
+document.querySelectorAll("#presets button").forEach(b=>b.onclick=()=>{
+ const m=MODELS[b.dataset.i];$("model").value=m.p;$("tokens").value=m.t;
+ document.querySelectorAll("#presets button").forEach(x=>x.classList.remove("on"));b.classList.add("on");sync();
+});
+function sync(){$("tval").textContent=MODE==="exaflops"?val("target").toFixed(1):commas(val("target"));
+ $("rackkwv").textContent=val("rackkw");$("tbgv").textContent=val("tbg");$("mfuv").textContent=val("mfu").toFixed(2);render();}
+["target","rackkw","kwh","pue","years","maint","capex300","capex200","tbg","model","tokens","mfu"].forEach(id=>{
+ $(id).addEventListener("input",sync);
+});
+sync();
+</script>
+</body>
+</html>
