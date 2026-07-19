@@ -96,9 +96,32 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(origin) });
     if (req.method !== 'POST') return json({ error: 'POST only' }, 405, origin);
 
+    // COST CONTROL - FAIL CLOSED.
+    // This endpoint is unauthenticated and every request that gets past this point
+    // costs real money (Mistral, max_tokens 700, billed to the account owner). The
+    // per-IP rate limiter is the ONLY thing standing between a script and an
+    // unbounded bill. A cost control that fails open is not a cost control: if the
+    // limiter throws (binding misconfigured, limiter outage, unexpected shape), the
+    // safe answer is to reject the request, not to shrug and call the paid API.
+    // We therefore treat "limiter configured but not working" as "over limit".
     if (env.CHAT_RL) {
       const ip = req.headers.get('CF-Connecting-IP') || 'anon';
-      try { const { success } = await env.CHAT_RL.limit({ key: ip }); if (!success) return json({ error: 'Rate limit — please slow down.' }, 429, origin); } catch (_) {}
+      let allowed;
+      try {
+        const res = await env.CHAT_RL.limit({ key: ip });
+        // Guard the shape too: a limiter returning something unexpected must not
+        // be read as an implicit allow.
+        allowed = !!(res && res.success === true);
+      } catch (e) {
+        console.error('CHAT_RL limiter error, failing closed:', String((e && e.message) || e));
+        return json({ error: 'Rate limiter unavailable - request rejected.' }, 503, origin);
+      }
+      if (!allowed) return json({ error: 'Rate limit — please slow down.' }, 429, origin);
+    } else {
+      // No limiter bound. That is a DEPLOYMENT CHOICE (see wrangler.toml
+      // [[unsafe.bindings]] ratelimit). Behaviour is unchanged (request proceeds),
+      // but it is logged loudly because this endpoint is then uncapped.
+      console.warn('CHAT_RL not configured: unauthenticated chat endpoint is running with NO per-IP rate limit.');
     }
     if (!env.MISTRAL_API_KEY) return json({ error: 'assistant not configured' }, 503, origin);
 
