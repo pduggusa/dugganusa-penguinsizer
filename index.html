@@ -112,6 +112,39 @@
   .dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--dim);margin:0 1px;animation:blink 1.2s infinite}
   .dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
   @keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+  /* rack planner */
+  .grid.full{grid-template-columns:1fr}
+  .grid.full .controls{display:none}
+  .rk-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:16px}
+  .rk-toolbar .grow{flex:1;min-width:180px}
+  .rk-toolbar input[type=text]{width:100%;background:#0a1119;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 10px;font-family:var(--sans);font-size:13px}
+  .rk-toolbar input[type=text]:focus{outline:none;border-color:var(--cool-dim)}
+  .rk-btn{background:#0a1119;border:1px solid var(--line);color:var(--dim);font-size:12px;padding:8px 13px;border-radius:8px;cursor:pointer;font-family:var(--sans);white-space:nowrap}
+  .rk-btn:hover{border-color:var(--cool-dim);color:var(--ink)}
+  .rk-btn.primary{background:var(--cool);color:#04222a;border-color:var(--cool);font-weight:650}
+  .rk-btn.warn{border-color:var(--hot);color:var(--hot)}
+  .rk-dirty{font-family:var(--mono);font-size:10.5px;color:var(--warn);opacity:.9}
+  .rk-dirty.clean{color:var(--faint)}
+  .rk-racks{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:16px}
+  .rk-rack{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:14px 15px;position:relative}
+  .rk-rack h4{margin:0 0 10px;font-size:13px;font-weight:640;display:flex;justify-content:space-between;align-items:center}
+  .rk-rack h4 .x{color:var(--faint);cursor:pointer;font-size:15px;border:0;background:none} .rk-rack h4 .x:hover{color:var(--hot)}
+  .rk-f{margin-bottom:8px}
+  .rk-f label{display:block;font-size:10.5px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+  .rk-f select,.rk-f input{width:100%;background:#0a1119;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font-family:var(--mono);font-size:12px}
+  .rk-f select:focus,.rk-f input:focus{outline:none;border-color:var(--cool-dim)}
+  .rk-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px} .rk-row2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .rk-out{margin-top:10px;padding-top:10px;border-top:1px solid #16212e;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+  .rk-out .m{display:flex;justify-content:space-between;font-size:11px} .rk-out .m .k{color:var(--dim)} .rk-out .m .v{font-family:var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+  .rk-out .m .v.hot{color:var(--hot)} .rk-out .m .v.ok{color:var(--ok)}
+  .rk-warn{margin-top:8px;font-size:11px;color:var(--hot);font-family:var(--mono)}
+  .rk-agg{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  .rk-agg h3{font-size:10.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--cool);margin:0 0 12px}
+  .rk-bom{width:100%;border-collapse:collapse;font-size:12px}
+  .rk-bom th{text-align:left;color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.6px;padding:6px 8px;border-bottom:1px solid var(--line)}
+  .rk-bom td{padding:6px 8px;border-bottom:1px solid #16212e;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .rk-bom td.desc{font-family:var(--sans);color:var(--dim)} .rk-bom td.qty{color:var(--cool);text-align:right}
+  .rk-bom tr:hover td{background:#0d141d}
 </style>
 </head>
 <body>
@@ -129,6 +162,7 @@
     <button data-v="why">Why Penguin</button>
     <button data-v="rent">Buy vs Rent</button>
     <button data-v="case">The Case</button>
+    <button data-v="rack">Rack Planner</button>
   </nav>
 
   <div class="grid">
@@ -237,6 +271,31 @@
           <div class="scard"><h4><span class="dot" style="background:var(--gold)"></span>The economic corollary</h4>
             <p>All three point the same way: sustained, sensitive, owned workloads. That's precisely the profile where <b>buy beats rent</b> and where an integrated partner — hardware + software + managed services — turns a capital project into a running AI factory. See the <b>Buy vs Rent</b> tab for the number.</p></div>
         </div>
+      </section>
+
+      <!-- RACK PLANNER -->
+      <section class="view" id="v-rack">
+        <h2 class="sec">Rack Power, Thermals &amp; Cabling Planner</h2>
+        <p class="lede">Build up to <b style="color:var(--ink)">5 racks</b>. Per-phase current, breaker &amp; connector; DTC liquid/air heat split, CFM &amp; loop flow; and a full <b style="color:var(--ink)">structured-cabling BOM</b> (DAC/AOC/optic + fiber) from the standard 8-GPU port topology, with slack for slide-out service. Every field recalculates live. Save the BOM to JSON and reload it next session. <span class="note">Typical/reference values — override any field with real numbers.</span></p>
+        <div class="rk-toolbar">
+          <div class="grow"><input type="text" id="rkProject" placeholder="Project / customer name…" autocomplete="off"/></div>
+          <button class="rk-btn" id="rkAdd">+ Add rack</button>
+          <button class="rk-btn primary" id="rkSave">⬇ Save JSON</button>
+          <button class="rk-btn" id="rkLoad">⬆ Load JSON</button>
+          <input type="file" id="rkFile" accept="application/json,.json" style="display:none"/>
+          <span class="rk-dirty clean" id="rkDirty">saved</span>
+        </div>
+        <div class="rk-racks" id="rkRacks"></div>
+        <div class="rk-agg" id="rkAggWrap">
+          <h3>Project totals</h3><div id="rkAgg"></div>
+        </div>
+        <div class="rk-agg">
+          <h3>Structured cabling BOM — all racks</h3>
+          <table class="rk-bom"><thead><tr><th>Qty</th><th>Link class</th><th>Speed</th><th>Media type</th><th>Length</th><th class="desc">Description</th></tr></thead><tbody id="rkBom"></tbody></table>
+        </div>
+        <footer style="margin-top:0;border:0;padding:0">
+          <span class="note">⚠ Reference topology: 8× compute (400G NDR / 800G OSFP, 1 rail/GPU) · 2× storage (200/400G) · 2× mgmt (25/100G bonded) · 1× BMC 1GbE · 1× SMC. DTC capture 75–80% to liquid, 20–25% residual to air. Per-phase A = kW·1000 ÷ (V·√3·PF); breaker at 80% continuous; CFM = air-BTU/hr ÷ (1.08·ΔT); loop L/min = liquid-kW·60 ÷ (4.186·ΔT_water). Sizing-grade, not an electrical/mechanical stamp.</span>
+        </footer>
       </section>
 
       <footer>
@@ -351,6 +410,212 @@ document.querySelectorAll("[data-c]").forEach(a=>a.onclick=e=>{e.preventDefault(
 function sync(){$("tval").textContent=MODE==="exaflops"?val("target").toFixed(1):commas(val("target"));$("rackkwv").textContent=val("rackkw");$("tbgv").textContent=val("tbg");$("mfuv").textContent=val("mfu").toFixed(2);$("utilv").textContent=val("util");renderAll();}
 ["target","rackkw","kwh","pue","years","maint","capex300","capex200","tbg","util","cloud","model","tokens","mfu"].forEach(id=>$(id).addEventListener("input",sync));
 sync();
+</script>
+
+<script>
+/* ===== RACK POWER / THERMAL / CABLING PLANNER =====================================
+ * Self-contained module. Does not touch the sizer above. Typical/reference defaults
+ * (per Penguin OriginAI 8-GPU scale-out topology); every field is editable and the
+ * whole board recalculates on any change.
+ * ---------------------------------------------------------------------------------*/
+(function(){
+ const LS_KEY="penguin-rack-planner-v1", MAX_RACKS=5, RACK_TARE_KG=160;
+ // node-based hardware profiles (rack-scale NVL72 included; its cabling is external scale-out)
+ const SPEC={
+  "relion-xe4418":{label:"Penguin Relion XE4418GT",nodeU:4, gpuPer:8,  pkw:14,  weight:100},
+  "altus-xe4318": {label:"Penguin Altus XE4318GTS", nodeU:4, gpuPer:8,  pkw:10.5,weight:100},
+  "dgx-b300":     {label:"NVIDIA DGX B300",         nodeU:10,gpuPer:8,  pkw:14,  weight:130},
+  "gb300-nvl72":  {label:"NVIDIA GB300 NVL72",      nodeU:48,gpuPer:72, pkw:142, weight:1360, integrated:true}
+ };
+ const BREAKERS=[16,20,30,32,40,50,60,63,80,100,125,150,175,200,225,250,300,350,400];
+ const nextBreaker=a=>BREAKERS.find(b=>b>=a)||Math.ceil(a/50)*50;
+ const iecConnector=a=> a<=16?"IEC 60309 16A":a<=32?"IEC 60309 32A":a<=63?"IEC 60309 63A":a<=125?"IEC 60309 125A":"busway tap-off";
+ // cable media auto-select: reach (incl. slack) + speed → medium
+ function media(cls,speed,len){
+  if(cls==="bmc")return{m:"Cat6A copper",c:"RJ45"};
+  const hi=(speed==="400G"||speed==="800G");
+  if(hi){ if(len<=2)return{m:"Passive DAC",c:"OSFP"}; if(len<=3)return{m:"Active DAC (ACC)",c:"OSFP"}; if(len<=5)return{m:"AOC",c:"OSFP"}; return{m:"Transceiver pair + MPO-12 SMF",c:"OSFP"}; }
+  if(speed==="200G"){ if(len<=3)return{m:"Passive DAC",c:"QSFP56"}; if(len<=7)return{m:"AOC",c:"QSFP56"}; return{m:"Transceiver + fiber",c:"QSFP56"}; }
+  // 25G / 100G mgmt
+  if(len<=3)return{m:"Passive DAC",c:speed==="25G"?"SFP28":"QSFP28"}; if(len<=7)return{m:"AOC",c:speed==="25G"?"SFP28":"QSFP28"}; return{m:"Transceiver + fiber",c:speed==="25G"?"SFP28":"QSFP28"};
+ }
+ // ---- the pure calculator (also unit-tested in node) ----------------------------
+ function calc(r){
+  const s=SPEC[r.arch]||SPEC["relion-xe4418"];
+  const usableU=Math.max(0,r.rackU-r.reserveU);
+  const maxSpace=s.integrated?1:Math.max(0,Math.floor(usableU/s.nodeU));
+  const wantNodes=r.nodes==null?maxSpace:r.nodes;
+  const nodes=Math.max(0,Math.min(wantNodes,maxSpace||wantNodes));
+  const gpus=nodes*s.gpuPer, uUsed=nodes*s.nodeU, loadKW=+(nodes*s.pkw).toFixed(1);
+  // POWER
+  const V=r.voltage, pf=r.pf, three=r.phase==="3";
+  const amps=loadKW>0? loadKW*1000/(V*(three?Math.sqrt(3):1)*pf) :0;
+  const breaker=nextBreaker(amps/0.8);
+  const connector=three?iecConnector(breaker):(breaker<=20?"NEMA L6-20":breaker<=30?"NEMA L6-30":"IEC 60309 "+breaker+"A");
+  const feeds=r.redundancy==="2N"?2:r.redundancy==="N+1"?2:1; // sizing shown per feed path (each carries full load)
+  // THERMAL
+  const totalBTU=loadKW*3412.14, liquidFrac=r.liquidFrac, airFrac=1-liquidFrac;
+  const airBTU=airFrac*totalBTU, liquidKW=+(liquidFrac*loadKW).toFixed(1);
+  const cfm=r.dTair>0?airBTU/(1.08*r.dTair):0;
+  const lpm=r.dTwater>0?liquidKW*60/(4.186*r.dTwater):0;
+  // WEIGHT
+  const weightKG=Math.round(nodes*s.weight+RACK_TARE_KG);
+  // CABLING — per-node port topology × nodes (node→ToR leaf), + leaf→spine uplinks
+  const intra=r.intraLen+r.slack, up=r.uplinkLen+r.slack;
+  const classes=[
+   {cls:"compute", n:s.gpuPer, speed:r.computeSpeed, reach:intra, desc:"GPU scale-out fabric (1 rail/GPU, IB/RoCE)"},
+   {cls:"storage", n:2,        speed:r.storageSpeed, reach:intra, desc:"Storage / PFS (GPUDirect)"},
+   {cls:"mgmt",    n:2,        speed:r.mgmtSpeed,    reach:intra, desc:"In-band cluster mgmt (bonded)"},
+   {cls:"bmc",     n:1,        speed:"1G",           reach:intra, desc:"OOB BMC / IPMI"},
+   {cls:"smc",     n:r.smc?1:0,speed:r.smcSpeed,     reach:intra, desc:"Chassis / system mgmt (SMC)"}
+  ];
+  const lines=[];
+  for(const c of classes){ if(c.n<=0)continue; const q=c.n*nodes; if(q<=0)continue; const md=media(c.cls,c.speed,c.reach);
+   lines.push({cls:c.cls,qty:q,speed:c.speed,media:md.m,conn:md.c,len:c.reach,desc:c.desc}); }
+  if(r.uplinks>0){ const md=media("compute",r.computeSpeed,up);
+   lines.push({cls:"uplink",qty:r.uplinks,speed:r.computeSpeed,media:md.m,conn:md.c,len:up,desc:"Leaf→spine uplink"}); }
+  const overSpace=nodes<wantNodes;
+  return{s,nodes,gpus,uUsed,usableU,maxSpace,loadKW,amps,breaker,connector,feeds,
+   totalBTU,airBTU,liquidKW,airFrac,cfm,lpm,weightKG,lines,overSpace,wantNodes};
+ }
+ // ---- default rack ---------------------------------------------------------------
+ const defRack=()=>({arch:"relion-xe4418",rackU:48,reserveU:4,nodes:null,
+  voltage:415,phase:"3",pf:0.98,redundancy:"2N",
+  liquidFrac:0.80,dTair:20,dTwater:10,
+  computeSpeed:"400G",storageSpeed:"400G",mgmtSpeed:"100G",smc:true,smcSpeed:"10G",
+  intraLen:2,uplinkLen:10,slack:1,uplinks:8});
+ // ---- state ----------------------------------------------------------------------
+ let state=load()||{project:"",racks:[defRack()]}, dirty=false;
+ function load(){try{const j=JSON.parse(localStorage.getItem(LS_KEY));if(j&&Array.isArray(j.racks))return j;}catch(e){}return null;}
+ function persist(){try{localStorage.setItem(LS_KEY,JSON.stringify(state));}catch(e){}}
+ function setDirty(d){dirty=d;const el=$id("rkDirty");if(el){el.textContent=d?"unsaved changes":"saved";el.className="rk-dirty"+(d?"":" clean");}}
+ const $id=id=>document.getElementById(id);
+ const NUM=n=>Math.round(n).toLocaleString();
+ // ---- select/field builders ------------------------------------------------------
+ const opt=(v,cur)=>`<option value="${v}" ${String(v)===String(cur)?"selected":""}>${v}</option>`;
+ const sel=(k,i,vals,cur,unit)=>`<select data-k="${k}" data-i="${i}">${vals.map(v=>`<option value="${v}" ${String(v)===String(cur)?"selected":""}>${v}${unit||""}</option>`).join("")}</select>`;
+ const numf=(k,i,cur,step,min,max)=>`<input type="number" data-k="${k}" data-i="${i}" value="${cur}" step="${step||1}"${min!=null?` min="${min}"`:""}${max!=null?` max="${max}"`:""}/>`;
+ // ---- render ----------------------------------------------------------------------
+ function render(){
+  const wrap=$id("rkRacks"); if(!wrap)return;
+  wrap.innerHTML=state.racks.map((r,i)=>{const c=calc(r);
+   return `<div class="rk-rack">
+    <h4><span>Rack ${i+1}${state.racks.length>1?`<span style="color:var(--faint);font-weight:400"> · ${c.s.label.split(" ").slice(-1)}</span>`:""}</span>${state.racks.length>1?`<button class="x" data-del="${i}" title="remove">×</button>`:""}</h4>
+    <div class="rk-f"><label>Architecture</label>${sel("arch",i,Object.keys(SPEC),r.arch).replace(/<option value="([^"]+)"([^>]*)>[^<]*/g,(m,v,a)=>`<option value="${v}"${a}>${SPEC[v].label}`)}</div>
+    <div class="rk-row3">
+     <div class="rk-f"><label>Rack U</label>${sel("rackU",i,[42,48,52],r.rackU,"U")}</div>
+     <div class="rk-f"><label>Reserve U</label>${numf("reserveU",i,r.reserveU,1,0,20)}</div>
+     <div class="rk-f"><label>Nodes</label><input type="number" data-k="nodes" data-i="${i}" value="${r.nodes==null?c.nodes:r.nodes}" step="1" min="0" max="${c.maxSpace}"/></div>
+    </div>
+    <div class="rk-row3">
+     <div class="rk-f"><label>Voltage</label>${sel("voltage",i,[208,400,415,480],r.voltage,"V")}</div>
+     <div class="rk-f"><label>Phase</label>${sel("phase",i,["1","3"],r.phase,"Ø")}</div>
+     <div class="rk-f"><label>PF</label>${numf("pf",i,r.pf,0.01,0.5,1)}</div>
+    </div>
+    <div class="rk-row2">
+     <div class="rk-f"><label>Feed redundancy</label>${sel("redundancy",i,["2N","N+1","N"],r.redundancy)}</div>
+     <div class="rk-f"><label>Liquid capture</label><input type="number" data-k="liquidFrac" data-i="${i}" value="${r.liquidFrac}" step="0.01" min="0" max="1"/></div>
+    </div>
+    <div class="rk-row2">
+     <div class="rk-f"><label>ΔT air °F</label>${numf("dTair",i,r.dTair,1,1,60)}</div>
+     <div class="rk-f"><label>ΔT water °C</label>${numf("dTwater",i,r.dTwater,1,1,30)}</div>
+    </div>
+    <div class="rk-row3">
+     <div class="rk-f"><label>Compute</label>${sel("computeSpeed",i,["400G","800G"],r.computeSpeed)}</div>
+     <div class="rk-f"><label>Storage</label>${sel("storageSpeed",i,["200G","400G"],r.storageSpeed)}</div>
+     <div class="rk-f"><label>Mgmt</label>${sel("mgmtSpeed",i,["25G","100G"],r.mgmtSpeed)}</div>
+    </div>
+    <div class="rk-row3">
+     <div class="rk-f"><label>Intra len m</label>${numf("intraLen",i,r.intraLen,0.5,0.5,10)}</div>
+     <div class="rk-f"><label>Uplink len m</label>${numf("uplinkLen",i,r.uplinkLen,1,1,50)}</div>
+     <div class="rk-f"><label>Slack m</label>${sel("slack",i,[0,1,3],r.slack,"m")}</div>
+    </div>
+    <div class="rk-row2">
+     <div class="rk-f"><label>Leaf→spine uplinks</label>${numf("uplinks",i,r.uplinks,1,0,64)}</div>
+     <div class="rk-f"><label>SMC port</label>${sel("smc",i,[["true","yes"],["false","no"]].map(x=>x[0]),String(r.smc)).replace('value="true"','value="true"').replace(/<option value="(true|false)"([^>]*)>[^<]*/g,(m,v,a)=>`<option value="${v}"${a}>${v==="true"?"yes":"no"}`)}</div>
+    </div>
+    <div class="rk-out">
+     <div class="m"><span class="k">GPUs · nodes</span><span class="v">${c.gpus} · ${c.nodes}</span></div>
+     <div class="m"><span class="k">U used</span><span class="v ${c.uUsed>c.usableU?"hot":""}">${c.uUsed}/${c.usableU}U</span></div>
+     <div class="m"><span class="k">Rack load</span><span class="v">${c.loadKW} kW</span></div>
+     <div class="m"><span class="k">Amps/phase</span><span class="v">${c.amps.toFixed(1)} A</span></div>
+     <div class="m"><span class="k">Breaker</span><span class="v">${c.breaker} A</span></div>
+     <div class="m"><span class="k">Connector</span><span class="v">${c.connector}${c.feeds>1?" ×2 (A/B)":""}</span></div>
+     <div class="m"><span class="k">Total heat</span><span class="v">${NUM(c.totalBTU)} BTU/h</span></div>
+     <div class="m"><span class="k">Liquid loop</span><span class="v ok">${c.liquidKW} kW · ${NUM(c.lpm)} L/min</span></div>
+     <div class="m"><span class="k">Air residual</span><span class="v">${Math.round(c.airFrac*100)}% · ${NUM(c.airBTU)} BTU/h</span></div>
+     <div class="m"><span class="k">Airflow</span><span class="v">${NUM(c.cfm)} CFM</span></div>
+     <div class="m"><span class="k">Weight</span><span class="v">${NUM(c.weightKG)} kg</span></div>
+     <div class="m"><span class="k">Cables</span><span class="v">${c.lines.reduce((a,l)=>a+l.qty,0)}</span></div>
+    </div>
+    ${c.overSpace?`<div class="rk-warn">⚠ ${c.wantNodes} nodes won't fit — capped at ${c.nodes} (${c.usableU}U usable ÷ ${c.s.nodeU}U/node). Raise Rack U or lower Reserve.</div>`:""}
+   </div>`;}).join("");
+
+  // aggregate
+  const totals=state.racks.map(calc);
+  const sum=(f)=>totals.reduce((a,c)=>a+f(c),0);
+  $id("rkAgg").innerHTML=`<div class="rk-out" style="grid-template-columns:repeat(4,1fr);border:0;padding:0">
+    <div class="m"><span class="k">Racks</span><span class="v">${state.racks.length}</span></div>
+    <div class="m"><span class="k">GPUs</span><span class="v">${NUM(sum(c=>c.gpus))}</span></div>
+    <div class="m"><span class="k">Nodes</span><span class="v">${NUM(sum(c=>c.nodes))}</span></div>
+    <div class="m"><span class="k">Total load</span><span class="v">${sum(c=>c.loadKW).toFixed(1)} kW</span></div>
+    <div class="m"><span class="k">Liquid loop</span><span class="v ok">${sum(c=>c.liquidKW).toFixed(1)} kW · ${NUM(sum(c=>c.lpm))} L/min</span></div>
+    <div class="m"><span class="k">Air heat</span><span class="v">${NUM(sum(c=>c.airBTU))} BTU/h</span></div>
+    <div class="m"><span class="k">Airflow</span><span class="v">${NUM(sum(c=>c.cfm))} CFM</span></div>
+    <div class="m"><span class="k">Weight</span><span class="v">${NUM(sum(c=>c.weightKG))} kg</span></div>
+    <div class="m"><span class="k">Total cables</span><span class="v">${NUM(sum(c=>c.lines.reduce((a,l)=>a+l.qty,0)))}</span></div>
+   </div>`;
+
+  // merged BOM across racks (key: speed|media|len|desc)
+  const bom={};
+  totals.forEach(c=>c.lines.forEach(l=>{const k=[l.speed,l.media,l.conn,l.len,l.desc].join("|");
+   (bom[k]=bom[k]||{...l,qty:0}).qty+=l.qty;}));
+  const rows=Object.values(bom).sort((a,b)=>b.qty-a.qty);
+  $id("rkBom").innerHTML=rows.length?rows.map(l=>`<tr>
+    <td class="qty">${l.qty}</td><td>${l.cls}</td><td>${l.speed}</td>
+    <td>${l.media} <span style="color:var(--faint)">(${l.conn})</span></td><td>${l.len} m</td><td class="desc">${l.desc}</td></tr>`).join("")
+   :`<tr><td colspan="6" class="desc">No cables — add a rack with nodes.</td></tr>`;
+ }
+ // ---- events: live recalc on ANY change ------------------------------------------
+ function onField(e){const t=e.target,k=t.dataset&&t.dataset.k;if(k==null)return;const i=+t.dataset.i;const r=state.racks[i];if(!r)return;
+  let v=t.value;
+  if(["reserveU","nodes","dTair","dTwater","uplinks","rackU","voltage"].includes(k))v=v===""?(k==="nodes"?null:0):parseInt(v,10);
+  else if(["pf","liquidFrac","intraLen","uplinkLen","slack"].includes(k))v=parseFloat(v);
+  else if(k==="smc")v=(v==="true");
+  r[k]=v; setDirty(true); persist(); render();
+ }
+ $id("rkRacks").addEventListener("change",onField);
+ $id("rkRacks").addEventListener("input",e=>{if(e.target.type==="number")onField(e);});
+ $id("rkRacks").addEventListener("click",e=>{const d=e.target.dataset&&e.target.dataset.del;if(d!=null){state.racks.splice(+d,1);setDirty(true);persist();render();}});
+ $id("rkProject").value=state.project||"";
+ $id("rkProject").addEventListener("input",e=>{state.project=e.target.value;setDirty(true);persist();});
+ $id("rkAdd").onclick=()=>{if(state.racks.length>=MAX_RACKS){alert("Max "+MAX_RACKS+" racks.");return;}state.racks.push(defRack());setDirty(true);persist();render();};
+ // ---- save / load JSON -----------------------------------------------------------
+ $id("rkSave").onclick=()=>{
+  const totals=state.racks.map(calc);
+  const bom={};totals.forEach(c=>c.lines.forEach(l=>{const k=[l.speed,l.media,l.conn,l.len,l.desc].join("|");(bom[k]=bom[k]||{qty:0,speed:l.speed,media:l.media,connector:l.conn,length_m:l.len,description:l.desc}).qty+=l.qty;}));
+  const doc={tool:"penguin-rack-planner-v1",project:state.project||"untitled",generated:new Date().toISOString(),
+   racks:state.racks.map((r,i)=>{const c=calc(r);return{rack:i+1,config:r,derived:{gpus:c.gpus,nodes:c.nodes,u_used:c.uUsed,load_kw:c.loadKW,amps_per_phase:+c.amps.toFixed(1),breaker_a:c.breaker,connector:c.connector,feeds:c.feeds,total_btu_h:Math.round(c.totalBTU),liquid_kw:c.liquidKW,liquid_lpm:Math.round(c.lpm),air_btu_h:Math.round(c.airBTU),cfm:Math.round(c.cfm),weight_kg:c.weightKG}};}),
+   totals:{racks:state.racks.length,gpus:totals.reduce((a,c)=>a+c.gpus,0),nodes:totals.reduce((a,c)=>a+c.nodes,0),load_kw:+totals.reduce((a,c)=>a+c.loadKW,0).toFixed(1)},
+   cabling_bom:Object.values(bom).sort((a,b)=>b.qty-a.qty)};
+  const blob=new Blob([JSON.stringify(doc,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=(state.project||"rack-plan").replace(/[^a-z0-9_-]+/gi,"-").toLowerCase()+"-bom.json";
+  a.click();URL.revokeObjectURL(a.href);setDirty(false);
+ };
+ $id("rkLoad").onclick=()=>$id("rkFile").click();
+ $id("rkFile").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{try{const j=JSON.parse(rd.result);const racks=(j.racks||[]).map(x=>({...defRack(),...(x.config||x)}));
+   if(!racks.length)throw 0;state.racks=racks.slice(0,MAX_RACKS);state.project=j.project||"";
+   $id("rkProject").value=state.project;setDirty(false);persist();render();}catch(err){alert("Not a valid rack-planner JSON.");}
+   $id("rkFile").value="";};rd.readAsText(f);});
+ // ---- unsaved-changes guard ------------------------------------------------------
+ window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
+ // ---- tab layout: rack planner runs full-width (hide the sizing rail) -------------
+ const grid=document.querySelector(".grid");
+ document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{grid.classList.toggle("full",b.dataset.v==="rack");}));
+ render();
+})();
 </script>
 
 <!-- CHAT ASSISTANT -->
