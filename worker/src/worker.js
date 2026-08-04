@@ -8,9 +8,13 @@
  * server-side, rate-limits per IP, caps tokens, and restricts CORS to the sizer origin.
  *
  * GROUNDING FETCH: the assistant may look up CURRENT info via a single tool that fetches
- * pages — but ONLY from https://www.penguinsolutions.com/. The host allowlist is enforced
- * in code (rejects any other host/scheme), so the tool can't be turned into an open proxy
- * or an SSRF vector against internal/other hosts.
+ * pages — but ONLY from the exact hosts in FETCH_HOSTS (Penguin Solutions + NVIDIA). The
+ * allowlist is enforced in code (rejects any other host/scheme), so the tool can't be
+ * turned into an open proxy or an SSRF vector against internal/other hosts.
+ *
+ * The allowlist is EXACT-MATCH on hostname, never a suffix test. `endsWith('nvidia.com')`
+ * would happily accept `nvidia.com.attacker.example`, which is the classic way this kind
+ * of check gets bypassed. Adding a host means adding a literal string to the Set.
  */
 
 const SYSTEM = `You are the "AI Factory Assistant" embedded in DugganUSA's Blackwell / SuperPOD sizing tool. You support a conversation about Penguin Solutions AI infrastructure.
@@ -20,7 +24,7 @@ SCOPE — only help with:
 2. Penguin Solutions products & services: Relion (Intel Xeon) and Altus (AMD EPYC) GPU servers, ClusterWareAI / MemoryAI / ComputeAI, and their design-build-deploy-manage AI-factory model.
 3. The concepts in this sizing tool: CapEx/OpEx/TCO, buy-vs-rent economics, sovereignty, and compliance (HIPAA, FedRAMP, EU AI Act, GDPR residency).
 
-GROUNDING: You have a tool, fetch_penguin_page, that fetches a page from www.penguinsolutions.com. Use it when the user asks about specific Penguin Solutions products, specs, or offerings and you want current, accurate detail rather than memory. Only Penguin Solutions' own site is reachable; do not attempt other URLs.
+GROUNDING: You have a tool, fetch_vendor_page, that fetches a page from Penguin Solutions' site (www.penguinsolutions.com) or NVIDIA's (www.nvidia.com, docs.nvidia.com, developer.nvidia.com, resources.nvidia.com). Use it when the user asks about specific products, specs, reference architectures, or DCGM detail and you want current, accurate information rather than memory. Prefer docs.nvidia.com for NVIDIA reference architectures (GB300 NVL72, DGX SuperPOD) and DCGM field documentation. Only those exact hosts are reachable; do not attempt other URLs. When you cite a spec from NVIDIA, say it came from NVIDIA's documentation — do not present NVIDIA's published figures as Penguin Solutions' or DugganUSA's own measurements.
 
 RULES:
 - Be concise (a few tight paragraphs or a short list). Lead with the answer.
@@ -37,16 +41,24 @@ const ALLOW = new Set([
   'http://localhost:8000', 'http://127.0.0.1:8000',
   'null', // local file:// open()
 ]);
-const FETCH_HOST = 'www.penguinsolutions.com'; // the ONLY host the grounding tool may reach
+// The ONLY hosts the grounding tool may reach. Exact hostname match — no suffix logic.
+const FETCH_HOSTS = new Set([
+  'www.penguinsolutions.com',
+  'www.nvidia.com',
+  'docs.nvidia.com',        // enterprise reference architectures, DCGM docs
+  'developer.nvidia.com',
+  'resources.nvidia.com',
+]);
+const HOST_LIST = [...FETCH_HOSTS].join(', ');
 
 const TOOLS = [{
   type: 'function',
   function: {
-    name: 'fetch_penguin_page',
-    description: 'Fetch a page from Penguin Solutions\' website (https://www.penguinsolutions.com/...) to ground an answer in current product/spec info. Only this host is reachable.',
+    name: 'fetch_vendor_page',
+    description: `Fetch a page from Penguin Solutions' or NVIDIA's website to ground an answer in current product/spec info. Only these exact hosts are reachable: ${HOST_LIST}. Use NVIDIA's docs.nvidia.com for reference architectures and DCGM documentation, and www.penguinsolutions.com for Relion/Altus/ClusterWareAI/MemoryAI detail.`,
     parameters: {
       type: 'object',
-      properties: { url: { type: 'string', description: 'A full https://www.penguinsolutions.com/... URL' } },
+      properties: { url: { type: 'string', description: `A full https:// URL on one of: ${HOST_LIST}` } },
       required: ['url'],
     },
   },
@@ -65,19 +77,19 @@ function htmlToText(html) {
     .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#\d+;/g, ' ')
     .replace(/\s+/g, ' ').trim().slice(0, 5000);
 }
-// SSRF-safe: hard host+scheme allowlist. Returns text or a refusal string.
-async function fetchPenguin(rawUrl) {
+// SSRF-safe: hard host+scheme allowlist, exact hostname match. Returns text or a refusal.
+async function fetchVendor(rawUrl) {
   let u;
   try { u = new URL(rawUrl); } catch { return 'Refused: not a valid URL.'; }
-  if (u.protocol !== 'https:' || u.hostname !== FETCH_HOST) {
-    return `Refused: only https://${FETCH_HOST}/ is allowed (requested ${u.hostname || '?'}).`;
+  if (u.protocol !== 'https:' || !FETCH_HOSTS.has(u.hostname)) {
+    return `Refused: only https on these hosts is allowed — ${HOST_LIST} (requested ${u.hostname || '?'}).`;
   }
   try {
     const r = await fetch(u.toString(), { headers: { 'User-Agent': 'DugganUSA-AIFactoryAssistant/1.0', 'Accept': 'text/html' }, cf: { cacheTtl: 600 } });
-    if (!r.ok) return `Fetch failed (HTTP ${r.status}) for ${u.pathname}.`;
+    if (!r.ok) return `Fetch failed (HTTP ${r.status}) for ${u.hostname}${u.pathname}.`;
     const txt = htmlToText(await r.text());
     return txt || 'Page had no readable text.';
-  } catch { return 'Fetch error reaching Penguin Solutions.'; }
+  } catch { return `Fetch error reaching ${u.hostname}.`; }
 }
 
 async function callMistral(env, messages) {
@@ -143,7 +155,7 @@ export default {
         if (round < 2 && m.tool_calls && m.tool_calls.length) {
           for (const tc of m.tool_calls) {
             let out = 'error';
-            try { out = await fetchPenguin(JSON.parse(tc.function.arguments || '{}').url || ''); } catch { out = 'tool error'; }
+            try { out = await fetchVendor(JSON.parse(tc.function.arguments || '{}').url || ''); } catch { out = 'tool error'; }
             messages.push({ role: 'tool', tool_call_id: tc.id, name: tc.function.name, content: out.slice(0, 5000) });
           }
           continue;

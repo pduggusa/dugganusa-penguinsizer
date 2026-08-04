@@ -46,6 +46,8 @@
   .presets button{background:#0a1119;border:1px solid var(--line);color:var(--dim);font-size:11px;padding:5px 9px;border-radius:7px;cursor:pointer;font-family:var(--sans)}
   .presets button:hover{border-color:var(--cool-dim);color:var(--ink)}
   .presets button.on{background:rgba(34,211,238,.12);border-color:var(--cool-dim);color:var(--cool)}
+  .qnote{font-size:10.5px;color:var(--faint);line-height:1.45;margin-top:6px} .qnote b{color:var(--dim);font-weight:600}
+  .qnote.tile{color:var(--warn);opacity:.9}
   .view{display:none} .view.on{display:block}
   .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media(max-width:1180px){.cards{grid-template-columns:1fr}}
@@ -138,6 +140,15 @@
   .rk-out .m{display:flex;justify-content:space-between;font-size:11px} .rk-out .m .k{color:var(--dim)} .rk-out .m .v{font-family:var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
   .rk-out .m .v.hot{color:var(--hot)} .rk-out .m .v.ok{color:var(--ok)}
   .rk-warn{margin-top:8px;font-size:11px;color:var(--hot);font-family:var(--mono)}
+  .rk-note{margin:2px 0 9px;font-size:10.5px;color:var(--faint);line-height:1.5;border-left:2px solid var(--grace);padding-left:8px}
+  .rk-note b{color:var(--dim)}
+  .rk-bom td.sp{color:var(--faint);text-align:right} .rk-bom td.tot{color:var(--ok);text-align:right;font-weight:600}
+  .rk-uses{font-family:var(--sans);font-size:10.5px;color:var(--faint)}
+  .rk-bom td.uses{font-family:var(--sans);font-size:10.5px;color:var(--faint)}
+  .rk-skunote{font-size:11.5px;color:var(--dim);margin:-4px 0 12px} .rk-skunote b{color:var(--cool);font-family:var(--mono)}
+  .rk-sp{font-size:11.5px;color:var(--dim);display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .rk-sp input{width:62px;background:#0a1119;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font-family:var(--mono);font-size:12px}
+  .rk-sp input:focus{outline:none;border-color:var(--cool-dim)}
   .rk-agg{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
   .rk-agg h3{font-size:10.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--cool);margin:0 0 12px}
   .rk-bom{width:100%;border-collapse:collapse;font-size:12px}
@@ -145,6 +156,67 @@
   .rk-bom td{padding:6px 8px;border-bottom:1px solid #16212e;font-family:var(--mono);font-variant-numeric:tabular-nums}
   .rk-bom td.desc{font-family:var(--sans);color:var(--dim)} .rk-bom td.qty{color:var(--cool);text-align:right}
   .rk-bom tr:hover td{background:#0d141d}
+  /* memoryAI */
+  .mem-h{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--cool);margin:26px 0 8px;font-weight:650}
+  .mem-hero{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:6px}
+  @media(max-width:900px){.mem-hero{grid-template-columns:1fr 1fr}}
+  .mem-k{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:14px;position:relative;overflow:hidden}
+  .mem-k::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--e,var(--cool))}
+  .mem-k .n{font-family:var(--mono);font-size:21px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.15}
+  .mem-k .l{font-size:11px;color:var(--dim);margin-top:4px;line-height:1.4}
+  .mem-k .s{font-size:10px;color:var(--faint);font-family:var(--mono);margin-top:3px}
+  .mem-cmd{background:#070d14;border:1px solid var(--cool-dim);border-radius:9px;padding:11px 13px;font-family:var(--mono);font-size:12.5px;color:var(--cool);overflow-x:auto;white-space:nowrap;margin-bottom:7px}
+  .mem-fine{font-size:11.5px;color:var(--faint);margin:0 0 14px} .mem-fine b{color:var(--dim)}
+  .mem-tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-bottom:14px}
+  .mem-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:720px}
+  .mem-tbl th{text-align:left;color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.6px;padding:9px 11px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .mem-tbl td{padding:9px 11px;border-bottom:1px solid #16212e;color:var(--dim);line-height:1.5;vertical-align:top}
+  .mem-tbl td:first-child{font-family:var(--mono);font-size:11px;color:var(--ink);white-space:nowrap}
+  .mem-tbl td:nth-child(2){font-family:var(--mono);color:var(--faint);text-align:center}
+  .mem-tbl td:nth-child(3){font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+  .mem-tbl td.hot{color:var(--hot)} .mem-tbl td.warn{color:var(--warn)} .mem-tbl td.ok{color:var(--ok)}
+  .mem-tbl tr:last-child td{border-bottom:0}
+  .mem-verdictbox{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:6px}
+  .mem-vrow{display:grid;grid-template-columns:minmax(200px,320px) 1fr;gap:12px;padding:6px 0;border-top:1px solid #16212e;font-size:12px;align-items:baseline}
+  .mem-vrow:first-child{border-top:0}
+  .mem-vk{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .mem-vv{font-size:12px} .mem-vv.ok{color:var(--ok)} .mem-vv.hot{color:var(--hot)} .mem-vv.warn{color:var(--warn)}
+  .mem-ctl{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+  .mem-f label{display:block;font-size:10px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+  .mem-f input,.mem-f select{width:100%;background:#0a1119;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font-family:var(--mono);font-size:12px}
+  .mem-f input:focus,.mem-f select:focus{outline:none;border-color:var(--cool-dim)}
+  .mem-f .hint{font-size:9.5px;color:var(--faint);margin-top:2px;font-family:var(--mono)}
+  .mem-out{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:6px}
+  @media(max-width:900px){.mem-out{grid-template-columns:1fr}}
+  .mem-panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:14px 15px}
+  .mem-panel h5{margin:0 0 9px;font-size:11px;text-transform:uppercase;letter-spacing:1.1px;color:var(--cool);font-weight:650}
+  .mem-m{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-top:1px solid #16212e;font-size:12px;gap:10px}
+  .mem-m:first-of-type{border-top:0}
+  .mem-m .k{color:var(--dim)} .mem-m .v{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+  .mem-m .v.hot{color:var(--hot)} .mem-m .v.ok{color:var(--ok)} .mem-m .v.warn{color:var(--warn)} .mem-m .v.big{font-size:14px;color:var(--cool)}
+  .mem-bars{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+  .mem-narr{font-size:13px;color:var(--dim);line-height:1.6;max-width:900px;margin-bottom:6px} .mem-narr b{color:var(--ink)}
+  .mem-tools{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  .mem-local{font-size:10.5px;color:var(--faint);font-family:var(--mono)}
+  /* dcgm upload */
+  .dz{border:2px dashed var(--line);border-radius:14px;padding:26px 20px;text-align:center;background:var(--panel2);transition:border-color .15s,background .15s;margin-bottom:14px}
+  .dz.over{border-color:var(--cool);background:rgba(34,211,238,.06)}
+  .dz-i{font-size:30px;line-height:1;margin-bottom:8px;opacity:.75}
+  .dz-t{font-size:14px;font-weight:640;margin-bottom:5px}
+  .dz-s{font-size:11.5px;color:var(--faint)}
+  .dcgm-res{margin-bottom:8px}
+  .dcgm-way{display:grid;grid-template-columns:38px 1fr;gap:13px;margin-bottom:16px;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:14px 15px}
+  .dcgm-num{width:30px;height:30px;border-radius:50%;background:rgba(34,211,238,.12);color:var(--cool);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;font-weight:650}
+  .dcgm-body h4{margin:3px 0 7px;font-size:13.5px;font-weight:640;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .dcgm-body p{margin:0 0 8px;font-size:12.5px;color:var(--dim);line-height:1.55}
+  .dcgm-body p.dcgm-p{font-size:11.5px;color:var(--faint)}
+  .dcgm-body p b{color:var(--ink)}
+  .dcgm-tag{font-size:9.5px;font-family:var(--mono);background:#0a1119;border:1px solid var(--line);color:var(--faint);padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px}
+  .dcgm-tag.ok{background:rgba(52,211,153,.12);border-color:transparent;color:var(--ok)}
+  code{font-family:var(--mono);font-size:11.5px;background:#0a1119;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--cool)}
+  .mem-cmd code{background:none;border:0;padding:0}
+  .mem-cmd{white-space:pre-wrap;word-break:break-word}
+  .dcgm-ok{border-left:3px solid var(--ok)} .dcgm-bad{border-left:3px solid var(--hot)}
 </style>
 </head>
 <body>
@@ -163,6 +235,8 @@
     <button data-v="rent">Buy vs Rent</button>
     <button data-v="case">The Case</button>
     <button data-v="rack">Rack Planner</button>
+    <button data-v="mem">🐧 MemoryAI</button>
+    <button data-v="dcgm">DCGM Upload</button>
   </nav>
 
   <div class="grid">
@@ -177,6 +251,13 @@
         <div class="field" style="margin-top:10px">
           <label><span id="tlabel">GPUs</span> <b id="tval">576</b></label>
           <input type="range" id="target" min="8" max="4608" step="8" value="576"/>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label>Quantization</label>
+          <div class="seg" id="quant">
+            <button data-q="grain" class="on">Tray / node</button><button data-q="tile">Floor tile</button>
+          </div>
+          <div class="qnote" id="qnote">Sizing to the <b>18 compute trays</b> inside a GB300 NVL72 (4× B300 each), not the whole rack. HGX nodes are already node-granular.</div>
         </div>
       </div>
       <div class="cgroup">
@@ -280,6 +361,7 @@
         <div class="rk-toolbar">
           <div class="grow"><input type="text" id="rkProject" placeholder="Project / customer name…" autocomplete="off"/></div>
           <button class="rk-btn" id="rkAdd">+ Add rack</button>
+          <label class="rk-sp">spares % <input type="number" id="rkSpares" value="5" min="0" max="50" step="1"/></label>
           <button class="rk-btn primary" id="rkSave">⬇ Save JSON</button>
           <button class="rk-btn" id="rkLoad">⬆ Load JSON</button>
           <input type="file" id="rkFile" accept="application/json,.json" style="display:none"/>
@@ -290,16 +372,175 @@
           <h3>Project totals</h3><div id="rkAgg"></div>
         </div>
         <div class="rk-agg">
-          <h3>Structured cabling BOM — all racks</h3>
+          <h3>Rationalized SKU roll-up — what goes on the PO</h3>
+          <div class="rk-skunote" id="rkSkuNote"></div>
+          <table class="rk-bom"><thead><tr><th>Qty</th><th>Spares</th><th>Order</th><th>Speed</th><th>Part</th><th>Connector</th><th>Length</th><th class="desc">Used by</th></tr></thead><tbody id="rkSku"></tbody></table>
+        </div>
+        <div class="rk-agg">
+          <h3>Structured cabling — by function</h3>
           <table class="rk-bom"><thead><tr><th>Qty</th><th>Link class</th><th>Speed</th><th>Media type</th><th>Length</th><th class="desc">Description</th></tr></thead><tbody id="rkBom"></tbody></table>
         </div>
         <footer style="margin-top:0;border:0;padding:0">
-          <span class="note">⚠ Reference topology: 8× compute (400G NDR / 800G OSFP, 1 rail/GPU) · 2× storage (200/400G) · 2× mgmt (25/100G bonded) · 1× BMC 1GbE · 1× SMC. DTC capture 75–80% to liquid, 20–25% residual to air. Per-phase A = kW·1000 ÷ (V·√3·PF); breaker at 80% continuous; CFM = air-BTU/hr ÷ (1.08·ΔT); loop L/min = liquid-kW·60 ÷ (4.186·ΔT_water). Sizing-grade, not an electrical/mechanical stamp.</span>
+          <span class="note">⚠ Port topology is per-architecture, not assumed. HGX node (Relion / Altus / DGX B300): 8× compute (1 rail/GPU) · 2× storage · 2× mgmt · 1× BMC · 1× SMC. GB300 NVL72 <b>per compute tray</b>: 4× ConnectX-8 compute · 2× BlueField-3 B3240 storage/N-S · 1× mgmt · 1× BMC — ×18 trays, plus rack-fixed 9× switch-tray BMC and 2× SN2201 OOB uplinks. NVLink5 GPU↔GPU is the in-rack copper cartridge backplane and is deliberately absent from the BOM. SKU roll-up rounds each computed reach <b>up</b> to a stock length, splits optical links into 2× transceiver + 1× trunk, and merges by physical part rather than by function. DTC capture 75–80% to liquid, 20–25% residual to air. Per-phase A = kW·1000 ÷ (V·√3·PF); breaker at 80% continuous; CFM = air-BTU/hr ÷ (1.08·ΔT); loop L/min = liquid-kW·60 ÷ (4.186·ΔT_water). Sizing-grade, not an electrical/mechanical stamp or a quote.</span>
+        </footer>
+      </section>
+
+      <!-- MEMORY AI -->
+      <section class="view" id="v-mem">
+        <h2 class="sec">🐧 MemoryAI — because a starving Blackwell is the most expensive idle object you own</h2>
+        <p class="lede">A B300 costs about the same as a house and can do <b style="color:var(--ink)">15.3 petaFLOPS</b>. When the KV cache outgrows HBM, it does <b style="color:var(--ink)">nothing at all</b> — very quickly, while drawing 1.4 kW. This tab answers one question with numbers instead of vibes: <b style="color:var(--ink)">are your GPUs actually starving, and if so is CXL memory the cheapest way to feed them?</b> Measure first (DCGM below), then do the arithmetic. If you're compute-bound, this whole tab should tell you to go away and buy GPUs — and it will.</p>
+
+        <div class="mem-hero" id="memHero"></div>
+        <div class="mem-tools">
+          <button class="rk-btn primary" id="memSaveHtml">⬇ Save report (HTML)</button>
+          <button class="rk-btn" id="memSaveJson">⬇ Save data (JSON)</button>
+          <button class="rk-btn" id="memReset">↺ Reset inputs</button>
+          <span class="mem-local">🔒 generated in your browser · nothing uploaded · saves to your machine</span>
+        </div>
+
+        <!-- STEP 1 — MEASURE -->
+        <h3 class="mem-h">Step 1 · Measure — the 60-second DCGM test</h3>
+        <p class="lede">Don't guess whether you're memory-bound. <b style="color:var(--ink)">NVIDIA Data Center GPU Manager</b> already knows. Run this against a production serving node under real load — not a benchmark — for a few minutes at 1-second resolution:</p>
+        <div class="mem-cmd">dcgmi dmon -e 1001,1002,1004,1005,1009,1010,203,204,250,252,155 -d 1000</div>
+        <p class="mem-fine">Or scrape the same field IDs from <b>dcgm-exporter</b> into Prometheus if you'd rather look at a week than a minute. The field IDs are what matter — the transport doesn't.</p>
+        <div class="mem-tbl-wrap">
+        <table class="mem-tbl">
+          <thead><tr><th>DCGM field</th><th>ID</th><th>Reading that indicts</th><th>What it actually means</th></tr></thead>
+          <tbody>
+            <tr><td><b>DCGM_FI_DEV_GPU_UTIL</b></td><td>203</td><td class="hot">&gt; 85%</td><td>The number that lies. It only means a kernel was <i>resident</i> — not that math happened. Never buy or refuse to buy on this alone.</td></tr>
+            <tr><td><b>DCGM_FI_PROF_PIPE_TENSOR_ACTIVE</b></td><td>1004</td><td class="hot">&lt; 35%</td><td><b>The truth.</b> Fraction of cycles the tensor pipes were actually busy. High 203 + low 1004 = the GPU is holding a seat, not working.</td></tr>
+            <tr><td><b>DCGM_FI_PROF_DRAM_ACTIVE</b></td><td>1005</td><td class="warn">&lt; 30%</td><td>Not even HBM bandwidth is saturated. You're not compute-bound <i>or</i> bandwidth-bound — you're waiting on something off-chip. That's the memory wall.</td></tr>
+            <tr><td><b>DCGM_FI_PROF_DRAM_ACTIVE</b></td><td>1005</td><td class="ok">&gt; 70% w/ low 1004</td><td><b>Different wall.</b> HBM bandwidth-bound, not capacity-bound. CXL will <i>not</i> fix this. Don't buy MemoryAI for it.</td></tr>
+            <tr><td><b>DCGM_FI_DEV_FB_USED / FB_TOTAL</b></td><td>252 / 250</td><td class="hot">&gt; 95%</td><td>HBM is full. You are evicting and recomputing KV, or rejecting/truncating requests. This is the capacity wall MemoryAI is built for.</td></tr>
+            <tr><td><b>DCGM_FI_PROF_PCIE_RX_BYTES</b></td><td>1010</td><td class="hot">sustained + bursty</td><td>You are <i>already</i> paging KV cache across PCIe. You've built a worse version of CXL by hand. Textbook case.</td></tr>
+            <tr><td><b>DCGM_FI_DEV_POWER_USAGE</b></td><td>155</td><td class="warn">&lt; 60% of TDP</td><td>Under 840 W on a 1,400 W B300 while "busy" = idle silicon. You are paying to cool a paperweight.</td></tr>
+            <tr><td><b>DCGM_FI_PROF_SM_OCCUPANCY</b></td><td>1003</td><td class="warn">low + low 1004</td><td>Batches too small to fill the machine — usually because KV headroom caps concurrency. More memory raises the batch ceiling.</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="mem-verdictbox">
+          <div class="mem-vrow"><span class="mem-vk">203 high · 1004 low · 1005 low · 252 pinned</span><span class="mem-vv ok">→ Memory-capacity bound. MemoryAI is in play. Do the math below.</span></div>
+          <div class="mem-vrow"><span class="mem-vk">1004 already &gt; 60%</span><span class="mem-vv hot">→ Compute-bound. Buy GPUs. Close this tab.</span></div>
+          <div class="mem-vrow"><span class="mem-vk">1005 &gt; 70% with 1004 low</span><span class="mem-vv hot">→ HBM bandwidth-bound. CXL is the wrong tool.</span></div>
+          <div class="mem-vrow"><span class="mem-vk">252 comfortably under FB_TOTAL</span><span class="mem-vv warn">→ No capacity wall today. Revisit when context or concurrency grows.</span></div>
+        </div>
+
+        <!-- STEP 2 — THE ARITHMETIC -->
+        <h3 class="mem-h">Step 2 · The arithmetic — does the KV cache even fit?</h3>
+        <p class="lede">KV cache per token is <b style="color:var(--ink)">2 × layers × KV-heads × head-dim × precision-bytes</b>. Multiply by context and concurrency and compare against the HBM you have left after weights. Everything here is editable — put your real model in.</p>
+        <div class="mem-ctl" id="memCtl"></div>
+        <div class="mem-out" id="memOut"></div>
+
+        <!-- STEP 3 — THE MONEY -->
+        <h3 class="mem-h">Step 3 · The money — CXL vs NVMe vs just buying more GPUs</h3>
+        <p class="lede">The comparison everyone makes is <b style="color:var(--ink)">CXL vs NVMe</b>. That's the wrong axis — NVMe at ~100 µs was never in the inference hot path, it's where cold data goes to retire. The comparison that decides the PO is <b style="color:var(--ink)">CXL vs buying more GPUs</b> to reach the same served throughput.</p>
+        <div class="mem-bars" id="memBars"></div>
+        <div class="mem-narr" id="memNarr"></div>
+
+        <!-- WHEN IT DOESN'T -->
+        <h3 class="mem-h">When the smart spend is <span style="color:var(--hot)">not</span> MemoryAI</h3>
+        <div class="why">
+          <div class="scard"><h4><span class="dot" style="background:var(--hot)"></span>You're compute-bound</h4>
+            <p>Tensor-active (1004) already above ~60%. The silicon is working. Memory buys you nothing — <b>every dollar belongs on GPUs</b>. This is the single most common misdiagnosis, because GPU_UTIL 203 reads 99% in both cases.</p></div>
+          <div class="scard"><h4><span class="dot" style="background:var(--hot)"></span>Batch, short-context, or latency-tolerant work</h4>
+            <p>Offline batch inference, classification, embeddings, short prompts, low concurrency. Cold data can absolutely afford a 100 µs fetch. <b>NVMe is the correct answer</b> and it's ~150× cheaper per GB. Take the cheap win.</p></div>
+          <div class="scard"><h4><span class="dot" style="background:var(--warn)"></span>Memflation &amp; supply concentration</h4>
+            <p>CXL rides DDR5, and 2026 DRAM is in a hard shortage — DDR5 roughly tripled-to-quadrupled from mid-2025, with <b>three suppliers</b> and no new entrants. NAND has a broader base and trended <i>down</i>. Dedicated CXL supply contracts add real allocation risk. Only worth it if GPU spend is your dominant cost line.</p></div>
+          <div class="scard"><h4><span class="dot" style="background:var(--ok)"></span>…and when it clearly is</h4>
+            <p>High concurrency, long context (32K+), agentic multi-step loops, prefix-cache reuse across sessions — anywhere KV working set exceeds HBM and GPUs visibly stall. <b>CXL costs materially less per GB than HBM while sitting ~200–500× closer than SSD.</b> Modest memory spend unlocks GPU capacity that would otherwise cost far more to add in GPUs.</p></div>
+        </div>
+        <footer style="margin-top:18px">
+          <span class="note">⚠ <b>Sourcing.</b> The efficiency multipliers used as defaults in Step 3 (throughput uplift, batch-size headroom, GPU-count reduction for KV storage) are <b>vendor- and industry-reported figures, not DugganUSA measurements</b> — they are exposed as editable inputs precisely so you can replace them with results from your own fleet. CXL ~200–500 ns vs NVMe ~100 µs is an order-of-magnitude architectural fact; the business multipliers are workload-specific and will not reproduce identically on your models. DCGM field IDs and semantics are NVIDIA's. Confirm capacity, pricing, and CXL supply commitments with Penguin Solutions before any of this becomes a purchase order. Sizing-grade, not a quote — and never above 95% certainty.</span>
+        </footer>
+      </section>
+
+      <!-- DCGM UPLOAD -->
+      <section class="view" id="v-dcgm">
+        <h2 class="sec">DCGM Upload — run the numbers on <i>your</i> fleet, not our defaults</h2>
+        <p class="lede">Every figure on the MemoryAI tab is a guess until it's your telemetry. NVIDIA <b style="color:var(--ink)">Data Center GPU Manager</b> already collects everything the decision needs. Export it, drop the file here, and the model re-runs on measured data. <b style="color:var(--ink)">The file never leaves this browser</b> — parsing is local JavaScript, there is no upload, no server, no telemetry. Close the tab and it's gone.</p>
+
+        <div class="dz" id="dcgmDrop">
+          <div class="dz-i">📄</div>
+          <div class="dz-t">Drop a DCGM export here</div>
+          <div class="dz-s">or <button class="rk-btn" id="dcgmPick">choose a file</button> · .txt · .prom · .json · .csv · up to ~50 MB</div>
+          <input type="file" id="dcgmFile" accept=".txt,.prom,.json,.csv,.log,text/plain,application/json" style="display:none"/>
+        </div>
+        <div class="dcgm-res" id="dcgmRes"></div>
+
+        <h3 class="mem-h">How to produce the file — four ways, pick whichever you already have</h3>
+        <p class="lede">All four are read-only and safe to run on a production node. Capture <b style="color:var(--ink)">under real serving load</b> — a quiet node or a synthetic benchmark will tell you a comfortable lie. Aim for at least 5 minutes; an hour is better; a week through Prometheus is best.</p>
+
+        <div class="dcgm-way">
+          <div class="dcgm-num">1</div>
+          <div class="dcgm-body">
+            <h4>Prometheus exposition from <code>dcgm-exporter</code> <span class="dcgm-tag ok">easiest · recommended</span></h4>
+            <p>If you run the DCGM exporter (it ships with NVIDIA GPU Operator on every Kubernetes GPU cluster), it's already serving exactly what we need on port 9400. One curl, one file:</p>
+            <div class="mem-cmd">curl -s http://localhost:9400/metrics &gt; dcgm-snapshot.prom</div>
+            <p class="dcgm-p">On Kubernetes, port-forward first: <code>kubectl -n gpu-operator port-forward svc/nvidia-dcgm-exporter 9400:9400</code></p>
+            <p class="dcgm-p"><b>Caveat:</b> this is an <i>instantaneous</i> snapshot — one moment in time. Good for a quick read, weak for a purchase decision. Take several minutes apart and upload the largest, or use method 2. If your exporter doesn't publish the profiling fields, set <code>DCGM_EXPORTER_COLLECTORS</code> to a counters file that includes <code>DCGM_FI_PROF_PIPE_TENSOR_ACTIVE</code> and <code>DCGM_FI_PROF_DRAM_ACTIVE</code> — they are commonly commented out of the default config, which is the single most frequent reason this tab reports "tensor field missing."</p>
+          </div>
+        </div>
+
+        <div class="dcgm-way">
+          <div class="dcgm-num">2</div>
+          <div class="dcgm-body">
+            <h4>Prometheus range query <span class="dcgm-tag ok">best evidence</span></h4>
+            <p>If dcgm-exporter feeds Prometheus, ask for a real time window. This gives averages and percentiles over days rather than one instant — which is what actually justifies capital:</p>
+            <div class="mem-cmd">curl -sG 'http://prometheus:9090/api/v1/query_range' \
+  --data-urlencode 'query={__name__=~"DCGM_FI_PROF_PIPE_TENSOR_ACTIVE|DCGM_FI_PROF_DRAM_ACTIVE|DCGM_FI_PROF_SM_OCCUPANCY|DCGM_FI_DEV_GPU_UTIL|DCGM_FI_DEV_FB_USED|DCGM_FI_DEV_FB_TOTAL|DCGM_FI_DEV_POWER_USAGE|DCGM_FI_PROF_PCIE_RX_BYTES"}' \
+  --data-urlencode "start=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)" \
+  --data-urlencode "end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --data-urlencode 'step=5m' &gt; dcgm-week.json</div>
+            <p class="dcgm-p">On macOS use <code>date -u -v-7d</code> instead of <code>date -u -d '7 days ago'</code>. A week at 5-minute steps is a few MB — well within what this page parses. If the response is truncated, narrow the window or widen the step.</p>
+          </div>
+        </div>
+
+        <div class="dcgm-way">
+          <div class="dcgm-num">3</div>
+          <div class="dcgm-body">
+            <h4><code>dcgmi dmon</code> — no Prometheus required <span class="dcgm-tag">bare metal</span></h4>
+            <p>Straight from the DCGM CLI on the node. This is the one to use on a standalone box or an air-gapped site. Field IDs are explicit, so nothing depends on exporter config:</p>
+            <div class="mem-cmd">dcgmi dmon -e 1001,1002,1003,1004,1005,1009,1010,203,204,250,252,155 -d 1000 -c 300 &gt; dcgm-dmon.txt</div>
+            <p class="dcgm-p"><code>-d 1000</code> = sample every 1000 ms, <code>-c 300</code> = 300 samples ≈ 5 minutes. Raise <code>-c</code> for a longer window (<code>-c 3600</code> ≈ 1 hour). Drop <code>-c</code> entirely and it runs until you Ctrl-C.</p>
+            <p class="dcgm-p"><b>Requires</b> <code>nv-hostengine</code> running (<code>sudo systemctl start nvidia-dcgm</code>). Profiling fields 1001–1010 need DCGM 2.0+ and are unavailable inside some containers unless the DCGM socket is mounted — if those columns come back <code>N/A</code>, run it on the host rather than in the pod.</p>
+          </div>
+        </div>
+
+        <div class="dcgm-way">
+          <div class="dcgm-num">4</div>
+          <div class="dcgm-body">
+            <h4>CSV from Grafana or your own pipeline <span class="dcgm-tag">fallback</span></h4>
+            <p>Any CSV with a header row works, as long as column names contain either the DCGM field name (<code>DCGM_FI_PROF_PIPE_TENSOR_ACTIVE</code>) or the <code>dmon</code> short name (<code>TENSO</code>). Grafana's panel → Inspect → Data → Download CSV produces this directly. Extra columns are ignored.</p>
+            <p class="dcgm-p">Minimum useful set: <b>tensor-active</b> and <b>DRAM-active</b>. Everything else sharpens the picture but the verdict can be reached without it.</p>
+          </div>
+        </div>
+
+        <h3 class="mem-h">What gets read, and what it decides</h3>
+        <div class="mem-tbl-wrap">
+        <table class="mem-tbl">
+          <thead><tr><th>DCGM field</th><th>ID</th><th><code>dmon</code></th><th>Unit</th><th>What this page does with it</th></tr></thead>
+          <tbody>
+            <tr><td><b>DCGM_FI_PROF_PIPE_TENSOR_ACTIVE</b></td><td>1004</td><td>TENSO</td><td>ratio 0–1</td><td class="ok"><b>Required.</b> Becomes "tensor-active now" — the idle-capital calculation rests entirely on this.</td></tr>
+            <tr><td><b>DCGM_FI_PROF_DRAM_ACTIVE</b></td><td>1005</td><td>DRAMA</td><td>ratio 0–1</td><td class="ok"><b>Required.</b> Separates a capacity wall (CXL helps) from a bandwidth wall (CXL does not).</td></tr>
+            <tr><td>DCGM_FI_DEV_FB_TOTAL</td><td>250</td><td>FBTTL</td><td>MiB</td><td>Sets HBM per GPU automatically — no need to tell us what you own.</td></tr>
+            <tr><td>DCGM_FI_DEV_FB_USED</td><td>252</td><td>FBUSD</td><td>MiB</td><td>Peak framebuffer occupancy. &gt;95% is the capacity wall showing itself.</td></tr>
+            <tr><td>DCGM_FI_DEV_GPU_UTIL</td><td>203</td><td>GPUTL</td><td>%</td><td>Only used to expose the gap against 1004 — the "busy but not working" delta.</td></tr>
+            <tr><td>DCGM_FI_PROF_SM_OCCUPANCY</td><td>1003</td><td>SMOCC</td><td>ratio 0–1</td><td>Low occupancy + low tensor = batch ceiling, usually KV-headroom imposed.</td></tr>
+            <tr><td>DCGM_FI_PROF_PCIE_RX_BYTES</td><td>1010</td><td>PCIRX</td><td>bytes/s</td><td>Sustained inbound = you're already paging KV over PCIe by hand.</td></tr>
+            <tr><td>DCGM_FI_DEV_POWER_USAGE</td><td>155</td><td>POWER</td><td>W</td><td>Draw far under TDP while "busy" corroborates idle silicon.</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="mem-fine">GPU count is inferred from distinct entity/GPU identifiers in the file. Percentiles are computed across all samples and all GPUs; the per-GPU table below the summary is where you'll spot a single starving rank dragging an otherwise healthy fleet.</p>
+
+        <footer style="margin-top:18px">
+          <span class="note">🔒 <b>Privacy.</b> The file is read with the browser's local FileReader and parsed in page JavaScript. It is never transmitted — no fetch, no XHR, no beacon, no analytics on this tab. The page works fully offline; disconnect your network and it behaves identically. Saved reports are written to your own downloads folder by the browser. <b>What DCGM exports contains:</b> GPU UUIDs, model names, hostnames, and utilization — treat the file as infrastructure metadata and handle it under your own classification rules. ⚠ Parsed telemetry is real; the <i>conclusions</i> still ride on the editable assumptions on the MemoryAI tab. Measurement removes the guesswork about your fleet's state, not about how a specific product will perform on it. Certainty capped at 95%.</span>
         </footer>
       </section>
 
       <footer>
-        <b>Anchors:</b> NVIDIA GB300 NVL72 / DGX B300 reference architecture + Penguin Relion/Altus datasheets (2026). B300 288 GB HBM3e, 15.3 PF FP4/GPU; B200 192 GB, 9 PF. GB300 rack = 72 GPU / 142 kW; SuperPOD = 8 racks / 576 GPU. Node builds packed at max(space, power) per rack.<br/>
+        <b>Anchors:</b> NVIDIA GB300 NVL72 / DGX B300 reference architecture + Penguin Relion/Altus datasheets (2026). B300 288 GB HBM3e, 15.3 PF FP4/GPU; B200 192 GB, 9 PF. GB300 rack = 72 GPU / 142 kW (18 compute trays × 4 B300 + 2 Grace, 9 NVLink switch trays, 6–8× 33 kW power shelves); SuperPOD = 8 racks / 576 GPU. Node builds packed at max(space, power) per rack. Partial-rack power is modelled non-linearly: fixed rack overhead (~26.8 kW of NVSwitch trays, power shelves, in-rack OOB) + 6.4 kW per compute tray.<br/>
+        <span class="note">⚠ Tray-level sizing exposes what NVIDIA's floor-tile rounding costs you — but the <b>NVL72 rack is the purchasable SKU</b>. NVIDIA does not list a partially-populated rack; treat tray counts as a planning and BOM figure, and confirm partial population with your Penguin rep before it becomes a quote.</span><br/>
         <span class="note">⚠ CapEx, cloud rate &amp; model sizes are editable estimates — enter real per-GPU $, $/kWh &amp; cloud pricing to move from sizing-grade to procurement-grade. FP4 = dense (sparse ≈ 2×). Training-days = 6·P·D ÷ (GPUs · FP8 · MFU). Not a quote.</span>
       </footer>
     </div>
@@ -309,31 +550,50 @@
 <script>
 const GPU={B300:{name:"B300 Blackwell Ultra",hbm:288,fp4:15.3,tdp:1.4,capexId:"capex300"},
            B200:{name:"B200 Blackwell",hbm:192,fp4:9.0,tdp:1.0,capexId:"capex200"}};
+/* `per` = GPUs in the purchasable block (NVIDIA's floor tile). `grain` = the smallest unit that
+ * physically exists inside it — the GB300 NVL72's 18 compute trays (4× B300 + 2× Grace each),
+ * or simply the node for HGX builds. NVIDIA's own sizers quantize to `per`; we size to `grain`. */
 const ARCH=[
- {key:"gb300-nvl72",label:"NVIDIA GB300 NVL72",who:"rack-scale · SuperPOD block",gpu:"B300",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:142,cool:"liquid DTC",su:8,edge:"var(--grace)"},
- {key:"dgx-b300",label:"NVIDIA DGX B300",who:"HGX 8-GPU node · 10U",gpu:"B300",per:8,unit:"node",u:10,cpu:"Xeon 6776P",cpuper:2,nvl:8,pkw:14,cool:"air/liquid",edge:"var(--cool)"},
- {key:"relion-xe4418",label:"Penguin Relion XE4418GT",who:"Intel Xeon 6 + B300 HGX · 4U DTC",gpu:"B300",per:8,unit:"node 4U",u:4,cpu:"Xeon 6",cpuper:2,nvl:8,pkw:14,cool:"liquid DTC",edge:"var(--ok)",hero:1},
- {key:"altus-xe4318",label:"Penguin Altus XE4318GTS",who:"AMD EPYC Turin + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"EPYC Turin",cpuper:2,nvl:8,pkw:10.5,cool:"liquid DTC",edge:"var(--warn)"}
+ {key:"gb300-nvl72",label:"NVIDIA GB300 NVL72",who:"rack-scale · SuperPOD block",gpu:"B300",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:142,cool:"liquid DTC",su:8,edge:"var(--grace)",
+  grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:6.4,fixedKw:26.8},sku:"rack"},
+ {key:"dgx-b300",label:"NVIDIA DGX B300",who:"HGX 8-GPU node · 10U",gpu:"B300",per:8,unit:"node",u:10,cpu:"Xeon 6776P",cpuper:2,nvl:8,pkw:14,cool:"air/liquid",edge:"var(--cool)",
+  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14,fixedKw:0}},
+ {key:"relion-xe4418",label:"Penguin Relion XE4418GT",who:"Intel Xeon 6 + B300 HGX · 4U DTC",gpu:"B300",per:8,unit:"node 4U",u:4,cpu:"Xeon 6",cpuper:2,nvl:8,pkw:14,cool:"liquid DTC",edge:"var(--ok)",hero:1,
+  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14,fixedKw:0}},
+ {key:"altus-xe4318",label:"Penguin Altus XE4318GTS",who:"AMD EPYC Turin + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"EPYC Turin",cpuper:2,nvl:8,pkw:10.5,cool:"liquid DTC",edge:"var(--warn)",
+  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:10.5,fixedKw:0}}
 ];
 const MODELS=[
  {n:"Llama 3.1 405B",p:405,t:15},{n:"DeepSeek-V3 671B",p:671,t:14.8},{n:"Mistral Large 2",p:123,t:12},
  {n:"Frontier MoE ~1.8T",p:1800,t:13},{n:"Reasoning 671B",p:671,t:20}
 ];
 const $=id=>document.getElementById(id), val=id=>parseFloat($(id).value)||0;
-let MODE="gpus",CMP="tco",VIEW="size";
+let MODE="gpus",CMP="tco",VIEW="size",QUANT="grain";
 const usd=n=>"$"+(n>=1e9?(n/1e9).toFixed(2)+"B":n>=1e6?(n/1e6).toFixed(1)+"M":(n/1e3).toFixed(0)+"K");
 const commas=n=>Math.round(n).toLocaleString();
 
 function targetGpus(a){const t=val("target");
  if(MODE==="gpus")return t; if(MODE==="exaflops")return Math.ceil(t*1000/GPU[a.gpu].fp4);
- if(MODE==="superpods")return t*((a.su||8)*a.per); if(MODE==="nodes")return t*a.per; return t;}
+ if(MODE==="superpods")return t*((a.su||8)*a.per);
+ if(MODE==="nodes")return t*(QUANT==="tile"?a.per:a.grain.gpu); return t;}
 
 function size(a){
  const g=GPU[a.gpu],RACK_U=42,RACK_KW=val("rackkw"),util=val("util")/100,yrs=val("years");
- const units=Math.max(1,Math.ceil(targetGpus(a)/a.per)), gpus=units*a.per, cpus=units*a.cpuper;
- const hbm=+(gpus*g.hbm/1000).toFixed(1), fp4=+(gpus*g.fp4/1000).toFixed(2), power=+(units*a.pkw).toFixed(1);
+ const gr=a.grain,tg=targetGpus(a);
+ // floor-tile quantization (what NVIDIA's sizer does) vs grain quantization (what's actually inside)
+ const tileGpus=Math.max(1,Math.ceil(tg/a.per))*a.per;
+ const grainGpus=Math.max(1,Math.ceil(tg/gr.gpu))*gr.gpu;
+ const gpus=QUANT==="tile"?tileGpus:grainGpus;
+ const grains=gpus/gr.gpu, blocks=Math.ceil(grains/gr.per);
+ const units=a.unit==="rack"?blocks:grains, cpus=grains*gr.cpu;
+ const partial=a.unit==="rack"&&grains%gr.per!==0;
+ // stranded = GPUs you buy but didn't ask for, purely from rounding up to the next floor tile
+ const strandedGpus=tileGpus-grainGpus, strandedCapex=strandedGpus*val(GPU[a.gpu].capexId);
+ const hbm=+(gpus*g.hbm/1000).toFixed(1), fp4=+(gpus*g.fp4/1000).toFixed(2);
+ // rack-scale power is non-linear: fixed rack overhead (NVSwitch trays, power shelves) + per-tray
+ const power=+(grains*gr.pkw+blocks*(gr.fixedKw||0)).toFixed(1);
  let racks,limit,chip;
- if(a.unit==="rack"){racks=units;limit="rack-scale";chip="ok";}
+ if(a.unit==="rack"){racks=blocks;limit=partial?"partial rack":"rack-scale";chip=partial?"warn":"ok";}
  else{const byU=Math.ceil(units*a.u/RACK_U),byP=Math.ceil(power/RACK_KW);racks=Math.max(byU,byP);
    if(byP>byU){limit="POWER-limited";chip="hot";}else if(byU>byP){limit="space-limited";chip="warn";}else{limit="balanced";chip="ok";}}
  const capex=gpus*val(g.capexId), annPower=power*8760*val("pue")*val("kwh"), tco=capex+yrs*(annPower+capex*val("maint"));
@@ -343,7 +603,8 @@ function size(a){
  const hbmB=hbm*1e12, maxInfer=Math.round(hbmB/(2*1.3)/1e9), maxTrain=Math.round(hbmB/16/1e9);
  let trainDays=null,ckpt=null; const P=val("model"),D=val("tokens");
  if(P>0&&D>0){trainDays=+((6*P*1e9*D*1e12)/(gpus*(g.fp4/2)*1e15*val("mfu"))/86400).toFixed(1);ckpt=+(P*1e9*14/1e12).toFixed(1);}
- return{a,g,units,gpus,cpus,hbm,fp4,power,racks,limit,chip,capex,tco,perEF,storage,ownedHr,cloud,savings,paybackMo,maxInfer,maxTrain,trainDays,ckpt};
+ return{a,g,units,gpus,cpus,hbm,fp4,power,racks,limit,chip,capex,tco,perEF,storage,ownedHr,cloud,savings,paybackMo,maxInfer,maxTrain,trainDays,ckpt,
+  grains,blocks,partial,strandedGpus,strandedCapex,grainLabel:gr.label};
 }
 function model(){return ARCH.map(size);}
 
@@ -352,7 +613,12 @@ function renderSize(rows){
   <div class="card ${r.a.hero?'hero':''}" style="--edge:${r.a.edge}">
     ${r.a.hero?'<span class="badge">best $/GPU density</span>':''}
     <h2>${r.a.label}</h2><div class="who">${r.a.who}</div>
-    <div class="metric"><span class="k">Build</span><span class="v">${r.units}×${r.a.unit} → <b style="color:var(--ink)">${commas(r.gpus)}</b> ${r.a.gpu}</span></div>
+    <div class="metric"><span class="k">Build</span><span class="v">${r.a.unit==="rack"
+      ?`${r.grains}×${r.grainLabel} · ${r.blocks} rack${r.blocks>1?"s":""}`
+      :`${r.units}×${r.a.unit}`} → <b style="color:var(--ink)">${commas(r.gpus)}</b> ${r.a.gpu}</span></div>
+    ${r.strandedGpus>0?(QUANT==="tile"
+      ?`<div class="metric"><span class="k">Floor-tile rounding</span><span class="v" style="color:var(--hot)">+${r.strandedGpus} GPU unasked-for · ${usd(r.strandedCapex)} stranded</span></div>`
+      :`<div class="metric"><span class="k">Rounding avoided</span><span class="v" style="color:var(--ok)">${r.strandedGpus} GPU · ${usd(r.strandedCapex)} not bought</span></div>`):""}
     <div class="metric"><span class="k">Compute · HBM</span><span class="v big">${r.fp4} EF <small>FP4 · ${r.hbm}TB HBM</small></span></div>
     <div class="metric"><span class="k">Power · footprint</span><span class="v">${commas(r.power)}kW · ${r.racks} rack<span class="chip ${r.chip}">${r.limit}</span></span></div>
     <div class="metric"><span class="k">CapEx · ${val("years")}yr TCO</span><span class="v">${usd(r.capex)} · <b class="big" style="font-size:13px">${usd(r.tco)}</b></span></div>
@@ -406,6 +672,11 @@ document.querySelectorAll("#mode button").forEach(b=>b.onclick=()=>{document.que
  if(MODE==="superpods"){t.min=1;t.max=16;t.step=1;t.value=1;l.textContent="SuperPODs";}
  if(MODE==="nodes"){t.min=1;t.max=512;t.step=1;t.value=64;l.textContent="Nodes";}sync();});
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("on"));b.classList.add("on");VIEW=b.dataset.v;document.querySelectorAll(".view").forEach(v=>v.classList.remove("on"));$("v-"+VIEW).classList.add("on");});
+document.querySelectorAll("#quant button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#quant button").forEach(x=>x.classList.remove("on"));b.classList.add("on");QUANT=b.dataset.q;
+ const n=$("qnote");
+ if(QUANT==="tile"){n.className="qnote tile";n.innerHTML="Rounding up to whole <b>72-GPU racks</b>, the way NVIDIA's building blocks and sizers do. The stranded GPUs and CapEx that rounding buys you show on each card.";}
+ else{n.className="qnote";n.innerHTML="Sizing to the <b>18 compute trays</b> inside a GB300 NVL72 (4× B300 each), not the whole rack. HGX nodes are already node-granular.";}
+ sync();});
 document.querySelectorAll("[data-c]").forEach(a=>a.onclick=e=>{e.preventDefault();CMP=a.dataset.c;document.querySelectorAll("[data-c]").forEach(x=>x.style.color="var(--dim)");a.style.color="var(--cool)";renderAll();});
 function sync(){$("tval").textContent=MODE==="exaflops"?val("target").toFixed(1):commas(val("target"));$("rackkwv").textContent=val("rackkw");$("tbgv").textContent=val("tbg");$("mfuv").textContent=val("mfu").toFixed(2);$("utilv").textContent=val("util");renderAll();}
 ["target","rackkw","kwh","pue","years","maint","capex300","capex200","tbg","util","cloud","model","tokens","mfu"].forEach(id=>$(id).addEventListener("input",sync));
@@ -419,17 +690,44 @@ sync();
  * whole board recalculates on any change.
  * ---------------------------------------------------------------------------------*/
 (function(){
- const LS_KEY="penguin-rack-planner-v1", MAX_RACKS=5, RACK_TARE_KG=160;
- // node-based hardware profiles (rack-scale NVL72 included; its cabling is external scale-out)
+ const LS_KEY="penguin-rack-planner-v2", MAX_RACKS=5, RACK_TARE_KG=160;
+ /* Hardware profiles at the granularity that actually exists inside the box.
+  * `ports` is per-node/per-tray; `fixedPorts` are rack-level items that don't scale with node count.
+  * GB300 NVL72 per NVIDIA's NVL72 AI-Factory reference architecture: 18 compute trays
+  * (4× B300 + 2× Grace + 4 dual-port ConnectX-8 + 1 dual-port BlueField-3 B3240 each),
+  * 9 NVLink switch trays, 6–8× 33 kW power shelves, 2 in-rack SN2201 OOB switches.
+  * NVLink5 GPU↔GPU rides the copper cable-cartridge backplane — deliberately NOT a cable-BOM line. */
  const SPEC={
-  "relion-xe4418":{label:"Penguin Relion XE4418GT",nodeU:4, gpuPer:8,  pkw:14,  weight:100},
-  "altus-xe4318": {label:"Penguin Altus XE4318GTS", nodeU:4, gpuPer:8,  pkw:10.5,weight:100},
-  "dgx-b300":     {label:"NVIDIA DGX B300",         nodeU:10,gpuPer:8,  pkw:14,  weight:130},
-  "gb300-nvl72":  {label:"NVIDIA GB300 NVL72",      nodeU:48,gpuPer:72, pkw:142, weight:1360, integrated:true}
+  "relion-xe4418":{label:"Penguin Relion XE4418GT",unit:"node", nodeU:4, gpuPer:8, pkw:14,  weight:100,
+    ports:{compute:8,storage:2,mgmt:2,bmc:1}},
+  "altus-xe4318": {label:"Penguin Altus XE4318GTS",unit:"node", nodeU:4, gpuPer:8, pkw:10.5,weight:100,
+    ports:{compute:8,storage:2,mgmt:2,bmc:1}},
+  "dgx-b300":     {label:"NVIDIA DGX B300",        unit:"node", nodeU:10,gpuPer:8, pkw:14,  weight:130,
+    ports:{compute:8,storage:2,mgmt:2,bmc:1}},
+  "gb300-nvl72":  {label:"NVIDIA GB300 NVL72",     unit:"compute tray",nodeU:1,gpuPer:4,pkw:6.4,weight:40,
+    rackScale:true, maxNodes:18, fixedU:26, fixedKw:26.8, fixedWeight:640,
+    ports:{compute:4,storage:2,mgmt:1,bmc:1},
+    fixedPorts:[{cls:"bmc", n:9,speed:"1G", desc:"NVLink switch-tray BMC / OOB (9 switch trays)"},
+                {cls:"mgmt",n:2,speed:"25G",desc:"In-rack SN2201 OOB switch uplink"}],
+    note:"NVLink5 GPU↔GPU = in-rack copper cartridge backplane, not cabled."}
  };
  const BREAKERS=[16,20,30,32,40,50,60,63,80,100,125,150,175,200,225,250,300,350,400];
  const nextBreaker=a=>BREAKERS.find(b=>b>=a)||Math.ceil(a/50)*50;
  const iecConnector=a=> a<=16?"IEC 60309 16A":a<=32?"IEC 60309 32A":a<=63?"IEC 60309 63A":a<=125?"IEC 60309 125A":"busway tap-off";
+ /* ---- SKU rationalization -------------------------------------------------------
+  * You cannot order a 3.7 m DAC. Every computed reach rounds UP to the next length
+  * the media is actually sold in, so identical parts collapse onto one orderable line. */
+ const LADDER={
+  "Passive DAC":            [0.5,1,1.5,2,2.5,3],
+  "Active DAC (ACC)":       [1,2,3,4,5],
+  "AOC":                    [3,5,7,10,15,20,30],
+  "Transceiver pair + MPO-12 SMF":[5,10,15,20,30,50,100],
+  "Transceiver + fiber":    [5,10,15,20,30,50,100],
+  "Cat6A copper":           [1,2,3,5,7,10,15,20,30]
+ };
+ function stdLen(m,l){const L=LADDER[m];if(!L)return l;
+  for(const x of L)if(x>=l)return x; return L[L.length-1];}
+ const isOptic=m=>m.indexOf("Transceiver")===0;
  // cable media auto-select: reach (incl. slack) + speed → medium
  function media(cls,speed,len){
   if(cls==="bmc")return{m:"Cat6A copper",c:"RJ45"};
@@ -443,10 +741,14 @@ sync();
  function calc(r){
   const s=SPEC[r.arch]||SPEC["relion-xe4418"];
   const usableU=Math.max(0,r.rackU-r.reserveU);
-  const maxSpace=s.integrated?1:Math.max(0,Math.floor(usableU/s.nodeU));
+  const fixedU=s.fixedU||0;                        // switch trays, power shelves, manifolds
+  let maxSpace=Math.max(0,Math.floor(Math.max(0,usableU-fixedU)/s.nodeU));
+  if(s.maxNodes!=null)maxSpace=Math.min(maxSpace,s.maxNodes);
   const wantNodes=r.nodes==null?maxSpace:r.nodes;
-  const nodes=Math.max(0,Math.min(wantNodes,maxSpace||wantNodes));
-  const gpus=nodes*s.gpuPer, uUsed=nodes*s.nodeU, loadKW=+(nodes*s.pkw).toFixed(1);
+  const nodes=Math.max(0,Math.min(wantNodes,maxSpace));
+  const live=nodes>0;                              // rack overhead only exists once populated
+  const gpus=nodes*s.gpuPer, uUsed=nodes*s.nodeU+(live?fixedU:0);
+  const loadKW=+(nodes*s.pkw+(live?(s.fixedKw||0):0)).toFixed(1);
   // POWER
   const V=r.voltage, pf=r.pf, three=r.phase==="3";
   const amps=loadKW>0? loadKW*1000/(V*(three?Math.sqrt(3):1)*pf) :0;
@@ -459,33 +761,57 @@ sync();
   const cfm=r.dTair>0?airBTU/(1.08*r.dTair):0;
   const lpm=r.dTwater>0?liquidKW*60/(4.186*r.dTwater):0;
   // WEIGHT
-  const weightKG=Math.round(nodes*s.weight+RACK_TARE_KG);
-  // CABLING — per-node port topology × nodes (node→ToR leaf), + leaf→spine uplinks
+  const weightKG=Math.round(nodes*s.weight+(live?(s.fixedWeight||0):0)+RACK_TARE_KG);
+  // CABLING — per-node port topology × nodes (node→ToR leaf), + rack-fixed items + leaf→spine uplinks
   const intra=r.intraLen+r.slack, up=r.uplinkLen+r.slack;
+  const p=s.ports, rails=r.rails||1;
   const classes=[
-   {cls:"compute", n:s.gpuPer, speed:r.computeSpeed, reach:intra, desc:"GPU scale-out fabric (1 rail/GPU, IB/RoCE)"},
-   {cls:"storage", n:2,        speed:r.storageSpeed, reach:intra, desc:"Storage / PFS (GPUDirect)"},
-   {cls:"mgmt",    n:2,        speed:r.mgmtSpeed,    reach:intra, desc:"In-band cluster mgmt (bonded)"},
-   {cls:"bmc",     n:1,        speed:"1G",           reach:intra, desc:"OOB BMC / IPMI"},
-   {cls:"smc",     n:r.smc?1:0,speed:r.smcSpeed,     reach:intra, desc:"Chassis / system mgmt (SMC)"}
+   {cls:"compute", n:(p.compute||0)*rails, speed:r.computeSpeed, reach:intra, desc:`GPU scale-out fabric (${rails} rail/GPU, IB/RoCE)`},
+   {cls:"storage", n:p.storage||0, speed:r.storageSpeed, reach:intra, desc:"Storage / N-S (BlueField-3, GPUDirect)"},
+   {cls:"mgmt",    n:p.mgmt||0,    speed:r.mgmtSpeed,    reach:intra, desc:"In-band cluster mgmt"},
+   {cls:"bmc",     n:p.bmc||0,     speed:"1G",           reach:intra, desc:"OOB BMC / IPMI"},
+   {cls:"smc",     n:r.smc?1:0,    speed:r.smcSpeed,     reach:intra, desc:"Chassis / system mgmt (SMC)"}
   ];
   const lines=[];
   for(const c of classes){ if(c.n<=0)continue; const q=c.n*nodes; if(q<=0)continue; const md=media(c.cls,c.speed,c.reach);
    lines.push({cls:c.cls,qty:q,speed:c.speed,media:md.m,conn:md.c,len:c.reach,desc:c.desc}); }
+  if(live&&s.fixedPorts)for(const f of s.fixedPorts){ const md=media(f.cls,f.speed,intra);
+   lines.push({cls:f.cls,qty:f.n,speed:f.speed,media:md.m,conn:md.c,len:intra,desc:f.desc}); }
   if(r.uplinks>0){ const md=media("compute",r.computeSpeed,up);
    lines.push({cls:"uplink",qty:r.uplinks,speed:r.computeSpeed,media:md.m,conn:md.c,len:up,desc:"Leaf→spine uplink"}); }
   const overSpace=nodes<wantNodes;
-  return{s,nodes,gpus,uUsed,usableU,maxSpace,loadKW,amps,breaker,connector,feeds,
+  return{s,nodes,gpus,uUsed,usableU,maxSpace,loadKW,amps,breaker,connector,feeds,fixedU,live,
    totalBTU,airBTU,liquidKW,airFrac,cfm,lpm,weightKG,lines,overSpace,wantNodes};
  }
+ /* Collapse cable lines into orderable SKUs: round each reach up to a stock length, split
+  * optical links into (2× transceiver + 1× trunk), then merge by physical part — NOT by
+  * function, because a 2 m QSFP112 DAC is the same part whether it lands on storage or mgmt. */
+ function skus(lines,sparesPct){
+  const bin={};
+  const put=(key,row,qty,use)=>{const b=bin[key]||(bin[key]={...row,qty:0,uses:{}});b.qty+=qty;b.uses[use]=(b.uses[use]||0)+qty;};
+  for(const l of lines){
+   const L=stdLen(l.media,l.len);
+   if(isOptic(l.media)){
+    const optic=l.speed+" "+l.conn+" transceiver";
+    put("x|"+optic,{part:optic,speed:l.speed,conn:l.conn,media:"Transceiver",len:null},l.qty*2,l.cls);
+    const trunk=(l.media.indexOf("MPO")>-1?"MPO-12 SMF trunk":"SMF duplex trunk");
+    put("f|"+trunk+"|"+L,{part:trunk,speed:l.speed,conn:"MPO/LC",media:"Fiber trunk",len:L},l.qty,l.cls);
+   }else{
+    put("c|"+l.media+"|"+l.conn+"|"+l.speed+"|"+L,{part:l.media+" "+l.speed,speed:l.speed,conn:l.conn,media:l.media,len:L},l.qty,l.cls);
+   }
+  }
+  return Object.values(bin).map(b=>{const sp=Math.ceil(b.qty*(sparesPct||0)/100);
+   return{...b,spares:sp,total:b.qty+sp,uses:Object.keys(b.uses).sort()};}).sort((a,b)=>b.total-a.total);
+ }
  // ---- default rack ---------------------------------------------------------------
- const defRack=()=>({arch:"relion-xe4418",rackU:48,reserveU:4,nodes:null,
+ const defRack=()=>({arch:"relion-xe4418",rackU:48,reserveU:4,nodes:null,rails:1,
   voltage:415,phase:"3",pf:0.98,redundancy:"2N",
   liquidFrac:0.80,dTair:20,dTwater:10,
   computeSpeed:"400G",storageSpeed:"400G",mgmtSpeed:"100G",smc:true,smcSpeed:"10G",
   intraLen:2,uplinkLen:10,slack:1,uplinks:8});
  // ---- state ----------------------------------------------------------------------
- let state=load()||{project:"",racks:[defRack()]}, dirty=false;
+ let state=load()||{project:"",racks:[defRack()],spares:5}, dirty=false;
+ if(state.spares==null)state.spares=5;
  function load(){try{const j=JSON.parse(localStorage.getItem(LS_KEY));if(j&&Array.isArray(j.racks))return j;}catch(e){}return null;}
  function persist(){try{localStorage.setItem(LS_KEY,JSON.stringify(state));}catch(e){}}
  function setDirty(d){dirty=d;const el=$id("rkDirty");if(el){el.textContent=d?"unsaved changes":"saved";el.className="rk-dirty"+(d?"":" clean");}}
@@ -505,8 +831,9 @@ sync();
     <div class="rk-row3">
      <div class="rk-f"><label>Rack U</label>${sel("rackU",i,[42,48,52],r.rackU,"U")}</div>
      <div class="rk-f"><label>Reserve U</label>${numf("reserveU",i,r.reserveU,1,0,20)}</div>
-     <div class="rk-f"><label>Nodes</label><input type="number" data-k="nodes" data-i="${i}" value="${r.nodes==null?c.nodes:r.nodes}" step="1" min="0" max="${c.maxSpace}"/></div>
+     <div class="rk-f"><label>${c.s.unit==="node"?"Nodes":"Trays"}</label><input type="number" data-k="nodes" data-i="${i}" value="${r.nodes==null?c.nodes:r.nodes}" step="1" min="0" max="${c.maxSpace}"/></div>
     </div>
+    ${c.s.rackScale?`<div class="rk-note">${c.s.note} Rack overhead of <b>${c.fixedU}U / ${c.s.fixedKw} kW</b> (9 switch trays, power shelves, in-rack OOB) is counted once, not per tray. The rack is the purchasable SKU — tray counts are a planning &amp; BOM figure.</div>`:""}
     <div class="rk-row3">
      <div class="rk-f"><label>Voltage</label>${sel("voltage",i,[208,400,415,480],r.voltage,"V")}</div>
      <div class="rk-f"><label>Phase</label>${sel("phase",i,["1","3"],r.phase,"Ø")}</div>
@@ -531,11 +858,22 @@ sync();
      <div class="rk-f"><label>Slack m</label>${sel("slack",i,[0,1,3],r.slack,"m")}</div>
     </div>
     <div class="rk-row2">
+     <div class="rk-f"><label>Rails / GPU</label>${sel("rails",i,[1,2],r.rails||1)}</div>
      <div class="rk-f"><label>Leaf→spine uplinks</label>${numf("uplinks",i,r.uplinks,1,0,64)}</div>
+    </div>
+    <div class="rk-row2">
      <div class="rk-f"><label>SMC port</label>${sel("smc",i,[["true","yes"],["false","no"]].map(x=>x[0]),String(r.smc)).replace('value="true"','value="true"').replace(/<option value="(true|false)"([^>]*)>[^<]*/g,(m,v,a)=>`<option value="${v}"${a}>${v==="true"?"yes":"no"}`)}</div>
     </div>
-    <div class="rk-out">
-     <div class="m"><span class="k">GPUs · nodes</span><span class="v">${c.gpus} · ${c.nodes}</span></div>
+    <div class="rk-out">${outHTML(c)}</div>
+    <div class="rk-warnwrap">${warnHTML(c)}</div>
+   </div>`;}).join("");
+  paint();
+ }
+ // outputs are re-painted on every keystroke; the input controls are NOT, so focus and
+ // caret survive typing. Full render() only runs on structural change (arch, add/remove).
+ function outHTML(c){
+  return `
+     <div class="m"><span class="k">GPUs · ${c.s.unit==="node"?"nodes":"trays"}</span><span class="v">${c.gpus} · ${c.nodes}</span></div>
      <div class="m"><span class="k">U used</span><span class="v ${c.uUsed>c.usableU?"hot":""}">${c.uUsed}/${c.usableU}U</span></div>
      <div class="m"><span class="k">Rack load</span><span class="v">${c.loadKW} kW</span></div>
      <div class="m"><span class="k">Amps/phase</span><span class="v">${c.amps.toFixed(1)} A</span></div>
@@ -546,13 +884,19 @@ sync();
      <div class="m"><span class="k">Air residual</span><span class="v">${Math.round(c.airFrac*100)}% · ${NUM(c.airBTU)} BTU/h</span></div>
      <div class="m"><span class="k">Airflow</span><span class="v">${NUM(c.cfm)} CFM</span></div>
      <div class="m"><span class="k">Weight</span><span class="v">${NUM(c.weightKG)} kg</span></div>
-     <div class="m"><span class="k">Cables</span><span class="v">${c.lines.reduce((a,l)=>a+l.qty,0)}</span></div>
-    </div>
-    ${c.overSpace?`<div class="rk-warn">⚠ ${c.wantNodes} nodes won't fit — capped at ${c.nodes} (${c.usableU}U usable ÷ ${c.s.nodeU}U/node). Raise Rack U or lower Reserve.</div>`:""}
-   </div>`;}).join("");
-
-  // aggregate
+     <div class="m"><span class="k">Cables</span><span class="v">${c.lines.reduce((a,l)=>a+l.qty,0)}</span></div>`;
+ }
+ function warnHTML(c){
+  return c.overSpace?`<div class="rk-warn">⚠ ${c.wantNodes} ${c.s.unit}s won't fit — capped at ${c.nodes}${c.s.maxNodes!=null&&c.wantNodes>c.s.maxNodes?` (chassis holds ${c.s.maxNodes} max)`:` ((${c.usableU}−${c.fixedU})U ÷ ${c.s.nodeU}U each)`}. ${c.s.maxNodes!=null&&c.wantNodes>c.s.maxNodes?"":"Raise Rack U or lower Reserve."}</div>`:"";
+ }
+ // repaint derived output only — leaves every input element (and its focus) untouched
+ function paint(){
+  const cards=document.querySelectorAll("#rkRacks .rk-rack");
   const totals=state.racks.map(calc);
+  totals.forEach((c,i)=>{const card=cards[i];if(!card)return;
+   const o=card.querySelector(".rk-out"),w=card.querySelector(".rk-warnwrap");
+   if(o)o.innerHTML=outHTML(c); if(w)w.innerHTML=warnHTML(c);
+   const nf=card.querySelector('input[data-k="nodes"]'); if(nf)nf.max=c.maxSpace;});
   const sum=(f)=>totals.reduce((a,c)=>a+f(c),0);
   $id("rkAgg").innerHTML=`<div class="rk-out" style="grid-template-columns:repeat(4,1fr);border:0;padding:0">
     <div class="m"><span class="k">Racks</span><span class="v">${state.racks.length}</span></div>
@@ -566,7 +910,7 @@ sync();
     <div class="m"><span class="k">Total cables</span><span class="v">${NUM(sum(c=>c.lines.reduce((a,l)=>a+l.qty,0)))}</span></div>
    </div>`;
 
-  // merged BOM across racks (key: speed|media|len|desc)
+  // by-function detail across racks (key: speed|media|conn|len|desc)
   const bom={};
   totals.forEach(c=>c.lines.forEach(l=>{const k=[l.speed,l.media,l.conn,l.len,l.desc].join("|");
    (bom[k]=bom[k]||{...l,qty:0}).qty+=l.qty;}));
@@ -575,29 +919,48 @@ sync();
     <td class="qty">${l.qty}</td><td>${l.cls}</td><td>${l.speed}</td>
     <td>${l.media} <span style="color:var(--faint)">(${l.conn})</span></td><td>${l.len} m</td><td class="desc">${l.desc}</td></tr>`).join("")
    :`<tr><td colspan="6" class="desc">No cables — add a rack with nodes.</td></tr>`;
+
+  // rationalized SKU roll-up — what you actually put on a PO
+  const allLines=totals.flatMap(c=>c.lines);
+  const sk=skus(allLines,state.spares);
+  $id("rkSku").innerHTML=sk.length?sk.map(s=>`<tr>
+    <td class="qty">${NUM(s.qty)}</td><td class="sp">${s.spares?"+"+s.spares:"—"}</td><td class="tot">${NUM(s.total)}</td>
+    <td>${s.speed}</td><td>${s.part}</td><td>${s.conn}</td><td>${s.len==null?"—":s.len+" m"}</td>
+    <td class="uses">${s.uses.join(", ")}</td></tr>`).join("")
+   :`<tr><td colspan="8" class="desc">No cables — add a rack with nodes.</td></tr>`;
+  const distinct=sk.length, raw=rows.length;
+  $id("rkSkuNote").innerHTML=sk.length
+   ?`<b>${NUM(sk.reduce((a,s)=>a+s.total,0))}</b> parts across <b>${distinct}</b> distinct SKUs (from ${raw} functional line${raw===1?"":"s"}) · spares at <b>${state.spares}%</b> · reaches rounded up to stock lengths.`
+   :"";
  }
  // ---- events: live recalc on ANY change ------------------------------------------
  function onField(e){const t=e.target,k=t.dataset&&t.dataset.k;if(k==null)return;const i=+t.dataset.i;const r=state.racks[i];if(!r)return;
   let v=t.value;
-  if(["reserveU","nodes","dTair","dTwater","uplinks","rackU","voltage"].includes(k))v=v===""?(k==="nodes"?null:0):parseInt(v,10);
+  if(["reserveU","nodes","dTair","dTwater","uplinks","rackU","voltage","rails"].includes(k))v=v===""?(k==="nodes"?null:0):parseInt(v,10);
   else if(["pf","liquidFrac","intraLen","uplinkLen","slack"].includes(k))v=parseFloat(v);
   else if(k==="smc")v=(v==="true");
-  r[k]=v; setDirty(true); persist(); render();
+  r[k]=v; setDirty(true); persist();
+  // arch swaps the whole control set; everything else only moves the numbers
+  if(k==="arch"){if(r.nodes!=null)r.nodes=null;render();}else paint();
  }
  $id("rkRacks").addEventListener("change",onField);
  $id("rkRacks").addEventListener("input",e=>{if(e.target.type==="number")onField(e);});
  $id("rkRacks").addEventListener("click",e=>{const d=e.target.dataset&&e.target.dataset.del;if(d!=null){state.racks.splice(+d,1);setDirty(true);persist();render();}});
  $id("rkProject").value=state.project||"";
  $id("rkProject").addEventListener("input",e=>{state.project=e.target.value;setDirty(true);persist();});
+ $id("rkSpares").value=state.spares;
+ $id("rkSpares").addEventListener("input",e=>{const v=parseInt(e.target.value,10);state.spares=isNaN(v)?0:Math.max(0,Math.min(50,v));setDirty(true);persist();paint();});
  $id("rkAdd").onclick=()=>{if(state.racks.length>=MAX_RACKS){alert("Max "+MAX_RACKS+" racks.");return;}state.racks.push(defRack());setDirty(true);persist();render();};
  // ---- save / load JSON -----------------------------------------------------------
  $id("rkSave").onclick=()=>{
   const totals=state.racks.map(calc);
   const bom={};totals.forEach(c=>c.lines.forEach(l=>{const k=[l.speed,l.media,l.conn,l.len,l.desc].join("|");(bom[k]=bom[k]||{qty:0,speed:l.speed,media:l.media,connector:l.conn,length_m:l.len,description:l.desc}).qty+=l.qty;}));
-  const doc={tool:"penguin-rack-planner-v1",project:state.project||"untitled",generated:new Date().toISOString(),
+  const sk=skus(totals.flatMap(c=>c.lines),state.spares);
+  const doc={tool:"penguin-rack-planner-v2",project:state.project||"untitled",generated:new Date().toISOString(),spares_pct:state.spares,
    racks:state.racks.map((r,i)=>{const c=calc(r);return{rack:i+1,config:r,derived:{gpus:c.gpus,nodes:c.nodes,u_used:c.uUsed,load_kw:c.loadKW,amps_per_phase:+c.amps.toFixed(1),breaker_a:c.breaker,connector:c.connector,feeds:c.feeds,total_btu_h:Math.round(c.totalBTU),liquid_kw:c.liquidKW,liquid_lpm:Math.round(c.lpm),air_btu_h:Math.round(c.airBTU),cfm:Math.round(c.cfm),weight_kg:c.weightKG}};}),
    totals:{racks:state.racks.length,gpus:totals.reduce((a,c)=>a+c.gpus,0),nodes:totals.reduce((a,c)=>a+c.nodes,0),load_kw:+totals.reduce((a,c)=>a+c.loadKW,0).toFixed(1)},
-   cabling_bom:Object.values(bom).sort((a,b)=>b.qty-a.qty)};
+   cabling_bom_by_function:Object.values(bom).sort((a,b)=>b.qty-a.qty),
+   sku_rollup:sk.map(s=>({part:s.part,speed:s.speed,connector:s.conn,length_m:s.len,qty:s.qty,spares:s.spares,order_qty:s.total,used_by:s.uses}))};
   const blob=new Blob([JSON.stringify(doc,null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);
   a.download=(state.project||"rack-plan").replace(/[^a-z0-9_-]+/gi,"-").toLowerCase()+"-bom.json";
@@ -607,14 +970,478 @@ sync();
  $id("rkFile").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
   rd.onload=()=>{try{const j=JSON.parse(rd.result);const racks=(j.racks||[]).map(x=>({...defRack(),...(x.config||x)}));
    if(!racks.length)throw 0;state.racks=racks.slice(0,MAX_RACKS);state.project=j.project||"";
-   $id("rkProject").value=state.project;setDirty(false);persist();render();}catch(err){alert("Not a valid rack-planner JSON.");}
+   state.spares=j.spares_pct!=null?j.spares_pct:5;
+   $id("rkProject").value=state.project;$id("rkSpares").value=state.spares;setDirty(false);persist();render();}catch(err){alert("Not a valid rack-planner JSON.");}
    $id("rkFile").value="";};rd.readAsText(f);});
  // ---- unsaved-changes guard ------------------------------------------------------
  window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
  // ---- tab layout: rack planner runs full-width (hide the sizing rail) -------------
  const grid=document.querySelector(".grid");
- document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{grid.classList.toggle("full",b.dataset.v==="rack");}));
+ document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{grid.classList.toggle("full",["rack","mem","dcgm"].includes(b.dataset.v));}));
  render();
+})();
+</script>
+
+<script>
+/* ===== MEMORY AI — KV-cache pressure, DCGM-grounded, and the buy decision ==========
+ * Self-contained. Answers: (1) does the KV working set fit in HBM, (2) what is idle
+ * GPU capital costing per hour, (3) is CXL cheaper than buying the GPUs it frees.
+ * Every efficiency multiplier is an EDITABLE input, because they are vendor-reported
+ * figures rather than our measurements. Report export is 100% client-side.
+ * ---------------------------------------------------------------------------------*/
+(function(){
+ const $m=id=>document.getElementById(id);
+ const LS="penguin-memoryai-v1";
+ const F=[
+  {k:"gpus",     l:"GPUs in fleet",      v:72,     step:1,   hint:"serving fleet"},
+  {k:"capex",    l:"$ / GPU",            v:45000,  step:1000,hint:"B300 capex"},
+  {k:"hbm",      l:"HBM / GPU (GB)",     v:288,    step:8,   hint:"B300 = 288"},
+  {k:"years",    l:"Amortize (yrs)",     v:4,      step:1,   hint:"for $/hr"},
+  {k:"tensorNow",l:"Tensor-active now %",v:22,     step:1,   hint:"DCGM 1004"},
+  {k:"dramNow",  l:"DRAM-active now %",  v:28,     step:1,   hint:"DCGM 1005"},
+  {k:"tensorCap",l:"Achievable tensor %",v:60,     step:1,   hint:"healthy ceiling"},
+  {k:"tensorAft",l:"Tensor % after CXL", v:50,     step:1,   hint:"vendor-derived"},
+  {k:"params",   l:"Model params (B)",   v:70,     step:1,   hint:"weights"},
+  {k:"wbits",    l:"Weight precision",   v:1,      step:0.5, hint:"bytes/param",sel:[["2","fp16 (2B)"],["1","fp8 (1B)"],["0.5","fp4 (0.5B)"]]},
+  {k:"layers",   l:"Layers",             v:80,     step:1,   hint:"transformer"},
+  {k:"kvheads",  l:"KV heads",           v:8,      step:1,   hint:"GQA groups"},
+  {k:"headdim",  l:"Head dim",           v:128,    step:8,   hint:"per head"},
+  {k:"kvbits",   l:"KV precision",       v:2,      step:0.5, hint:"bytes/elem",sel:[["2","fp16 (2B)"],["1","fp8 (1B)"],["0.5","fp4 (0.5B)"]]},
+  {k:"ctx",      l:"Avg context (tokens)",v:32768, step:1024,hint:"per sequence"},
+  {k:"conc",     l:"Concurrent / replica",v:256,   step:8,   hint:"in-flight seqs"},
+  {k:"tp",       l:"GPUs per replica",   v:8,      step:1,   hint:"TP × PP shard"},
+  {k:"memTB",    l:"MemoryAI TB / srv",  v:11,     step:1,   hint:"3 DDR5 + 8×1TB CXL"},
+  {k:"memCost",  l:"$ / MemoryAI srv",   v:250000, step:5000,hint:"PLACEHOLDER — quote it"},
+  {k:"nvmeGB",   l:"$ / GB NVMe",        v:0.12,   step:0.01,hint:"NAND tier"}
+ ];
+ const PRESETS=[
+  {n:"Llama 3.1 70B",   params:70, layers:80, kvheads:8,  headdim:128},
+  {n:"Llama 3.1 405B",  params:405,layers:126,kvheads:8,  headdim:128},
+  {n:"Mistral Large 2", params:123,layers:88, kvheads:8,  headdim:128},
+  {n:"Qwen-class 32B",  params:32, layers:64, kvheads:8,  headdim:128},
+  {n:"Dense 7B",        params:7,  layers:32, kvheads:8,  headdim:128}
+ ];
+ let S=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==="object")return j;}catch(e){}return null;})()
+   ||F.reduce((a,f)=>(a[f.k]=f.v,a),{});
+ F.forEach(f=>{if(S[f.k]==null)S[f.k]=f.v;});
+ const g=k=>{const n=parseFloat(S[k]);return isNaN(n)?0:n;};
+ const usd2=n=>n>=1e9?"$"+(n/1e9).toFixed(2)+"B":n>=1e6?"$"+(n/1e6).toFixed(2)+"M":n>=1e3?"$"+(n/1e3).toFixed(0)+"K":"$"+n.toFixed(0);
+ const num=n=>Math.round(n).toLocaleString();
+
+ function compute(){
+  const gpus=g("gpus"),capex=g("capex"),hbm=g("hbm"),yrs=Math.max(1,g("years"));
+  // --- KV arithmetic -------------------------------------------------------------
+  // KV cache lives inside the serving REPLICA that owns the request, not in a fleet-wide
+  // pool — so headroom is per-replica (tp GPUs' HBM minus one sharded copy of the weights),
+  // and fleet totals are that scaled by replica count. Pooling all fleet HBM would
+  // massively overstate headroom and hide every real memory wall.
+  const kvPerTok=2*g("layers")*g("kvheads")*g("headdim")*g("kvbits");   // bytes/token
+  const perSeqGB=kvPerTok*g("ctx")/1e9;
+  const tp=Math.max(1,g("tp")), replicas=Math.max(1,Math.floor(gpus/tp));
+  const hbmPerRep=tp*hbm, weightsGB=g("params")*g("wbits"), reserveRep=hbmPerRep*0.10;
+  const headroomRep=Math.max(0,hbmPerRep-weightsGB-reserveRep);
+  const workingRep=perSeqGB*g("conc");
+  const spillRep=Math.max(0,workingRep-headroomRep);
+  // fleet-level rollups
+  const hbmTotal=gpus*hbm, headroomGB=headroomRep*replicas, workingGB=workingRep*replicas;
+  const spillGB=spillRep*replicas, reserveGB=reserveRep*replicas;
+  const spillPct=workingGB>0?spillGB/workingGB*100:0;
+  const fitsSeqs=perSeqGB>0?Math.floor(headroomRep/perSeqGB):0;   // per replica
+  // --- idle capital --------------------------------------------------------------
+  const cap=Math.max(1,g("tensorCap"));
+  const idleFrac=Math.max(0,Math.min(1,1-g("tensorNow")/cap));
+  const gpuCapital=gpus*capex, stranded=gpuCapital*idleFrac;
+  const burnHr=stranded/(yrs*8760), burnYr=burnHr*8760;
+  // --- recovery & the three options ----------------------------------------------
+  const recFrac=Math.max(0,Math.min(1,(g("tensorAft")-g("tensorNow"))/cap));
+  const gpuEquiv=gpus*recFrac, valueRec=gpuEquiv*capex;
+  const servers=spillGB>0?Math.ceil(spillGB/(g("memTB")*1000)):0;
+  const cxlCost=servers*g("memCost");
+  const gpusToBuy=Math.ceil(gpuEquiv), gpuAltCost=gpusToBuy*capex;
+  const nvmeCost=spillGB*g("nvmeGB")*1000;   // spillGB is GB; $/GB
+  const roi=cxlCost>0?valueRec/cxlCost:0;
+  const net=valueRec-cxlCost;
+  // --- verdict -------------------------------------------------------------------
+  let verdict,vclass,why;
+  if(g("tensorNow")>=60){verdict="COMPUTE-BOUND — buy GPUs";vclass="hot";
+   why="Tensor-active (DCGM 1004) is already at "+g("tensorNow")+"%. The silicon is working. Memory buys you nothing here — put the money on GPUs.";}
+  else if(g("dramNow")>=70&&g("tensorNow")<40){verdict="BANDWIDTH-BOUND — wrong wall";vclass="hot";
+   why="DRAM-active (1005) at "+g("dramNow")+"% with tensor at "+g("tensorNow")+"% means HBM bandwidth is the limit, not capacity. CXL adds capacity, not HBM bandwidth. It will not fix this.";}
+  else if(spillGB<=0){verdict="KV FITS — no wall today";vclass="warn";
+   why="Each replica's "+num(workingRep)+" GB working set fits inside "+num(headroomRep)+" GB of KV headroom on "+tp+" GPUs. There is no capacity problem to buy your way out of. Revisit when context or concurrency grows — you have room for "+num(fitsSeqs)+" concurrent sequences per replica at this context.";}
+  else if(roi>=2){verdict="GO — MemoryAI clears the bar";vclass="ok";
+   why="KV spills "+spillGB.toFixed(0)+" GB past HBM and tensor-active sits at "+g("tensorNow")+"%. "+servers+" MemoryAI server"+(servers===1?"":"s")+" at "+usd2(cxlCost)+" recovers roughly "+gpuEquiv.toFixed(1)+" GPUs of effective capacity ("+usd2(valueRec)+") — a "+roi.toFixed(1)+"× return, and "+usd2(gpuAltCost-cxlCost)+" cheaper than buying the "+gpusToBuy+" GPUs it would take to get there.";}
+  else if(roi>=1){verdict="MARGINAL — negotiate hard";vclass="warn";
+   why="Return is "+roi.toFixed(2)+"×. Real but thin. It turns on the server price ("+usd2(g("memCost"))+" is a placeholder — get a quote) and on whether tensor-active really recovers to "+g("tensorAft")+"%. Pilot before you commit to supply.";}
+  else{verdict="NO — GPUs are the better dollar";vclass="hot";
+   why="Recovered capacity is worth "+usd2(valueRec)+" against "+usd2(cxlCost)+" of CXL — a "+roi.toFixed(2)+"× return. Under a DRAM shortage that is not a trade worth the allocation risk.";}
+  return{gpus,capex,hbm,yrs,kvPerTok,perSeqGB,workingGB,hbmTotal,weightsGB,reserveGB,headroomGB,
+   tp,replicas,hbmPerRep,headroomRep,workingRep,spillRep,
+   spillGB,spillPct,fitsSeqs,idleFrac,gpuCapital,stranded,burnHr,burnYr,recFrac,gpuEquiv,valueRec,
+   servers,cxlCost,gpusToBuy,gpuAltCost,nvmeCost,roi,net,verdict,vclass,why};
+ }
+
+ function renderCtl(){
+  $m("memCtl").innerHTML=
+   `<div class="mem-f" style="grid-column:1/-1"><label>Model preset</label><div class="presets" id="memPre">${
+     PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join("")}</div></div>`+
+   F.map(f=>`<div class="mem-f"><label>${f.l}</label>${
+    f.sel?`<select data-mk="${f.k}">${f.sel.map(o=>`<option value="${o[0]}"${String(S[f.k])===o[0]?" selected":""}>${o[1]}</option>`).join("")}</select>`
+        :`<input type="number" data-mk="${f.k}" value="${S[f.k]}" step="${f.step}"/>`
+   }<div class="hint">${f.hint}</div></div>`).join("");
+  $m("memCtl").querySelectorAll("[data-mk]").forEach(el=>el.addEventListener("input",e=>{
+   S[e.target.dataset.mk]=e.target.value;save();paint();}));
+  $m("memPre").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+   const p=PRESETS[b.dataset.p];Object.assign(S,{params:p.params,layers:p.layers,kvheads:p.kvheads,headdim:p.headdim});
+   save();renderCtl();paint();});
+ }
+ const save=()=>{try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}};
+
+ function paint(){
+  const c=compute();
+  $m("memHero").innerHTML=`
+   <div class="mem-k" style="--e:var(--hot)"><div class="n" style="color:var(--hot)">${usd2(c.burnHr)}<span style="font-size:12px;color:var(--faint)">/hr</span></div>
+     <div class="l">idle GPU capital burning while the fleet waits on memory</div><div class="s">${(c.idleFrac*100).toFixed(0)}% of ${usd2(c.gpuCapital)} stranded</div></div>
+   <div class="mem-k" style="--e:${c.spillGB>0?"var(--warn)":"var(--ok)"}"><div class="n" style="color:${c.spillGB>0?"var(--warn)":"var(--ok)"}">${c.spillGB>0?num(c.spillGB)+" GB":"fits"}</div>
+     <div class="l">KV cache spilling past HBM headroom (fleet)</div><div class="s">${num(c.workingRep)} GB working set vs ${num(c.headroomRep)} GB headroom · per replica</div></div>
+   <div class="mem-k" style="--e:var(--cool)"><div class="n" style="color:var(--cool)">${(c.kvPerTok/1024).toFixed(0)} KB<span style="font-size:12px;color:var(--faint)">/tok</span></div>
+     <div class="l">KV cache per token at this architecture</div><div class="s">${c.perSeqGB.toFixed(1)} GB per full-context sequence</div></div>
+   <div class="mem-k" style="--e:var(--${c.vclass})"><div class="n" style="font-size:15px;color:var(--${c.vclass})">${c.verdict}</div>
+     <div class="l">verdict at these inputs</div><div class="s">${c.roi>0?c.roi.toFixed(2)+"× return on CXL spend":"n/a"}</div></div>`;
+
+  $m("memOut").innerHTML=`
+   <div class="mem-panel"><h5>KV cache vs HBM — per serving replica</h5>
+    <div class="mem-m"><span class="k">Topology</span><span class="v">${c.replicas} replica${c.replicas===1?"":"s"} × ${c.tp} GPU</span></div>
+    <div class="mem-m"><span class="k">KV per token</span><span class="v">${num(c.kvPerTok)} B <small style="color:var(--faint)">(${(c.kvPerTok/1024).toFixed(0)} KB)</small></span></div>
+    <div class="mem-m"><span class="k">Per sequence @ ${num(g("ctx"))} tok</span><span class="v">${c.perSeqGB.toFixed(2)} GB</span></div>
+    <div class="mem-m"><span class="k">Working set @ ${g("conc")} in-flight</span><span class="v big">${num(c.workingRep)} GB <small style="color:var(--faint)">/replica</small></span></div>
+    <div class="mem-m"><span class="k">Replica HBM (${c.tp} × ${c.hbm} GB)</span><span class="v">${num(c.hbmPerRep)} GB</span></div>
+    <div class="mem-m"><span class="k">− weights · − 10% reserve</span><span class="v">${num(c.weightsGB)} · ${num(c.hbmPerRep*0.1)} GB</span></div>
+    <div class="mem-m"><span class="k">KV headroom per replica</span><span class="v ok">${num(c.headroomRep)} GB</span></div>
+    <div class="mem-m"><span class="k">Spill past HBM</span><span class="v ${c.spillGB>0?"hot":"ok"}">${c.spillGB>0?num(c.spillRep)+" GB/replica · "+num(c.spillGB)+" GB fleet ("+c.spillPct.toFixed(0)+"%)":"none"}</span></div>
+    <div class="mem-m"><span class="k">Concurrency HBM alone supports</span><span class="v ${c.fitsSeqs<g("conc")?"warn":"ok"}">${num(c.fitsSeqs)} seqs/replica</span></div>
+   </div>
+   <div class="mem-panel"><h5>Idle capital</h5>
+    <div class="mem-m"><span class="k">Tensor-active now (DCGM 1004)</span><span class="v ${g("tensorNow")<35?"hot":"ok"}">${g("tensorNow")}%</span></div>
+    <div class="mem-m"><span class="k">Achievable ceiling</span><span class="v">${g("tensorCap")}%</span></div>
+    <div class="mem-m"><span class="k">Effective idle fraction</span><span class="v hot">${(c.idleFrac*100).toFixed(0)}%</span></div>
+    <div class="mem-m"><span class="k">GPU capital deployed</span><span class="v">${usd2(c.gpuCapital)}</span></div>
+    <div class="mem-m"><span class="k">Capital doing nothing</span><span class="v hot big">${usd2(c.stranded)}</span></div>
+    <div class="mem-m"><span class="k">Burn rate</span><span class="v hot">${usd2(c.burnHr)}/hr · ${usd2(c.burnYr)}/yr</span></div>
+    <div class="mem-m"><span class="k">Capacity CXL would recover</span><span class="v ok">${c.gpuEquiv.toFixed(1)} GPU-equiv · ${usd2(c.valueRec)}</span></div>
+    <div class="mem-m"><span class="k">MemoryAI servers for the spill</span><span class="v">${c.servers} × ${g("memTB")} TB = ${usd2(c.cxlCost)}</span></div>
+   </div>`;
+
+  const opts=[
+   {n:"MemoryAI (CXL tier)",v:c.cxlCost,best:true,note:c.servers+" srv · ~200–500 ns · byte-addressable"},
+   {n:"Buy "+c.gpusToBuy+" more GPUs",v:c.gpuAltCost,note:"same throughput, all-silicon route"},
+   {n:"NVMe tier",v:c.nvmeCost,note:"~100 µs · block I/O · not the hot path"}
+  ];
+  const mx=Math.max(...opts.map(o=>o.v))||1;
+  $m("memBars").innerHTML=`<h3 style="font-size:10.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--cool);margin:0 0 4px">Cost to close the same gap</h3>
+   <div class="hint" style="color:var(--faint);font-size:11.5px;margin-bottom:12px">Shorter is cheaper. NVMe is on the chart for honesty about price — at ~100 µs it does not keep a Blackwell fed, so it is not a like-for-like substitute for the other two.</div>`+
+   opts.map(o=>`<div class="bar ${o.v===Math.min(...opts.filter(x=>x.v>0).map(x=>x.v))&&o.v>0?"best":""}"><span class="name">${o.n}</span>
+     <div class="track"><div class="fill" style="width:${Math.max(2,o.v/mx*100)}%"></div></div><span class="val">${usd2(o.v)}</span></div>
+     <div style="font-size:10.5px;color:var(--faint);font-family:var(--mono);margin:-4px 0 8px 190px">${o.note}</div>`).join("");
+
+  $m("memNarr").innerHTML=`<b style="color:var(--${c.vclass})">${c.verdict}.</b> ${c.why}
+   ${c.spillGB>0&&g("tensorNow")<60?` The honest caveat: this whole calculation assumes the stall is <b>capacity</b>, and DCGM is how you prove that rather than assume it — if field 1005 comes back hot, you have a bandwidth problem wearing a capacity costume, and no amount of CXL fixes it.`:""}`;
+ }
+
+ // ---- local-only report export ----------------------------------------------------
+ function reportHTML(){
+  const c=compute(),d=new Date();
+  const row=(k,v)=>`<tr><td>${k}</td><td class="v">${v}</td></tr>`;
+  return `<!doctype html><meta charset="utf-8"><title>MemoryAI assessment</title>
+<style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:820px;margin:36px auto;padding:0 20px;color:#111;line-height:1.5}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:13px;text-transform:uppercase;letter-spacing:1.2px;color:#0e7490;margin:26px 0 8px;border-bottom:1px solid #ddd;padding-bottom:5px}
+.sub{color:#666;font-size:12px;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}
+td{padding:5px 8px;border-bottom:1px solid #eee}td.v{text-align:right;font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+.verdict{padding:13px 15px;border-radius:8px;font-size:14px;margin:12px 0;border-left:4px solid #0e7490;background:#f4fbfd}
+.verdict b{display:block;font-size:16px;margin-bottom:5px}.note{font-size:11px;color:#666;line-height:1.6;border-top:1px solid #ddd;margin-top:26px;padding-top:12px}
+code{background:#f2f4f6;padding:2px 5px;border-radius:4px;font-size:12px}@media print{body{margin:0}}</style>
+<h1>MemoryAI assessment — is CXL memory the cheapest way to feed these GPUs?</h1>
+<div class="sub">Generated ${d.toLocaleString()} · AI Factory Sizer · DugganUSA LLC · sizing-grade, not a quote</div>
+<div class="verdict"><b>${c.verdict}</b>${c.why}</div>
+<h2>Measure first — DCGM fields to confirm this</h2>
+<p style="font-size:13px">Run <code>dcgmi dmon -e 1001,1002,1004,1005,1009,1010,203,204,250,252,155 -d 1000</code> against a production serving node under real load. Field <b>1004</b> (PIPE_TENSOR_ACTIVE) is the truth; field <b>203</b> (GPU_UTIL) is the number that lies. If <b>1005</b> (DRAM_ACTIVE) comes back above ~70% with 1004 low, the wall is HBM bandwidth, not capacity, and CXL is the wrong purchase.</p>
+<table>${row("Tensor-active now — DCGM 1004",g("tensorNow")+"%")}${row("DRAM-active now — DCGM 1005",g("dramNow")+"%")}${row("Achievable tensor ceiling",g("tensorCap")+"%")}${row("Assumed tensor-active after CXL",g("tensorAft")+"%")}</table>
+<h2>KV cache vs HBM</h2>
+<table>${row("Model",g("params")+"B params · "+g("layers")+" layers · "+g("kvheads")+" KV heads · head dim "+g("headdim"))}
+${row("KV precision",g("kvbits")+" bytes/element")}${row("KV per token",num(c.kvPerTok)+" B ("+(c.kvPerTok/1024).toFixed(0)+" KB)")}
+${row("Serving topology",c.replicas+" replica(s) × "+c.tp+" GPUs")}
+${row("Context × concurrency",num(g("ctx"))+" tokens × "+g("conc")+" in-flight per replica")}
+${row("KV working set",num(c.workingRep)+" GB per replica · "+num(c.workingGB)+" GB fleet")}
+${row("Replica HBM",num(c.hbmPerRep)+" GB ("+c.tp+" × "+c.hbm+" GB)")}${row("KV headroom after weights + reserve",num(c.headroomRep)+" GB per replica")}
+${row("<b>Spill past HBM</b>",c.spillGB>0?"<b>"+num(c.spillRep)+" GB per replica · "+num(c.spillGB)+" GB fleet ("+c.spillPct.toFixed(0)+"%)</b>":"none")}
+${row("Concurrency HBM alone supports",num(c.fitsSeqs)+" sequences per replica")}</table>
+<p style="font-size:12px;color:#666">KV cache is held by the replica serving the request, so headroom is computed per replica — <b>${c.tp} GPUs' HBM minus one sharded copy of the weights</b> — and then scaled by replica count. Pooling all fleet HBM into a single KV budget would overstate headroom by roughly ${c.replicas}× and hide the wall entirely.</p>
+<h2>The money</h2>
+<table>${row("GPU capital deployed",usd2(c.gpuCapital))}${row("Effective idle fraction",(c.idleFrac*100).toFixed(0)+"%")}
+${row("<b>Capital doing nothing</b>","<b>"+usd2(c.stranded)+"</b>")}${row("Burn rate",usd2(c.burnHr)+"/hr · "+usd2(c.burnYr)+"/yr")}
+${row("Capacity CXL would recover",c.gpuEquiv.toFixed(1)+" GPU-equivalent · "+usd2(c.valueRec))}
+${row("MemoryAI — "+c.servers+" server(s) × "+g("memTB")+" TB",usd2(c.cxlCost))}
+${row("Alternative — buy "+c.gpusToBuy+" more GPUs",usd2(c.gpuAltCost))}
+${row("NVMe tier (not a hot-path substitute)",usd2(c.nvmeCost))}
+${row("<b>Return on CXL spend</b>","<b>"+c.roi.toFixed(2)+"× · net "+usd2(c.net)+"</b>")}</table>
+<div class="note"><b>Sourcing &amp; limits.</b> The assumed post-CXL tensor-active figure and the achievable ceiling are <b>editable assumptions seeded from vendor- and industry-reported results — they are not DugganUSA measurements</b> and will not reproduce identically on your models. The MemoryAI server price is a placeholder pending a real quote. CXL ~200–500 ns vs NVMe ~100 µs is an architectural fact; the business multipliers are workload-specific. DCGM field IDs and semantics are NVIDIA's. 2026 DRAM supply is concentrated across three vendors and in shortage — allocation risk is a real term of any CXL commitment. Confirm all capacity, pricing, and supply with Penguin Solutions before raising a purchase order. Certainty capped at 95%.</div>`;
+ }
+ function dl(name,content,type){
+  const b=new Blob([content],{type});const a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+ }
+ const stamp=()=>new Date().toISOString().slice(0,10);
+ $m("memSaveHtml").onclick=()=>dl("memoryai-assessment-"+stamp()+".html",reportHTML(),"text/html");
+ $m("memSaveJson").onclick=()=>{const c=compute();
+  dl("memoryai-assessment-"+stamp()+".json",JSON.stringify({tool:"penguin-memoryai-v1",generated:new Date().toISOString(),
+   inputs:S,derived:{kv_bytes_per_token:c.kvPerTok,working_set_gb:+c.workingGB.toFixed(1),hbm_total_gb:c.hbmTotal,
+    kv_headroom_gb:+c.headroomGB.toFixed(1),spill_gb:+c.spillGB.toFixed(1),spill_pct:+c.spillPct.toFixed(1),
+    concurrency_hbm_supports:c.fitsSeqs,idle_fraction:+c.idleFrac.toFixed(3),stranded_capital_usd:Math.round(c.stranded),
+    burn_per_hour_usd:Math.round(c.burnHr),gpu_equiv_recovered:+c.gpuEquiv.toFixed(2),value_recovered_usd:Math.round(c.valueRec),
+    memoryai_servers:c.servers,cxl_cost_usd:Math.round(c.cxlCost),gpu_alt_cost_usd:Math.round(c.gpuAltCost),
+    nvme_cost_usd:Math.round(c.nvmeCost),roi_multiple:+c.roi.toFixed(3),verdict:c.verdict},
+   dcgm_fields:{1004:"PIPE_TENSOR_ACTIVE — the truth",1005:"DRAM_ACTIVE — bandwidth vs capacity",203:"GPU_UTIL — the number that lies",252:"FB_USED",250:"FB_TOTAL",1010:"PCIE_RX_BYTES",155:"POWER_USAGE",1003:"SM_OCCUPANCY"},
+   disclaimer:"Efficiency multipliers are vendor/industry-reported assumptions, not DugganUSA measurements. Server price is a placeholder. Sizing-grade, not a quote. Certainty capped at 95%."},null,2),"application/json");};
+ $m("memReset").onclick=()=>{S=F.reduce((a,f)=>(a[f.k]=f.v,a),{});save();renderCtl();paint();};
+ // consumed by the DCGM Upload tab so measured telemetry can drive this model directly
+ window.__memAI={apply(p){Object.assign(S,p);save();renderCtl();paint();},read:()=>({...S}),verdict:()=>compute()};
+ renderCtl();paint();
+})();
+</script>
+
+<script>
+/* ===== DCGM UPLOAD — parse the user's own telemetry, entirely in-browser ===========
+ * Accepts: Prometheus exposition (dcgm-exporter), Prometheus query_range JSON,
+ * `dcgmi dmon` fixed-width text, and generic CSV. NOTHING is transmitted — there is
+ * no fetch/XHR anywhere in this module by design. Feeds window.__memAI.
+ * ---------------------------------------------------------------------------------*/
+(function(){
+ const $d=id=>document.getElementById(id);
+ // field → {aliases (long + dmon short), unit}. ratio = 0..1, pct = 0..100.
+ const FIELDS={
+  tensor:{id:1004,name:"PIPE_TENSOR_ACTIVE",alias:["DCGM_FI_PROF_PIPE_TENSOR_ACTIVE","TENSO"],unit:"ratio",req:true},
+  dram:  {id:1005,name:"DRAM_ACTIVE",       alias:["DCGM_FI_PROF_DRAM_ACTIVE","DRAMA"],      unit:"ratio",req:true},
+  gract: {id:1001,name:"GR_ENGINE_ACTIVE",  alias:["DCGM_FI_PROF_GR_ENGINE_ACTIVE","GRACT"], unit:"ratio"},
+  smact: {id:1002,name:"SM_ACTIVE",         alias:["DCGM_FI_PROF_SM_ACTIVE","SMACT"],        unit:"ratio"},
+  smocc: {id:1003,name:"SM_OCCUPANCY",      alias:["DCGM_FI_PROF_SM_OCCUPANCY","SMOCC"],     unit:"ratio"},
+  util:  {id:203, name:"GPU_UTIL",          alias:["DCGM_FI_DEV_GPU_UTIL","GPUTL"],          unit:"pct"},
+  fbtot: {id:250, name:"FB_TOTAL",          alias:["DCGM_FI_DEV_FB_TOTAL","FBTTL"],          unit:"mib"},
+  fbused:{id:252, name:"FB_USED",           alias:["DCGM_FI_DEV_FB_USED","FBUSD"],           unit:"mib"},
+  pcirx: {id:1010,name:"PCIE_RX_BYTES",     alias:["DCGM_FI_PROF_PCIE_RX_BYTES","PCIRX"],    unit:"bps"},
+  power: {id:155, name:"POWER_USAGE",       alias:["DCGM_FI_DEV_POWER_USAGE","POWER"],       unit:"w"}
+ };
+ const KEYS=Object.keys(FIELDS);
+ // longest alias first so DCGM_FI_PROF_PIPE_TENSOR_ACTIVE wins over a bare TENSO substring
+ const byAlias=(s)=>{const u=s.toUpperCase();
+  let best=null,bl=0;
+  for(const k of KEYS)for(const a of FIELDS[k].alias){if(u.indexOf(a)>-1&&a.length>bl){best=k;bl=a.length;}}
+  return best;};
+ const push=(acc,k,gpu,v)=>{if(!isFinite(v))return;(acc[k]=acc[k]||{}) ;(acc[k][gpu]=acc[k][gpu]||[]).push(v);};
+
+ // ---- parsers ---------------------------------------------------------------------
+ function parsePrometheusText(txt){
+  const acc={},re=/^([A-Za-z_:][A-Za-z0-9_:]*)(\{[^}]*\})?\s+([-+0-9.eENaN]+)\s*(\d+)?$/;
+  let n=0;
+  for(const line of txt.split(/\r?\n/)){
+   if(!line||line[0]==="#")continue;
+   const m=line.match(re); if(!m)continue;
+   const k=byAlias(m[1]); if(!k)continue;
+   let gpu="0"; const lbl=m[2]||"";
+   const gm=lbl.match(/(?:^|,|\{)\s*(?:gpu|GPU|device|minor_number)="([^"]*)"/); if(gm)gpu=gm[1];
+   const um=lbl.match(/UUID="([^"]*)"/); if(um)gpu=um[1];
+   const hm=lbl.match(/Hostname="([^"]*)"/); if(hm)gpu=hm[1]+"/"+gpu;
+   const v=parseFloat(m[3]); push(acc,k,gpu,v); n++;
+  }
+  return n?{acc,fmt:"Prometheus exposition (dcgm-exporter)",samples:n}:null;
+ }
+ function parsePromJSON(txt){
+  let j; try{j=JSON.parse(txt);}catch(e){return null;}
+  const res=j&&j.data&&Array.isArray(j.data.result)?j.data.result:null;
+  if(!res)return null;
+  const acc={};let n=0,tmin=Infinity,tmax=-Infinity;
+  for(const s of res){
+   const nm=(s.metric&&(s.metric.__name__||""))||"";
+   const k=byAlias(nm); if(!k)continue;
+   let gpu=(s.metric&&(s.metric.gpu||s.metric.device||s.metric.UUID))||"0";
+   if(s.metric&&s.metric.Hostname)gpu=s.metric.Hostname+"/"+gpu;
+   const pts=s.values||(s.value?[s.value]:[]);
+   for(const p of pts){const t=+p[0],v=parseFloat(p[1]);
+    if(isFinite(t)){tmin=Math.min(tmin,t);tmax=Math.max(tmax,t);}
+    push(acc,k,gpu,v);n++;}
+  }
+  if(!n)return null;
+  const win=isFinite(tmin)&&isFinite(tmax)&&tmax>tmin?fmtDur((tmax-tmin)*1000):null;
+  return{acc,fmt:"Prometheus query_range JSON",samples:n,window:win};
+ }
+ function parseDmon(txt){
+  const lines=txt.split(/\r?\n/);
+  let cols=null,off=0;
+  for(const line of lines){
+   if(!/^#/.test(line))continue;
+   const parts=line.replace(/^#/,"").trim().split(/\s+/);
+   const mapped=parts.map(byAlias);
+   if(mapped.filter(Boolean).length>=2){cols=parts;break;}
+  }
+  if(!cols)return null;
+  // header begins with an entity column ("Entity"/"ID"); data rows start "GPU <n>"
+  const map=cols.map(byAlias);
+  const acc={};let n=0;
+  for(const line of lines){
+   if(!line||/^#/.test(line))continue;
+   const t=line.trim(); if(!/^GPU\s+\d+/i.test(t))continue;
+   const p=t.split(/\s+/);                       // ["GPU","0",v,v,...]
+   const gpu=p[1], vals=p.slice(2);
+   // align: header's first token is the entity label, so values map from map[1..] or map[0..]
+   const start=map[0]===null?1:0;
+   for(let i=0;i<vals.length;i++){
+    const k=map[i+start]; if(!k)continue;
+    const v=parseFloat(vals[i]); if(!isFinite(v))continue;
+    push(acc,k,gpu,v);n++;
+   }
+  }
+  return n?{acc,fmt:"dcgmi dmon output",samples:n}:null;
+ }
+ function parseCSV(txt){
+  const lines=txt.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return null;
+  const split=l=>l.split(",").map(s=>s.trim().replace(/^"|"$/g,""));
+  const hdr=split(lines[0]),map=hdr.map(byAlias);
+  if(map.filter(Boolean).length<1)return null;
+  let gi=hdr.findIndex(h=>/^(gpu|device|uuid|entity|instance|hostname)$/i.test(h));
+  const acc={};let n=0;
+  for(let r=1;r<lines.length;r++){
+   const p=split(lines[r]); const gpu=gi>=0?(p[gi]||"0"):"0";
+   for(let i=0;i<p.length;i++){const k=map[i];if(!k)continue;
+    const v=parseFloat(p[i]);if(!isFinite(v))continue;push(acc,k,gpu,v);n++;}
+  }
+  return n?{acc,fmt:"CSV",samples:n}:null;
+ }
+ function fmtDur(ms){const h=ms/3.6e6;
+  return h>=48?(h/24).toFixed(1)+" days":h>=1?h.toFixed(1)+" hours":(ms/6e4).toFixed(0)+" min";}
+
+ // ---- stats -----------------------------------------------------------------------
+ const pct=(arr,p)=>{if(!arr.length)return 0;const s=[...arr].sort((a,b)=>a-b);
+  const i=Math.min(s.length-1,Math.max(0,Math.round((p/100)*(s.length-1))));return s[i];};
+ const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+ function summarize(acc){
+  const out={},gpus=new Set();
+  for(const k of KEYS){
+   const per=acc[k]; if(!per)continue;
+   const all=[];for(const gpu in per){gpus.add(gpu);all.push(...per[gpu]);}
+   if(!all.length)continue;
+   const f=FIELDS[k],scale=f.unit==="ratio"?100:1;
+   out[k]={mean:mean(all)*scale,p50:pct(all,50)*scale,p95:pct(all,95)*scale,max:Math.max(...all)*scale,
+    n:all.length,unit:f.unit,perGpu:Object.fromEntries(Object.entries(per).map(([g,v])=>[g,mean(v)*scale]))};
+  }
+  return{stats:out,gpus:[...gpus]};
+ }
+
+ // ---- render ----------------------------------------------------------------------
+ let LAST=null;
+ function show(html){$d("dcgmRes").innerHTML=html;}
+ function fail(msg,detail){show(`<div class="mem-panel dcgm-bad"><h5 style="color:var(--hot)">Could not read that file</h5>
+   <p style="font-size:12.5px;color:var(--dim);margin:0 0 8px;line-height:1.55">${msg}</p>
+   ${detail?`<p style="font-size:11.5px;color:var(--faint);font-family:var(--mono);margin:0">${detail}</p>`:""}
+   <p style="font-size:11.5px;color:var(--faint);margin:9px 0 0;line-height:1.55">The two fields that must be present are <b style="color:var(--dim)">DCGM_FI_PROF_PIPE_TENSOR_ACTIVE</b> (1004) and <b style="color:var(--dim)">DCGM_FI_PROF_DRAM_ACTIVE</b> (1005), or their dmon short names TENSO and DRAMA. If you exported from dcgm-exporter and they're absent, the profiling collectors are commented out of its counters config — see method 1 above.</p></div>`);}
+
+ function fmtV(k,s){
+  const u=FIELDS[k].unit;
+  if(u==="ratio"||u==="pct")return s.toFixed(1)+"%";
+  if(u==="mib")return (s/1024).toFixed(1)+" GB";
+  if(u==="w")return Math.round(s)+" W";
+  if(u==="bps")return (s/1e9).toFixed(2)+" GB/s";
+  return s.toFixed(2);
+ }
+ function render(p){
+  const {stats,gpus}=summarize(p.acc);
+  LAST={p,stats,gpus};
+  const have=k=>stats[k]!=null;
+  if(!have("tensor")||!have("dram")){
+   const found=KEYS.filter(have).map(k=>FIELDS[k].name).join(", ")||"none";
+   return fail(`Parsed as <b style="color:var(--dim)">${p.fmt}</b> (${p.samples.toLocaleString()} values, ${gpus.length} GPU${gpus.length===1?"":"s"}) — but the required fields are missing.`,`found: ${found}`);
+  }
+  const t=stats.tensor,dr=stats.dram;
+  const rows=KEYS.filter(have).map(k=>{const s=stats[k];
+   return `<tr><td><b>${FIELDS[k].name}</b></td><td>${FIELDS[k].id}</td><td>${fmtV(k,s.mean)}</td><td>${fmtV(k,s.p50)}</td><td>${fmtV(k,s.p95)}</td><td>${fmtV(k,s.max)}</td><td style="color:var(--faint)">${s.n.toLocaleString()}</td></tr>`;}).join("");
+  // FB occupancy + the util-vs-tensor gap are the two headline reads
+  const occ=have("fbtot")&&have("fbused")&&stats.fbtot.mean>0?stats.fbused.p95/stats.fbtot.mean*100:null;
+  const gap=have("util")?stats.util.mean-t.mean:null;
+  const hbmGB=have("fbtot")?stats.fbtot.mean/1024:null;
+  let read,rc;
+  if(t.mean>=60){read="Compute-bound — the silicon is working. Buy GPUs, not memory.";rc="hot";}
+  else if(dr.mean>=70&&t.mean<40){read="HBM bandwidth-bound. This is a different wall — CXL adds capacity, not bandwidth. MemoryAI is the wrong purchase for this fleet.";rc="hot";}
+  else if(t.mean<35&&dr.mean<30){read="Memory-capacity bound. Neither the tensor pipes nor HBM bandwidth are saturated — the GPUs are waiting on something off-chip. This is the regime MemoryAI exists for.";rc="ok";}
+  else{read="Mixed signal. Tensor-active is low but not damningly so, and bandwidth isn't pinned. Capture a longer window under peak load before committing capital.";rc="warn";}
+  show(`
+   <div class="mem-panel dcgm-ok" style="margin-bottom:14px">
+    <h5>Parsed — ${p.fmt}</h5>
+    <div class="mem-m"><span class="k">Values read</span><span class="v">${p.samples.toLocaleString()} across ${gpus.length} GPU${gpus.length===1?"":"s"}${p.window?" · "+p.window:""}</span></div>
+    <div class="mem-m"><span class="k">Tensor-active (1004)</span><span class="v ${t.mean<35?"hot":"ok"} big">${t.mean.toFixed(1)}% <small style="color:var(--faint)">mean · p95 ${t.p95.toFixed(1)}%</small></span></div>
+    <div class="mem-m"><span class="k">DRAM-active (1005)</span><span class="v ${dr.mean>=70?"hot":""}">${dr.mean.toFixed(1)}% <small style="color:var(--faint)">mean · p95 ${dr.p95.toFixed(1)}%</small></span></div>
+    ${gap!=null?`<div class="mem-m"><span class="k">GPU_UTIL minus tensor-active</span><span class="v ${gap>50?"hot":gap>25?"warn":""}">${gap>0?"+":""}${gap.toFixed(1)} pts <small style="color:var(--faint)">${gap>50?"busy but not working":"consistent"}</small></span></div>`:""}
+    ${occ!=null?`<div class="mem-m"><span class="k">Framebuffer occupancy (p95)</span><span class="v ${occ>95?"hot":occ>85?"warn":"ok"}">${occ.toFixed(1)}%</span></div>`:""}
+    ${hbmGB?`<div class="mem-m"><span class="k">HBM per GPU (detected)</span><span class="v">${hbmGB.toFixed(0)} GB</span></div>`:""}
+    <div class="mem-m"><span class="k">Read</span><span class="v ${rc}" style="max-width:62%;white-space:normal;text-align:right;font-family:var(--sans)">${read}</span></div>
+    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+      <button class="rk-btn primary" id="dcgmApply">→ Apply to MemoryAI &amp; open it</button>
+      <button class="rk-btn" id="dcgmSave">⬇ Save parsed summary (JSON)</button>
+      <span class="mem-local">🔒 parsed locally · never uploaded</span>
+    </div>
+   </div>
+   <div class="mem-tbl-wrap" style="margin-bottom:14px"><table class="mem-tbl">
+    <thead><tr><th>Field</th><th>ID</th><th>Mean</th><th>p50</th><th>p95</th><th>Max</th><th>Samples</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+   ${gpus.length>1?`<div class="mem-tbl-wrap"><table class="mem-tbl">
+    <thead><tr><th>GPU</th><th>Tensor-active mean</th><th>DRAM-active mean</th><th>Verdict</th></tr></thead><tbody>${
+     gpus.map(gid=>{const tv=t.perGpu[gid],dv=dr.perGpu[gid];
+      if(tv==null&&dv==null)return "";
+      const bad=tv!=null&&tv<35;
+      return `<tr><td><b>${gid}</b></td><td class="${bad?"hot":"ok"}">${tv!=null?tv.toFixed(1)+"%":"—"}</td><td>${dv!=null?dv.toFixed(1)+"%":"—"}</td><td>${bad?"<span style='color:var(--hot)'>starving</span>":"<span style='color:var(--ok)'>healthy</span>"}</td></tr>`;}).join("")
+    }</tbody></table></div><p class="mem-fine">Per-GPU means. One starving rank inside a healthy fleet is usually a placement or sharding problem, not a memory-tier problem — fix that before buying anything.</p>`:""}`);
+
+  $d("dcgmApply").onclick=()=>{
+   const patch={tensorNow:+t.mean.toFixed(1),dramNow:+dr.mean.toFixed(1)};
+   if(hbmGB)patch.hbm=Math.round(hbmGB);
+   if(gpus.length>1)patch.gpus=gpus.length;
+   if(window.__memAI){window.__memAI.apply(patch);
+    document.querySelector('#tabs button[data-v="mem"]').click();window.scrollTo({top:0,behavior:"smooth"});}
+  };
+  $d("dcgmSave").onclick=()=>{
+   const doc={tool:"penguin-dcgm-parse-v1",generated:new Date().toISOString(),format:p.fmt,
+    values_read:p.samples,window:p.window||null,gpus:gpus.length,gpu_ids:gpus,
+    fields:Object.fromEntries(Object.entries(stats).map(([k,s])=>[FIELDS[k].name,
+     {dcgm_field_id:FIELDS[k].id,unit:s.unit,mean:+s.mean.toFixed(3),p50:+s.p50.toFixed(3),p95:+s.p95.toFixed(3),max:+s.max.toFixed(3),samples:s.n}])),
+    read,note:"Parsed entirely in-browser; the source file was never transmitted."};
+   const b=new Blob([JSON.stringify(doc,null,2)],{type:"application/json"});
+   const a=document.createElement("a");a.href=URL.createObjectURL(b);
+   a.download="dcgm-summary-"+new Date().toISOString().slice(0,10)+".json";a.click();
+   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  };
+ }
+
+ function handle(file){
+  if(!file)return;
+  if(file.size>60*1024*1024)return fail("That file is larger than 60 MB. Narrow the time window or widen the Prometheus step and try again.");
+  show(`<div class="mem-panel"><h5>Reading ${file.name}…</h5></div>`);
+  const rd=new FileReader();
+  rd.onerror=()=>fail("The browser could not read that file.");
+  rd.onload=()=>{
+   const txt=String(rd.result||"");
+   if(!txt.trim())return fail("That file is empty.");
+   const p=parsePromJSON(txt)||parsePrometheusText(txt)||parseDmon(txt)||parseCSV(txt);
+   if(!p)return fail("Nothing recognisable as DCGM output was found — no Prometheus exposition lines, no query_range JSON, no dmon header, no usable CSV header.",
+     "first line: "+txt.split(/\r?\n/)[0].slice(0,120));
+   try{render(p);}catch(e){fail("Parsed the file but failed while summarising it.",String(e.message||e).slice(0,160));}
+  };
+  rd.readAsText(file);
+ }
+ const dz=$d("dcgmDrop");
+ $d("dcgmPick").onclick=()=>$d("dcgmFile").click();
+ $d("dcgmFile").addEventListener("change",e=>{handle(e.target.files[0]);e.target.value="";});
+ ["dragenter","dragover"].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add("over");}));
+ ["dragleave","drop"].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();if(ev==="dragleave"&&dz.contains(e.relatedTarget))return;dz.classList.remove("over");}));
+ dz.addEventListener("drop",e=>{const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];handle(f);});
 })();
 </script>
 
