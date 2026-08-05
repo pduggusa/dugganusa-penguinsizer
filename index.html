@@ -164,8 +164,8 @@
   @media(max-width:520px){.rk-racks{grid-template-columns:minmax(0,1fr)}.mem-cmd{font-size:11px}}
   /* memoryAI */
   .mem-h{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--cool);margin:26px 0 8px;font-weight:650}
-  .mem-hero{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:6px}
-  @media(max-width:900px){.mem-hero{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .mem-hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px;margin-bottom:6px}
+  @media(max-width:900px){.mem-hero{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}}
   .mem-k{min-width:0;overflow-wrap:anywhere;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:14px;position:relative;overflow:hidden}
   .mem-k::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--e,var(--cool))}
   .mem-k .n{font-family:var(--mono);font-size:21px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.15}
@@ -205,6 +205,20 @@
   .mem-narr{font-size:13px;color:var(--dim);line-height:1.6;max-width:900px;margin-bottom:6px} .mem-narr b{color:var(--ink)}
   .mem-tools{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
   .mem-local{font-size:10.5px;color:var(--faint);font-family:var(--mono)}
+  .presets.wl button{font-size:11.5px;padding:6px 11px}
+  .presets.wl button.on{background:rgba(52,211,153,.14);border-color:var(--ok);color:var(--ok)}
+  .wl-d{font-size:11px;color:var(--faint);line-height:1.5;margin-top:7px} .wl-d b{color:var(--dim)}
+  /* references */
+  .ref-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:13px;margin-bottom:8px}
+  .ref-c{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-left:3px solid var(--e,var(--cool));border-radius:12px;padding:14px 15px}
+  .ref-c h4{margin:0 0 3px;font-size:13px;font-weight:640;color:var(--ink)}
+  .ref-c .src{font-size:10.5px;color:var(--faint);font-family:var(--mono);margin-bottom:9px}
+  .ref-n{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-top:1px solid #16212e}
+  .ref-n:first-of-type{border-top:0}
+  .ref-n .k{color:var(--dim);line-height:1.4} .ref-n .v{font-family:var(--mono);color:var(--cool);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .ref-c a{color:var(--cool);font-size:11px;text-decoration:none;display:inline-block;margin-top:9px;border-bottom:1px dotted var(--cool-dim)}
+  .ref-c a:hover{color:var(--ink)}
+  .ref-warn{font-size:11px;color:var(--warn);margin-top:8px;line-height:1.5;opacity:.9}
   /* eli5 */
   .eli5{background:linear-gradient(180deg,#101d2b,var(--panel2));border:1px solid var(--cool-dim);border-radius:14px;padding:16px 17px;margin:0 0 20px}
   .eli5-h{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--cool);font-weight:650;margin-bottom:11px}
@@ -310,6 +324,7 @@
     <button data-v="mem">🐧 MemoryAI</button>
     <button data-v="dcgm">DCGM Upload</button>
     <button data-v="tree">🎯 Decide</button>
+    <button data-v="ref">📚 References</button>
   </nav>
 
   <div class="grid">
@@ -434,6 +449,7 @@
         <div class="rk-toolbar">
           <div class="grow"><input type="text" id="rkProject" placeholder="Project / customer name…" autocomplete="off"/></div>
           <button class="rk-btn" id="rkAdd">+ Add rack</button>
+          <button class="rk-btn" id="rkImport">↙ Import from Size It</button>
           <label class="rk-sp">spares % <input type="number" id="rkSpares" value="5" min="0" max="50" step="1"/></label>
           <button class="rk-btn primary" id="rkSave">⬇ Save JSON</button>
           <button class="rk-btn" id="rkLoad">⬆ Load JSON</button>
@@ -555,6 +571,14 @@
         <p class="lede">The comparison everyone makes is <b style="color:var(--ink)">CXL vs NVMe</b>. That's the wrong axis — NVMe at ~100 µs was never in the inference hot path, it's where cold data goes to retire. The comparison that decides the PO is <b style="color:var(--ink)">CXL vs buying more GPUs</b> to reach the same served throughput.</p>
         <div class="mem-bars" id="memBars"></div>
         <div class="mem-narr" id="memNarr"></div>
+
+        <!-- TTFT -->
+        <h3 class="mem-h">Step 3b · Time to first token — the number in the SLA</h3>
+        <p class="lede">Capacity and idle-GPU capital are the internal arguments. <b style="color:var(--ink)">TTFT is the one your customer actually contracts on</b>, and it's the metric the memory tier moves most directly. It's also fully derivable rather than asserted, so here it is derived.</p>
+        <p class="lede" style="margin-bottom:14px">TTFT is set by <b style="color:var(--ink)">prefill</b>. On a cache <b style="color:var(--ink)">miss</b> you recompute the prompt's KV — roughly 2·P·tokens of FLOPs across the replica. On a cache <b style="color:var(--ink)">hit</b> you instead move that KV from wherever it lives, so the tier's bandwidth decides. Which gives the test that actually settles the tier debate: <b style="color:var(--ink)">a tier slower than recomputing isn't a cache at all — it's a slower way to arrive at the same answer.</b></p>
+        <div class="mem-out" id="ttftOut"></div>
+        <div class="mem-bars" id="ttftBars"></div>
+        <div class="mem-narr" id="ttftNarr"></div>
 
         <!-- WHEN IT DOESN'T -->
         <h3 class="mem-h">Day one or later — adding the memory tier at install time</h3>
@@ -745,6 +769,147 @@
         </footer>
       </section>
 
+      <!-- REFERENCES -->
+      <section class="view" id="v-ref">
+        <h2 class="sec">📚 References — the published numbers, and who published them</h2>
+        <p class="lede">Every figure this tool leans on, with its source. <b style="color:var(--ink)">Vendor numbers are labelled as vendor numbers</b> and separated from what the tool derives itself — so when you quote something in front of a customer, you know exactly which kind of claim you're making and who stands behind it.</p>
+
+        <h3 class="mem-h">Penguin Solutions — MemoryAI KV cache server</h3>
+        <div class="ref-g">
+          <div class="ref-c" style="--e:var(--ok)">
+            <h4>MemoryAI KV cache server</h4>
+            <div class="src">Penguin Solutions · announced GTC, March 2026 · vendor-published</div>
+            <div class="ref-n"><span class="k">Faster than NVMe-based KV caching</span><span class="v">10×</span></div>
+            <div class="ref-n"><span class="k">Faster than RDMA-based approaches</span><span class="v">3.8×</span></div>
+            <div class="ref-n"><span class="k">Total memory per appliance</span><span class="v">11 TB</span></div>
+            <div class="ref-n"><span class="k">Composition</span><span class="v">3 TB DDR5 + 8× 1 TB AIC</span></div>
+            <div class="ref-n"><span class="k">Form factor</span><span class="v">4U</span></div>
+            <a href="https://www.penguinsolutions.com/en-us/products/cxl-memory-expansion-servers" target="_blank" rel="noopener">Product page →</a>
+            <div class="ref-warn">These are the numbers to quote. This tool's TTFT model derives a comparable CXL-vs-NVMe advantage independently, but the derived figure is bandwidth-only — cite Penguin's published 10×, not ours.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--ok)">
+            <h4>The problem it addresses</h4>
+            <div class="src">Penguin Solutions · memory-wall-scaling · vendor-published</div>
+            <div class="ref-n"><span class="k">"Performance slows when memory-starved GPUs struggle to produce tokens and become idle"</span><span class="v"></span></div>
+            <div class="ref-n"><span class="k">Claimed outcomes</span><span class="v">TTFT ↓ · SLA ↑</span></div>
+            <div class="ref-n"><span class="k">Stated fit</span><span class="v">large models, long context</span></div>
+            <a href="https://www.penguinsolutions.com/en-us/challenges/memory-wall-scaling" target="_blank" rel="noopener">Memory wall →</a>
+            <a href="https://www.penguinsolutions.com/en-us/resources/blog/why-ai-needs-cxl" target="_blank" rel="noopener">Why AI needs CXL →</a>
+          </div>
+        </div>
+
+        <h3 class="mem-h">CXL — latency, and what the spec actually guarantees</h3>
+        <div class="ref-g">
+          <div class="ref-c" style="--e:var(--cool)">
+            <h4>Access latency</h4>
+            <div class="src">CXL Consortium figures · independent measurement</div>
+            <div class="ref-n"><span class="k">Local DRAM (direct path)</span><span class="v">80–140 ns</span></div>
+            <div class="ref-n"><span class="k">CXL-attached memory</span><span class="v">170–250 ns</span></div>
+            <div class="ref-n"><span class="k">Measured, incl. remote-NUMA comparison</span><span class="v">200–400 ns</span></div>
+            <div class="ref-n"><span class="k">Load instruction vs NUMA access</span><span class="v">~35% longer</span></div>
+            <div class="ref-n"><span class="k">NVMe, for contrast</span><span class="v">~100 µs</span></div>
+            <a href="https://www.servethehome.com/compute-express-link-cxl-latency-how-much-is-added-at-hc34/" target="_blank" rel="noopener">CXL latency at HC34 →</a>
+            <a href="https://arxiv.org/pdf/2409.14317" target="_blank" rel="noopener">Dissecting CXL Memory Performance at Scale →</a>
+            <div class="ref-warn">The ~200–500 ns range used elsewhere in this tool is the conservative envelope across these sources. CXL sits roughly 2–3× local DRAM and roughly 400× closer than NAND — that ratio, not the absolute number, is the architectural argument.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--cool)">
+            <h4>Multi-tenancy primitives</h4>
+            <div class="src">CXL 2.0 / 3.x specification</div>
+            <div class="ref-n"><span class="k">Logical devices per MLD (by LD-ID)</span><span class="v">up to 16</span></div>
+            <div class="ref-n"><span class="k">Hosts served simultaneously</span><span class="v">up to 16</span></div>
+            <div class="ref-n"><span class="k">Link encryption (CXL 2.0 IDE)</span><span class="v">AES-GCM 256</span></div>
+            <div class="ref-n"><span class="k">Confidential VMs (CXL 3.1)</span><span class="v">TSP</span></div>
+            <div class="ref-n"><span class="k">Dynamic Capacity (CXL 3.0)</span><span class="v">DCD add/release</span></div>
+            <a href="https://computeexpresslink.org/blog/cxl-2-0-specification-memory-pooling-questions-from-the-webinar-part-2-2391/" target="_blank" rel="noopener">CXL 2.0 memory pooling →</a>
+            <a href="https://computeexpresslink.org/event/compute-express-link-cxl-link-level-integrity-and-data-encryption-cxl-ide/" target="_blank" rel="noopener">CXL IDE →</a>
+          </div>
+        </div>
+
+        <h3 class="mem-h">The stranding problem — why pooling exists at all</h3>
+        <div class="ref-g">
+          <div class="ref-c" style="--e:var(--grace)">
+            <h4>Pond: CXL-based memory pooling for cloud</h4>
+            <div class="src">Microsoft Research · ASPLOS '23 · peer-reviewed</div>
+            <div class="ref-n"><span class="k">Azure DRAM stranded</span><span class="v">up to 25%</span></div>
+            <div class="ref-n"><span class="k">VMs never touching half their rented memory</span><span class="v">50%</span></div>
+            <div class="ref-n"><span class="k">Achieved performance</span><span class="v">same-NUMA-node</span></div>
+            <div class="ref-n"><span class="k">Estimated server cost reduction</span><span class="v">4–5%</span></div>
+            <a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2022/10/Pond-ASPLOS23.pdf" target="_blank" rel="noopener">Pond (ASPLOS '23) →</a>
+            <div class="ref-warn">This is the fleet-efficiency case, not the AI-inference case. Useful for credibility on CXL generally; do not use it to size a KV tier — see the overcommit note on the MemoryAI tab.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--grace)">
+            <h4>Deployment status, honestly</h4>
+            <div class="src">industry reporting · 2026</div>
+            <div class="ref-n"><span class="k">Hyperscale production pooling</span><span class="v">still largely pilots</span></div>
+            <div class="ref-n"><span class="k">Microsoft CXL VM preview (SAP HANA)</span><span class="v">Nov 2025</span></div>
+            <div class="ref-n"><span class="k">First production CXL KV cache server</span><span class="v">Mar 2026</span></div>
+            <div class="ref-n"><span class="k">Samsung: CXL vs DRAM, 8-GPU config</span><span class="v">92% of DRAM perf</span></div>
+            <div class="ref-warn">Worth knowing before a customer raises it: a well-circulated contrarian piece argues CXL underdelivered for AI. The counter is that KV cache offload is a different use case from fleet pooling — and it is the one now shipping.</div>
+          </div>
+        </div>
+
+        <h3 class="mem-h">NVIDIA — the measurement and isolation layer</h3>
+        <div class="ref-g">
+          <div class="ref-c" style="--e:var(--warn)">
+            <h4>DCGM field semantics</h4>
+            <div class="src">NVIDIA Data Center GPU Manager</div>
+            <div class="ref-n"><span class="k">PIPE_TENSOR_ACTIVE — the truth</span><span class="v">1004</span></div>
+            <div class="ref-n"><span class="k">DRAM_ACTIVE — capacity vs bandwidth</span><span class="v">1005</span></div>
+            <div class="ref-n"><span class="k">GPU_UTIL — residency, not work</span><span class="v">203</span></div>
+            <div class="ref-n"><span class="k">FB_USED / FB_TOTAL</span><span class="v">252 / 250</span></div>
+            <a href="https://docs.nvidia.com/datacenter/dcgm/latest/dcgm-api/dcgm-api-field-ids.html" target="_blank" rel="noopener">DCGM field IDs →</a>
+          </div>
+          <div class="ref-c" style="--e:var(--warn)">
+            <h4>GB300 NVL72 reference architecture</h4>
+            <div class="src">NVIDIA enterprise reference architectures</div>
+            <div class="ref-n"><span class="k">Compute trays (4× B300 + 2× Grace each)</span><span class="v">18</span></div>
+            <div class="ref-n"><span class="k">NVLink switch trays</span><span class="v">9</span></div>
+            <div class="ref-n"><span class="k">Power shelves</span><span class="v">6–8 × 33 kW</span></div>
+            <div class="ref-n"><span class="k">Rack power — max / nominal</span><span class="v">142 / 132 kW</span></div>
+            <a href="https://docs.nvidia.com/enterprise-reference-architectures/nvl72-ai-factory/latest/components.html" target="_blank" rel="noopener">NVL72 components →</a>
+          </div>
+          <div class="ref-c" style="--e:var(--hot)">
+            <h4>Isolation — and the exclusivity</h4>
+            <div class="src">NVIDIA MIG · Confidential Computing</div>
+            <div class="ref-n"><span class="k">MIG instances per GPU</span><span class="v">up to 7</span></div>
+            <div class="ref-n"><span class="k">MIG isolation</span><span class="v">hardware memory path</span></div>
+            <div class="ref-n"><span class="k">Blackwell CC — NVLink encryption</span><span class="v">up to 8 GPUs</span></div>
+            <div class="ref-n"><span class="k">Published CC overhead, H100 inference</span><span class="v">~2–5%</span></div>
+            <div class="ref-n"><span class="k">MIG enabled → NVLink P2P</span><span class="v">disabled</span></div>
+            <a href="https://docs.nvidia.com/datacenter/tesla/mig-user-guide/latest/index.html" target="_blank" rel="noopener">MIG user guide →</a>
+            <a href="https://docs.nvidia.com/nvidia-secure-ai-with-blackwell-and-hopper-gpus-whitepaper.pdf" target="_blank" rel="noopener">Secure AI whitepaper →</a>
+          </div>
+        </div>
+
+        <h3 class="mem-h">Prefix-cache sharing — the security literature</h3>
+        <div class="ref-g">
+          <div class="ref-c" style="--e:var(--hot)">
+            <h4>Cross-tenant KV cache timing side channel</h4>
+            <div class="src">vendor advisory + peer-reviewed research</div>
+            <div class="ref-n"><span class="k">vLLM security advisory</span><span class="v">GHSA-4qjh-9fv9-r85r</span></div>
+            <div class="ref-n"><span class="k">Attack vector</span><span class="v">TTFT timing probe</span></div>
+            <div class="ref-n"><span class="k">Proposed mitigations</span><span class="v">PrefixWall · SafeKV</span></div>
+            <a href="https://github.com/vllm-project/vllm/security/advisories/GHSA-4qjh-9fv9-r85r" target="_blank" rel="noopener">vLLM advisory →</a>
+            <a href="https://arxiv.org/html/2409.20002v2" target="_blank" rel="noopener">The Early Bird Catches the Leak →</a>
+            <a href="https://arxiv.org/pdf/2411.18191" target="_blank" rel="noopener">InputSnatch →</a>
+            <div class="ref-warn">Raise this before a security team does. It converts a memory-saving feature into a capacity requirement in any multi-tenant deployment — which is an argument <b>for</b> the tier, quantified on the MemoryAI tab.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--cool)">
+            <h4>What this tool derives itself</h4>
+            <div class="src">DugganUSA · computed, not cited</div>
+            <div class="ref-n"><span class="k">KV per token</span><span class="v">2·L·H·D·bytes</span></div>
+            <div class="ref-n"><span class="k">Prefill / recompute cost</span><span class="v">≈2·P·tokens FLOPs</span></div>
+            <div class="ref-n"><span class="k">Tier fetch time</span><span class="v">KV bytes ÷ bandwidth</span></div>
+            <div class="ref-n"><span class="k">Partial NVL72 power</span><span class="v">fixed + per-tray</span></div>
+            <div class="ref-n"><span class="k">Cable BOM</span><span class="v">per-arch port topology</span></div>
+            <div class="ref-warn">These are arithmetic from first principles on inputs you control — reproducible, and wrong in exactly the ways your inputs are wrong. They are not measurements of any product.</div>
+          </div>
+        </div>
+        <footer style="margin-top:18px">
+          <span class="note">⚠ <b>Three kinds of claim, kept separate on purpose.</b> <b>Vendor-published</b> figures (Penguin's 10× and 3.8×, NVIDIA's specifications) belong to those vendors — quote them with attribution and they carry that vendor's weight. <b>Peer-reviewed and independent measurement</b> (Pond, the CXL latency work, the side-channel literature) is the strongest material available and is what to lead with in a technical audience. <b>Derived</b> figures are this tool's own arithmetic on your inputs — useful for showing a customer their own situation, never for claiming a product benchmark. Presenting a derived number as a measured one is the failure mode this page is structured to prevent. Certainty capped at 95%.</span>
+        </footer>
+      </section>
+
       <footer>
         <b>Anchors:</b> NVIDIA GB300 NVL72 / DGX B300 reference architecture + Penguin Relion/Altus datasheets (2026). B300 288 GB HBM3e, 15.3 PF FP4/GPU; B200 192 GB, 9 PF. GB300 rack = 72 GPU / 142 kW (18 compute trays × 4 B300 + 2 Grace, 9 NVLink switch trays, 6–8× 33 kW power shelves); SuperPOD = 8 racks / 576 GPU. Node builds packed at max(space, power) per rack. Partial-rack power is modelled non-linearly: fixed rack overhead (~26.8 kW of NVSwitch trays, power shelves, in-rack OOB) + 6.4 kW per compute tray.<br/>
         <span class="note">⚠ Tray-level sizing exposes what NVIDIA's floor-tile rounding costs you — but the <b>NVL72 rack is the purchasable SKU</b>. NVIDIA does not list a partially-populated rack; treat tray counts as a planning and BOM figure, and confirm partial population with your Penguin rep before it becomes a quote.</span><br/>
@@ -868,7 +1033,10 @@ function renderRent(rows){
   <div class="bar"><span class="name">Rent — hyperscaler</span><div class="track"><div class="fill" style="width:100%;background:linear-gradient(90deg,#7f1d1d,var(--hot))"></div></div><span class="val">${usd(rel.cloud)}</span></div>`;
  $("rentNarr").innerHTML=`At <b style="color:var(--ink)">${val("util")}% utilization</b>, owning this ${commas(rel.gpus)}-GPU Relion factory costs <b style="color:var(--ink)">$${rel.ownedHr.toFixed(2)}/GPU-hr</b> all-in vs <b style="color:var(--ink)">$${val("cloud").toFixed(2)}</b> rented — <b style="color:var(--ok)">${pct}% cheaper</b>, paying back in <b style="color:var(--ink)">${rel.paybackMo.toFixed(1)} months</b>. Reasoning/inference is a sustained load, so real utilization sits high — which is exactly the regime where owning wins. Drag utilization down to see the crossover.`;
 }
-function renderAll(){const rows=model();renderSize(rows);renderWhy(rows);renderRent(rows);}
+function renderAll(){const rows=model();renderSize(rows);renderWhy(rows);renderRent(rows);
+ // published so the Rack Planner can import the current build (it stays otherwise independent)
+ window.__sizer={rows:rows.map(r=>({key:r.a.key,label:r.a.label,grains:r.grains,blocks:r.blocks,
+  gpus:r.gpus,racks:r.racks,unit:r.a.unit,grainLabel:r.grainLabel})),hero:rows.find(r=>r.a.hero)||rows[0]};}
 
 // wiring
 $("presets").innerHTML=MODELS.map((m,i)=>`<button data-i="${i}">${m.n}</button>`).join("");
@@ -1158,6 +1326,30 @@ sync();
  $id("rkSpares").value=state.spares;
  $id("rkSpares").addEventListener("input",e=>{const v=parseInt(e.target.value,10);state.spares=isNaN(v)?0:Math.max(0,Math.min(50,v));setDirty(true);persist();paint();});
  $id("rkAdd").onclick=()=>{if(state.racks.length>=MAX_RACKS){alert("Max "+MAX_RACKS+" racks.");return;}state.racks.push(defRack());setDirty(true);persist();render();};
+ /* Import the Size It build. The planner is deliberately independent — it holds hand-edited
+  * per-rack detail and a saved BOM, so it must never silently follow the sizer. This is the
+  * explicit bridge: pull the current build, confirm before discarding work, cap at MAX_RACKS. */
+ $id("rkImport").onclick=()=>{
+  const sz=window.__sizer; if(!sz){alert("Open the Size It tab first.");return;}
+  const pick=sz.rows.find(r=>r.key===state.racks[0].arch)||sz.hero;
+  const spec=SPEC[pick.key]; if(!spec){alert("That architecture has no rack profile.");return;}
+  const probe={...defRack(),arch:pick.key,nodes:null};
+  const perRack=calc(probe).maxSpace||1;                       // what one rack actually holds
+  const needed=Math.ceil((spec.rackScale?pick.grains:pick.grains)/perRack);
+  const racks=Math.min(MAX_RACKS,Math.max(1,needed));
+  const total=spec.rackScale?pick.grains:pick.grains;
+  const msg=`Import ${pick.label}: ${total} ${spec.unit}${total===1?"":"s"} (${pick.gpus.toLocaleString()} GPUs).\n\n`+
+   `That needs ${needed} rack${needed===1?"":"s"} at ${perRack} per rack; this planner holds ${MAX_RACKS}, so `+
+   (needed>MAX_RACKS?`only the first ${MAX_RACKS} will be built — the BOM will cover ${MAX_RACKS*perRack} of ${total}.`
+                    :`all ${needed} will be built.`)+
+   `\n\nThis replaces the current ${state.racks.length} rack${state.racks.length===1?"":"s"}.`;
+  if(!confirm(msg))return;
+  let left=Math.min(total,racks*perRack);
+  state.racks=Array.from({length:racks},()=>{const r={...defRack(),arch:pick.key};
+   r.nodes=Math.min(perRack,left); left-=r.nodes; return r;}).filter(r=>r.nodes>0);
+  if(!state.racks.length)state.racks=[defRack()];
+  setDirty(true);persist();render();
+ };
  // ---- save / load JSON -----------------------------------------------------------
  $id("rkSave").onclick=()=>{
   const totals=state.racks.map(calc);
@@ -1184,7 +1376,7 @@ sync();
  window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
  // ---- tab layout: rack planner runs full-width (hide the sizing rail) -------------
  const grid=document.querySelector(".grid");
- document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{grid.classList.toggle("full",["rack","mem","dcgm","tree"].includes(b.dataset.v));}));
+ document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{grid.classList.toggle("full",["rack","mem","dcgm","tree","ref"].includes(b.dataset.v));}));
  render();
 })();
 </script>
@@ -1222,7 +1414,15 @@ sync();
   {k:"prefixShare",l:"Prefix dedup %",   v:15,     step:5,   hint:"KV saved by sharing"},
   {k:"memTB",    l:"MemoryAI TB / srv",  v:11,     step:1,   hint:"3 DDR5 + 8×1TB CXL"},
   {k:"memCost",  l:"$ / MemoryAI srv",   v:250000, step:5000,hint:"PLACEHOLDER — quote it"},
-  {k:"nvmeGB",   l:"$ / GB NVMe",        v:0.12,   step:0.01,hint:"NAND tier"}
+  {k:"nvmeGB",   l:"$ / GB NVMe",        v:0.12,   step:0.01,hint:"NAND tier"},
+  {k:"promptTok",l:"Avg prompt tokens",  v:8192,   step:512, hint:"prefill length"},
+  {k:"prefillMfu",l:"Prefill MFU",       v:0.4,    step:0.05,hint:"0–1"},
+  {k:"hitRate",  l:"KV cache hit %",     v:60,     step:5,   hint:"reuse rate"},
+  {k:"cxlBW",    l:"CXL tier GB/s",      v:128,    step:16,  hint:"aggregate AIC"},
+  {k:"nvmeBW",   l:"NVMe tier GB/s",     v:7,      step:1,   hint:"Gen5 NVMe"},
+  {k:"hbmBW",    l:"HBM GB/s",           v:8000,   step:500, hint:"B300 ≈ 8 TB/s"},
+  {k:"ttftTarget",l:"TTFT SLA (ms)",     v:500,    step:50,  hint:"your target"},
+  {k:"gpuPF",    l:"FP4 PFLOPS / GPU",   v:15.3,   step:0.1, hint:"B300 = 15.3"}
  ];
  const PRESETS=[
   {n:"Llama 3.1 70B",   params:70, layers:80, kvheads:8,  headdim:128},
@@ -1230,6 +1430,25 @@ sync();
   {n:"Mistral Large 2", params:123,layers:88, kvheads:8,  headdim:128},
   {n:"Qwen-class 32B",  params:32, layers:64, kvheads:8,  headdim:128},
   {n:"Dense 7B",        params:7,  layers:32, kvheads:8,  headdim:128}
+ ];
+ /* Workload profiles — the shape of the traffic, separate from the model.
+  * Values are typical production settings for each pattern, not tuned to force an
+  * outcome: some of these genuinely land on "you have headroom", which is the point. */
+ const WORKLOADS=[
+  {n:"🤖 Agentic / multi-step", d:"Tool-calling loops, long-lived scratchpads, shared system prompt and tool definitions across every call.",
+   set:{ctx:65536,conc:128,promptTok:32768,hitRate:75,tenants:1,iso:0,ttftTarget:800}},
+  {n:"📚 RAG chat (enterprise)", d:"Retrieved passages vary per turn; the system prompt and instruction block are constant.",
+   set:{ctx:32768,conc:256,promptTok:16384,hitRate:65,tenants:1,iso:0,ttftTarget:500}},
+  {n:"📄 Long-context documents", d:"Whole contracts, filings or codebases in a single prompt. Fewer sessions, enormous KV each.",
+   set:{ctx:131072,conc:64,promptTok:98304,hitRate:40,tenants:1,iso:0,ttftTarget:2000}},
+  {n:"💻 Code assistant", d:"Repository context held across a session, high concurrency, heavy prefix reuse.",
+   set:{ctx:65536,conc:192,promptTok:24576,hitRate:70,tenants:1,iso:0,ttftTarget:600}},
+  {n:"💬 High-concurrency chat", d:"Short prompts, very many in flight. The classic case where HBM alone often still copes.",
+   set:{ctx:8192,conc:512,promptTok:2048,hitRate:55,tenants:1,iso:0,ttftTarget:300}},
+  {n:"🏢 Multi-tenant SaaS", d:"Several customers on shared infrastructure. Prefix sharing forfeited for isolation.",
+   set:{ctx:32768,conc:256,promptTok:16384,hitRate:65,tenants:4,iso:1,ttftTarget:500}},
+  {n:"📦 Offline batch", d:"Scheduled scoring and embedding. Latency-tolerant — the case where NVMe is the right tier.",
+   set:{ctx:8192,conc:64,promptTok:4096,hitRate:20,tenants:1,iso:0,ttftTarget:60000}}
  ];
  let S=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==="object")return j;}catch(e){}return null;})()
    ||F.reduce((a,f)=>(a[f.k]=f.v,a),{});
@@ -1285,6 +1504,26 @@ sync();
   const headroomUse=headroomRep>0?workingRep/headroomRep*100:0;
   const wallAtConc=perSeqGB>0?Math.floor(headroomRep/perSeqGB):0;
   const wallAtCtx=(perSeqGB>0&&g("conc")>0)?Math.floor(headroomRep/(perSeqGB/g("ctx"))/g("conc")):0;
+  /* ---- TIME TO FIRST TOKEN -------------------------------------------------------
+   * TTFT is set by prefill. On a cache MISS you recompute the prompt's KV:
+   *   FLOPs ≈ 2·P·tokens, over the replica's FP8 throughput at prefill MFU.
+   * On a cache HIT you instead MOVE that KV from wherever it lives, so the tier's
+   * bandwidth decides. The comparison that matters is fetch-vs-recompute: a tier
+   * slower than recomputing is not a cache, it is a slower way to be correct. */
+  const promptTok=g("promptTok"), kvPromptGB=kvPerTok*promptTok/1e9;
+  const fp8PF=g("gpuPF")/2;                               // dense FP8 ≈ half FP4
+  const recomputeMs=(g("prefillMfu")>0&&tp>0)
+    ? (2*g("params")*1e9*promptTok)/(tp*fp8PF*1e15*g("prefillMfu"))*1000 : 0;
+  const msFor=bw=>bw>0?kvPromptGB/bw*1000:Infinity;
+  const hbmMs=msFor(g("hbmBW")), cxlMs=msFor(g("cxlBW")), nvmeMs=msFor(g("nvmeBW"))+0.1;
+  const hit=Math.max(0,Math.min(1,g("hitRate")/100));
+  const eff=t=>hit*t+(1-hit)*recomputeMs;                 // blended across hits & misses
+  const effHbm=eff(hbmMs), effCxl=eff(cxlMs), effNvme=eff(nvmeMs), effNone=recomputeMs;
+  // a tier only helps if fetching beats recomputing
+  const cxlHelps=cxlMs<recomputeMs, nvmeHelps=nvmeMs<recomputeMs;
+  const ttftTarget=g("ttftTarget");
+  const cxlSaveMs=effNone-effCxl, cxlSavePct=effNone>0?cxlSaveMs/effNone*100:0;
+
   let verdict,vclass,why;
   if(g("tensorNow")>=60){verdict="COMPUTE-BOUND — GPUs first";vclass="hot";
    why="Tensor-active (DCGM 1004) is at "+g("tensorNow")+"%, so the silicon is genuinely working and more memory wouldn't have much to feed. GPUs are the better dollar <b>today</b>. Worth another look once you push concurrency or context up — capacity is usually the <i>next</i> wall after compute, not an alternative to it.";}
@@ -1302,12 +1541,17 @@ sync();
    tp,replicas,hbmPerRep,headroomRep,workingRep,spillRep,
    iso,tenants,shareRate,workingRaw,dedupSaved,forfeited,headroomPerTenant,workingPerTenant,
    headroomUse,wallAtConc,wallAtCtx,
+   promptTok,kvPromptGB,recomputeMs,hbmMs,cxlMs,nvmeMs,hit,effHbm,effCxl,effNvme,effNone,
+   cxlHelps,nvmeHelps,ttftTarget,cxlSaveMs,cxlSavePct,
    spillGB,spillPct,fitsSeqs,idleFrac,gpuCapital,stranded,burnHr,burnYr,recFrac,gpuEquiv,valueRec,
    servers,cxlCost,gpusToBuy,gpuAltCost,nvmeCost,roi,net,verdict,vclass,why};
  }
 
  function renderCtl(){
   $m("memCtl").innerHTML=
+   `<div class="mem-f" style="grid-column:1/-1"><label>Workload profile — start here</label><div class="presets wl" id="memWl">${
+     WORKLOADS.map((w,i)=>`<button data-w="${i}" title="${w.d}">${w.n}</button>`).join("")}</div>
+     <div class="wl-d" id="memWlD">Pick the pattern closest to your traffic. It sets context, concurrency, prompt length, cache reuse and the TTFT target together — those move as a group, and setting one without the others is how sizing goes wrong.</div></div>`+
    `<div class="mem-f" style="grid-column:1/-1"><label>Model preset</label><div class="presets" id="memPre">${
      PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join("")}</div></div>`+
    F.map(f=>`<div class="mem-f"><label>${f.l}</label>${
@@ -1319,6 +1563,12 @@ sync();
   $m("memPre").querySelectorAll("button").forEach(b=>b.onclick=()=>{
    const p=PRESETS[b.dataset.p];Object.assign(S,{params:p.params,layers:p.layers,kvheads:p.kvheads,headdim:p.headdim});
    save();renderCtl();paint();});
+  $m("memWl").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+   const w=WORKLOADS[b.dataset.w];Object.assign(S,w.set);S._wl=b.dataset.w;
+   save();renderCtl();paint();
+   const d=$m("memWlD");if(d)d.innerHTML=`<b>${w.n}</b> — ${w.d}`;});
+  if(S._wl!=null){const b=$m("memWl").querySelector(`[data-w="${S._wl}"]`);
+   if(b){b.classList.add("on");$m("memWlD").innerHTML=`<b>${WORKLOADS[S._wl].n}</b> — ${WORKLOADS[S._wl].d}`;}}
  }
  const save=()=>{try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}};
 
@@ -1331,6 +1581,8 @@ sync();
      <div class="l">KV cache spilling past HBM headroom (fleet)</div><div class="s">${num(c.workingRep)} GB working set vs ${num(c.headroomRep)} GB headroom · per replica</div></div>
    <div class="mem-k" style="--e:var(--cool)"><div class="n" style="color:var(--cool)">${(c.kvPerTok/1024).toFixed(0)} KB<span style="font-size:12px;color:var(--faint)">/tok</span></div>
      <div class="l">KV cache per token at this architecture</div><div class="s">${c.perSeqGB.toFixed(1)} GB per full-context sequence</div></div>
+   <div class="mem-k" style="--e:${c.cxlSaveMs>0?"var(--ok)":"var(--warn)"}"><div class="n" style="color:${c.cxlSaveMs>0?"var(--ok)":"var(--warn)"}">${c.cxlSaveMs>0?"−"+c.cxlSavePct.toFixed(0)+"%":"—"}</div>
+     <div class="l">time to first token, with the CXL tier</div><div class="s">${c.effCxl>=1000?(c.effCxl/1000).toFixed(2)+"s":Math.round(c.effCxl)+"ms"} vs ${c.effNone>=1000?(c.effNone/1000).toFixed(2)+"s":Math.round(c.effNone)+"ms"} untiered</div></div>
    <div class="mem-k" style="--e:var(--${c.vclass})"><div class="n" style="font-size:15px;color:var(--${c.vclass})">${c.verdict}</div>
      <div class="l">verdict at these inputs</div><div class="s">${c.roi>0?c.roi.toFixed(2)+"× return on CXL spend":"n/a"}</div></div>`;
 
@@ -1374,6 +1626,48 @@ sync();
      <div class="track"><div class="fill" style="width:${Math.max(2,o.v/mx*100)}%"></div></div><span class="val">${usd2(o.v)}</span></div>
      <div style="font-size:10.5px;color:var(--faint);font-family:var(--mono);margin:-4px 0 8px 190px">${o.note}</div>`).join("");
 
+  // ---- TTFT ----------------------------------------------------------------------
+  const ms=v=>!isFinite(v)?"—":v>=1000?(v/1000).toFixed(2)+" s":v>=10?Math.round(v)+" ms":v.toFixed(1)+" ms";
+  $m("ttftOut").innerHTML=`
+   <div class="mem-panel"><h5>Prefill vs fetch — per request</h5>
+    <div class="mem-m"><span class="k">Prompt length</span><span class="v">${num(c.promptTok)} tokens</span></div>
+    <div class="mem-m"><span class="k">KV for that prompt</span><span class="v">${c.kvPromptGB.toFixed(2)} GB</span></div>
+    <div class="mem-m"><span class="k">Recompute it (cache miss)</span><span class="v warn">${ms(c.recomputeMs)}</span></div>
+    <div class="mem-m"><span class="k">Fetch from HBM</span><span class="v ok">${ms(c.hbmMs)}</span></div>
+    <div class="mem-m"><span class="k">Fetch from CXL tier</span><span class="v ${c.cxlHelps?"ok":"hot"}">${ms(c.cxlMs)} ${c.cxlHelps?"<small style='color:var(--faint)'>beats recompute</small>":"<small style='color:var(--hot)'>slower than recompute</small>"}</span></div>
+    <div class="mem-m"><span class="k">Fetch from NVMe tier</span><span class="v ${c.nvmeHelps?"ok":"hot"}">${ms(c.nvmeMs)} ${c.nvmeHelps?"<small style='color:var(--faint)'>beats recompute</small>":"<small style='color:var(--hot)'>slower than recompute</small>"}</span></div>
+   </div>
+   <div class="mem-panel"><h5>Effective TTFT at ${Math.round(c.hit*100)}% cache hit</h5>
+    <div class="mem-m"><span class="k">No cache tier (always recompute)</span><span class="v">${ms(c.effNone)}</span></div>
+    <div class="mem-m"><span class="k">With CXL tier</span><span class="v ok big">${ms(c.effCxl)}</span></div>
+    <div class="mem-m"><span class="k">With NVMe tier</span><span class="v ${c.effNvme<=c.effNone?"":"hot"}">${ms(c.effNvme)} ${c.effNvme>c.effNone?"<small style='color:var(--hot)'>worse than no cache</small>":""}</span></div>
+    <div class="mem-m"><span class="k">All-in-HBM ceiling</span><span class="v" style="color:var(--faint)">${ms(c.effHbm)}</span></div>
+    <div class="mem-m"><span class="k">CXL vs no tier</span><span class="v ${c.cxlSaveMs>0?"ok":"hot"}">${c.cxlSaveMs>0?"−"+ms(c.cxlSaveMs)+" ("+c.cxlSavePct.toFixed(0)+"% faster)":"no gain"}</span></div>
+    <div class="mem-m"><span class="k">Against your ${num(c.ttftTarget)} ms SLA</span><span class="v ${c.effCxl<=c.ttftTarget?"ok":"hot"}">${c.effCxl<=c.ttftTarget?"MEETS with CXL":"MISSES even with CXL"}</span></div>
+   </div>`;
+  const tb=[
+   {n:"All in HBM (ceiling)",v:c.effHbm,note:"unreachable at scale — the reference point"},
+   {n:"CXL tier",v:c.effCxl,note:c.cxlHelps?"fetch beats recompute":"fetch is slower than recompute here"},
+   {n:"No cache tier",v:c.effNone,note:"recompute every miss"},
+   {n:"NVMe tier",v:c.effNvme,note:c.nvmeHelps?"fetch beats recompute":"block I/O loses to recompute"}
+  ].filter(x=>isFinite(x.v));
+  const tmax=Math.max(...tb.map(x=>x.v),c.ttftTarget)||1, best=Math.min(...tb.map(x=>x.v));
+  $m("ttftBars").innerHTML=`<h3 style="font-size:10.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--cool);margin:0 0 4px">Effective time to first token</h3>
+   <div class="hint" style="color:var(--faint);font-size:11.5px;margin-bottom:12px">Shorter is better. Blended across cache hits and misses at ${Math.round(c.hit*100)}% hit rate. The dashed marker is your ${num(c.ttftTarget)} ms SLA.</div>`+
+   tb.map(o=>`<div class="bar ${o.v===best?"best":""}"><span class="name">${o.n}</span>
+     <div class="track" style="position:relative"><div class="fill" style="width:${Math.max(2,o.v/tmax*100)}%;${o.v>c.ttftTarget?"background:linear-gradient(90deg,#7f1d1d,var(--hot))":""}"></div>
+     <div style="position:absolute;top:-2px;bottom:-2px;left:${Math.min(99,c.ttftTarget/tmax*100)}%;width:0;border-left:2px dashed var(--gold);opacity:.85"></div></div>
+     <span class="val">${ms(o.v)}</span></div>
+     <div style="font-size:10.5px;color:var(--faint);font-family:var(--mono);margin:-4px 0 8px 190px">${o.note}</div>`).join("");
+  $m("ttftNarr").innerHTML=
+   (c.nvmeHelps
+     ? `At this prompt length NVMe fetch (${ms(c.nvmeMs)}) still comes in under recompute (${ms(c.recomputeMs)}), so a NAND tier is defensible here — the gap narrows as prompts lengthen, because KV grows linearly while recompute grows linearly too but from a much lower base.`
+     : `<b style="color:var(--hot)">Note what the arithmetic says about NVMe:</b> fetching this prompt's KV over NAND takes ${ms(c.nvmeMs)}, while simply recomputing it takes ${ms(c.recomputeMs)}. <b>An NVMe KV tier would make TTFT worse than having no cache at all</b> — which is the concrete reason block storage sits outside the inference hot path, rather than a matter of preference.`)
+   + ` ${c.cxlHelps
+     ? `CXL fetch lands at ${ms(c.cxlMs)} against ${ms(c.recomputeMs)} to recompute, so every cache hit is real time saved — blended, that is <b>${ms(c.effCxl)}</b> versus <b>${ms(c.effNone)}</b> with no tier${c.cxlSaveMs>0?`, a <b style="color:var(--ok)">${c.cxlSavePct.toFixed(0)}% reduction in time to first token</b>`:""}.`
+     : `At this configuration CXL fetch (${ms(c.cxlMs)}) does not beat recompute (${ms(c.recomputeMs)}) — check the aggregate tier bandwidth, since that is usually what moves this.`}
+   ${c.effCxl<=c.ttftTarget?` That clears your ${num(c.ttftTarget)} ms SLA.`:` That still misses your ${num(c.ttftTarget)} ms target — TTFT here is prefill-dominated, so shortening prompts, raising prefill MFU, or adding GPUs to the replica are the levers, not capacity.`}`;
+
   $m("memNarr").innerHTML=`<b style="color:var(--${c.vclass})">${c.verdict}.</b> ${c.why}
    ${c.iso&&c.forfeited>0?` <b style="color:var(--hot)">Isolation is carrying ${num(c.forfeited)} GB per replica of that.</b> Hostile tenancy forbids cross-tenant prefix dedup, so the capacity you would have saved by sharing has to be bought instead — that is not waste, it is the cost of not leaking one tenant's prompts to another through cache-hit timing.`:""}
    ${!c.iso&&c.tenants>1?` <b style="color:var(--warn)">Note:</b> this assumes ${c.tenants} tenants can safely share a prefix cache. If any two of them are commercial rivals, flip isolation to hostile — the ${num(c.dedupSaved)} GB currently being saved by sharing is exactly the side channel.`:""}
@@ -1412,6 +1706,17 @@ ${row("Replica HBM",num(c.hbmPerRep)+" GB ("+c.tp+" × "+c.hbm+" GB)")}${row("KV
 ${row("<b>Spill past HBM</b>",c.spillGB>0?"<b>"+num(c.spillRep)+" GB per replica · "+num(c.spillGB)+" GB fleet ("+c.spillPct.toFixed(0)+"%)</b>":"none")}
 ${row("Concurrency HBM alone supports",num(c.fitsSeqs)+" sequences per replica")}</table>
 <p style="font-size:12px;color:#666">KV cache is held by the replica serving the request, so headroom is computed per replica — <b>${c.tp} GPUs' HBM minus one sharded copy of the weights</b> — and then scaled by replica count. Pooling all fleet HBM into a single KV budget would overstate headroom by roughly ${c.replicas}× and hide the wall entirely.</p>
+<h2>Time to first token</h2>
+<table>${row("Prompt length",num(c.promptTok)+" tokens")}${row("KV for that prompt",c.kvPromptGB.toFixed(2)+" GB")}
+${row("Recompute on a cache miss",Math.round(c.recomputeMs)+" ms")}
+${row("Fetch from CXL tier",Math.round(c.cxlMs)+" ms"+(c.cxlHelps?" (beats recompute)":" (slower than recompute)"))}
+${row("Fetch from NVMe tier",Math.round(c.nvmeMs)+" ms"+(c.nvmeHelps?" (beats recompute)":" (<b>slower than recompute</b>)"))}
+${row("Cache hit rate assumed",Math.round(c.hit*100)+"%")}
+${row("Effective TTFT — no tier",Math.round(c.effNone)+" ms")}
+${row("<b>Effective TTFT — CXL tier</b>","<b>"+Math.round(c.effCxl)+" ms</b>")}
+${row("Effective TTFT — NVMe tier",Math.round(c.effNvme)+" ms"+(c.effNvme>c.effNone?" (<b>worse than no cache</b>)":""))}
+${row("<b>Against the "+num(c.ttftTarget)+" ms SLA</b>","<b>"+(c.effCxl<=c.ttftTarget?"MEETS with CXL":"MISSES even with CXL")+"</b>")}</table>
+<p style="font-size:13px">TTFT is set by prefill. A cache miss recomputes the prompt's KV (~2·P·tokens of FLOPs across the replica); a cache hit moves that KV from wherever it lives, so tier bandwidth decides. ${c.nvmeHelps?"":"<b>Note that fetching from NAND takes longer here than recomputing outright, so an NVMe KV tier would raise TTFT rather than lower it</b> — the concrete reason block storage sits outside the inference hot path."}</p>
 <h2>The money</h2>
 <table>${row("GPU capital deployed",usd2(c.gpuCapital))}${row("Effective idle fraction",(c.idleFrac*100).toFixed(0)+"%")}
 ${row("<b>Capital doing nothing</b>","<b>"+usd2(c.stranded)+"</b>")}${row("Burn rate",usd2(c.burnHr)+"/hr · "+usd2(c.burnYr)+"/yr")}
