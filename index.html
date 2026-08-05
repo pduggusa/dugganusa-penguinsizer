@@ -198,6 +198,24 @@
   .mem-narr{font-size:13px;color:var(--dim);line-height:1.6;max-width:900px;margin-bottom:6px} .mem-narr b{color:var(--ink)}
   .mem-tools{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
   .mem-local{font-size:10.5px;color:var(--faint);font-family:var(--mono)}
+  /* eli5 */
+  .eli5{background:linear-gradient(180deg,#101d2b,var(--panel2));border:1px solid var(--cool-dim);border-radius:14px;padding:16px 17px;margin:0 0 20px}
+  .eli5-h{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--cool);font-weight:650;margin-bottom:11px}
+  .eli5-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+  .eli5-c{background:#0a1119;border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:12.5px;color:var(--dim);line-height:1.55}
+  .eli5-c b{color:var(--ink)}
+  .eli5-c.eli5-win{border-color:rgba(52,211,153,.4)} .eli5-c.eli5-win b{color:var(--ok)}
+  .eli5-c.eli5-warn{border-color:rgba(251,191,36,.4)} .eli5-c.eli5-warn b{color:var(--warn)}
+  .eli5-f{margin-top:11px;font-size:11.5px;color:var(--faint);line-height:1.55} .eli5-f b{color:var(--dim)}
+  /* callouts */
+  .callout{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:12px;padding:14px 16px;margin:16px 0}
+  .callout.hot{border-left-color:var(--hot)}
+  .callout-h{font-size:13px;font-weight:650;color:var(--warn);margin-bottom:8px}
+  .callout.hot .callout-h{color:var(--hot)}
+  .callout p{margin:0 0 8px;font-size:12.5px;color:var(--dim);line-height:1.6} .callout p b{color:var(--ink)}
+  .callout p:last-child{margin-bottom:0}
+  .callout p.callout-x{border-top:1px solid #16212e;padding-top:9px;margin-top:10px;color:var(--faint)}
+  .callout p.callout-x b{color:var(--dim)}
   /* dcgm upload */
   .dz{border:2px dashed var(--line);border-radius:14px;padding:26px 20px;text-align:center;background:var(--panel2);transition:border-color .15s,background .15s;margin-bottom:14px}
   .dz.over{border-color:var(--cool);background:rgba(34,211,238,.06)}
@@ -388,6 +406,20 @@
       <!-- MEMORY AI -->
       <section class="view" id="v-mem">
         <h2 class="sec">🐧 MemoryAI — because a starving Blackwell is the most expensive idle object you own</h2>
+
+        <div class="eli5">
+          <div class="eli5-h">Explain it like I'm five 🍳</div>
+          <div class="eli5-g">
+            <div class="eli5-c"><b>Your GPU is a very fast chef.</b> It can cook an unbelievable number of orders per second. You paid about the price of a house for this chef.</div>
+            <div class="eli5-c"><b>HBM is the counter space next to the chef.</b> It's the fastest surface in the kitchen, and there is never enough of it.</div>
+            <div class="eli5-c"><b>The KV cache is the chef's notes</b> on every order still in progress. Long conversations mean long notes. A hundred customers at once means a hundred sets of notes.</div>
+            <div class="eli5-c"><b>Run out of counter and the chef stops cooking.</b> Either they walk to the basement filing cabinet (that's NVMe — a <i>hundred thousand</i> nanoseconds) or they bin the notes and redo the work. Either way: a very expensive person, standing still.</div>
+            <div class="eli5-c eli5-win"><b>MemoryAI is a second counter</b> bolted to the first. A slightly longer reach (200–500 ns — you'd never see it), far more room, and much cheaper per square foot than hiring a second chef.</div>
+            <div class="eli5-c eli5-warn"><b>The whole question is whether your chef is actually standing around.</b> If they're cooking flat out, more counter does nothing and you need another chef. DCGM tells you which one you've got — and this page will happily tell you to go buy GPUs instead.</div>
+          </div>
+          <div class="eli5-f">Everything below is that same idea with the arithmetic attached. <b>Step 1</b> measures whether the chef is idle. <b>Step 2</b> checks whether the notes actually fit on the counter. <b>Step 3</b> compares the price of more counter against the price of another chef.</div>
+        </div>
+
         <p class="lede">A B300 costs about the same as a house and can do <b style="color:var(--ink)">15.3 petaFLOPS</b>. When the KV cache outgrows HBM, it does <b style="color:var(--ink)">nothing at all</b> — very quickly, while drawing 1.4 kW. This tab answers one question with numbers instead of vibes: <b style="color:var(--ink)">are your GPUs actually starving, and if so is CXL memory the cheapest way to feed them?</b> Measure first (DCGM below), then do the arithmetic. If you're compute-bound, this whole tab should tell you to go away and buy GPUs — and it will.</p>
 
         <div class="mem-hero" id="memHero"></div>
@@ -430,6 +462,38 @@
         <p class="lede">KV cache per token is <b style="color:var(--ink)">2 × layers × KV-heads × head-dim × precision-bytes</b>. Multiply by context and concurrency and compare against the HBM you have left after weights. Everything here is editable — put your real model in.</p>
         <div class="mem-ctl" id="memCtl"></div>
         <div class="mem-out" id="memOut"></div>
+
+        <div class="callout">
+          <div class="callout-h">⚠ If you're reading this like memory-overcommit guidance — stop</div>
+          <p>Most CXL literature is written in the fleet-efficiency register, and for good reason: Microsoft's <b>Pond</b> paper justified pooling with <b>~25% of Azure DRAM stranded</b> and <b>50% of VMs never touching 50% of their rented memory</b>. That is a textbook overcommit statistic, and for that use case the analogy is exact.</p>
+          <p><b>It does not transfer to KV cache</b>, and assuming it does will make you under-provision. Overcommit works on two assumptions that both fail here:</p>
+          <p>① <b>Demand is anti-correlated.</b> Tenants peak at different times, so peak-of-sum beats sum-of-peaks. But LLM serving follows the same diurnal curve on every replica and a viral hour hits all of them at once — the pool runs dry exactly when you need it.</p>
+          <p>② <b>There are cold pages to reclaim.</b> Ballooning works because guests hoard idle memory. A KV cache <i>is</i> the hot working set of in-flight requests. Nothing about it is idle. There is nothing to steal.</p>
+          <p class="callout-x">Size this tier to the <b>working set</b>, not to average utilization — which is what Step 2 does, per replica, deliberately. And note the far tier is a <b>design point, not a failure mode</b>: at 200–500 ns it is NUMA-far, not swap-far. You plan to sit on it permanently.</p>
+        </div>
+
+        <!-- MULTI-TENANCY -->
+        <h3 class="mem-h">Step 2b · Multi-tenancy — who can actually separate Pepsi from Coke</h3>
+        <p class="lede">If two tenants on your iron are commercial enemies, the memory math changes — and the feature that saves you the most memory becomes the one you are <b style="color:var(--ink)">obligated to switch off</b>. Set the isolation model in the controls above and Step 2 recomputes.</p>
+
+        <div class="mem-tbl-wrap">
+        <table class="mem-tbl">
+          <thead><tr><th>Separates…</th><th>Mechanism</th><th>Enforcement</th><th>Reality check</th></tr></thead>
+          <tbody>
+            <tr><td><b>Capacity</b></td><td>CXL MLD / DCD</td><td class="ok">Hardware — memory controllers, up to 16 logical devices by LD-ID, each to a different host</td><td>CXL's uncontested lane. Nothing in NVIDIA's stack pools memory across mutually-untrusting hosts. But it is <b>still mostly pilots</b> at hyperscale as of 2026.</td></tr>
+            <tr><td><b>Compute</b></td><td>NVIDIA MIG</td><td class="ok">Hardware — crossbar ports, L2 cache banks, memory controllers and DRAM address buses assigned uniquely per instance</td><td>Commonly mislabelled "software/logical" partitioning. It is not. It has shipped in production multi-tenant clouds since A100.</td></tr>
+            <tr><td><b>Trust</b></td><td>NVIDIA Confidential Computing</td><td class="ok">Hardware — signing key fused at manufacture, never exposed to software/firmware/host; remote attestation; encrypted VRAM; <b>NVLink encryption</b> across up to 8 Blackwell GPUs</td><td>Explicitly a don't-trust-the-operator design. ~2–5% overhead published for H100 inference.</td></tr>
+            <tr><td><b>Nothing, together</b></td><td class="hot">MIG + NVLink</td><td class="hot">Mutually exclusive</td><td><b>Enabling MIG disables NVLink P2P.</b> You choose hard intra-GPU partitioning <i>or</i> the fabric — never both on the same GPU. Any comparison treating "MIG + NVLink" as one multi-tenant story is comparing something that cannot be built.</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <div class="callout hot">
+          <div class="callout-h">🚨 Cross-tenant prefix caching is a leak, not a feature</div>
+          <p>Sharing KV for common prefixes across tenants is the single biggest memory saving in multi-tenant serving — and it is a <b>documented cross-tenant data-leak vector</b>, not an optimisation you get for free. Cache hits return measurably faster, so an attacker probes time-to-first-token, learns which prefixes are resident, and <b>incrementally reconstructs another tenant's prompt</b> — system instructions, PII, medical and financial detail — with no memory access and no special privilege.</p>
+          <p>This is not theoretical: it carries a vLLM security advisory (<b>GHSA-4qjh-9fv9-r85r</b>) and a research literature (<i>The Early Bird Catches the Leak</i>, <i>InputSnatch</i>), with <b>PrefixWall</b> and <b>SafeKV</b> as proposed mitigations.</p>
+          <p class="callout-x">Set isolation to <b>hostile</b> in the controls and the model forfeits that saving, because in a real Pepsi-and-Coke deployment you must. The forfeited capacity is shown as its own line — <b>that number is the price of isolation</b>, and it is usually the honest reason to buy more memory rather than a reason not to.</p>
+        </div>
 
         <!-- STEP 3 — THE MONEY -->
         <h3 class="mem-h">Step 3 · The money — CXL vs NVMe vs just buying more GPUs</h3>
@@ -1010,6 +1074,9 @@ sync();
   {k:"ctx",      l:"Avg context (tokens)",v:32768, step:1024,hint:"per sequence"},
   {k:"conc",     l:"Concurrent / replica",v:256,   step:8,   hint:"in-flight seqs"},
   {k:"tp",       l:"GPUs per replica",   v:8,      step:1,   hint:"TP × PP shard"},
+  {k:"iso",      l:"Isolation model",    v:0,      step:1,   hint:"tenant trust",sel:[["0","Cooperative / single"],["1","Hostile — isolated"]]},
+  {k:"tenants",  l:"Tenants / replica",  v:1,      step:1,   hint:"sharing the GPUs"},
+  {k:"prefixShare",l:"Prefix dedup %",   v:30,     step:5,   hint:"KV saved by sharing"},
   {k:"memTB",    l:"MemoryAI TB / srv",  v:11,     step:1,   hint:"3 DDR5 + 8×1TB CXL"},
   {k:"memCost",  l:"$ / MemoryAI srv",   v:250000, step:5000,hint:"PLACEHOLDER — quote it"},
   {k:"nvmeGB",   l:"$ / GB NVMe",        v:0.12,   step:0.01,hint:"NAND tier"}
@@ -1040,8 +1107,17 @@ sync();
   const tp=Math.max(1,g("tp")), replicas=Math.max(1,Math.floor(gpus/tp));
   const hbmPerRep=tp*hbm, weightsGB=g("params")*g("wbits"), reserveRep=hbmPerRep*0.10;
   const headroomRep=Math.max(0,hbmPerRep-weightsGB-reserveRep);
-  const workingRep=perSeqGB*g("conc");
+  // Cross-tenant prefix/KV dedup is the biggest saving in multi-tenant serving AND a
+  // documented timing side channel (vLLM GHSA-4qjh-9fv9-r85r). Hostile tenants must
+  // forfeit it — so isolation shows up here as real, quantified extra capacity.
+  const iso=g("iso")===1, tenants=Math.max(1,g("tenants"));
+  const shareRate=Math.min(0.6,Math.max(0,g("prefixShare")/100));
+  const workingRaw=perSeqGB*g("conc");
+  const dedupSaved=iso?0:workingRaw*shareRate;      // realised only when sharing is safe
+  const forfeited=iso?workingRaw*shareRate:0;       // the price of isolation
+  const workingRep=workingRaw-dedupSaved;
   const spillRep=Math.max(0,workingRep-headroomRep);
+  const headroomPerTenant=headroomRep/tenants, workingPerTenant=workingRep/tenants;
   // fleet-level rollups
   const hbmTotal=gpus*hbm, headroomGB=headroomRep*replicas, workingGB=workingRep*replicas;
   const spillGB=spillRep*replicas, reserveGB=reserveRep*replicas;
@@ -1077,6 +1153,7 @@ sync();
    why="Recovered capacity is worth "+usd2(valueRec)+" against "+usd2(cxlCost)+" of CXL — a "+roi.toFixed(2)+"× return. Under a DRAM shortage that is not a trade worth the allocation risk.";}
   return{gpus,capex,hbm,yrs,kvPerTok,perSeqGB,workingGB,hbmTotal,weightsGB,reserveGB,headroomGB,
    tp,replicas,hbmPerRep,headroomRep,workingRep,spillRep,
+   iso,tenants,shareRate,workingRaw,dedupSaved,forfeited,headroomPerTenant,workingPerTenant,
    spillGB,spillPct,fitsSeqs,idleFrac,gpuCapital,stranded,burnHr,burnYr,recFrac,gpuEquiv,valueRec,
    servers,cxlCost,gpusToBuy,gpuAltCost,nvmeCost,roi,net,verdict,vclass,why};
  }
@@ -1114,7 +1191,12 @@ sync();
     <div class="mem-m"><span class="k">Topology</span><span class="v">${c.replicas} replica${c.replicas===1?"":"s"} × ${c.tp} GPU</span></div>
     <div class="mem-m"><span class="k">KV per token</span><span class="v">${num(c.kvPerTok)} B <small style="color:var(--faint)">(${(c.kvPerTok/1024).toFixed(0)} KB)</small></span></div>
     <div class="mem-m"><span class="k">Per sequence @ ${num(g("ctx"))} tok</span><span class="v">${c.perSeqGB.toFixed(2)} GB</span></div>
-    <div class="mem-m"><span class="k">Working set @ ${g("conc")} in-flight</span><span class="v big">${num(c.workingRep)} GB <small style="color:var(--faint)">/replica</small></span></div>
+    <div class="mem-m"><span class="k">Raw working set @ ${g("conc")} in-flight</span><span class="v">${num(c.workingRaw)} GB <small style="color:var(--faint)">/replica</small></span></div>
+    ${c.iso
+      ?`<div class="mem-m"><span class="k">Prefix dedup forfeited to isolation</span><span class="v hot">+${num(c.forfeited)} GB <small style="color:var(--faint)">price of hostile tenancy</small></span></div>`
+      :`<div class="mem-m"><span class="k">Saved by cross-tenant prefix dedup</span><span class="v ok">−${num(c.dedupSaved)} GB <small style="color:var(--faint)">unsafe if tenants are hostile</small></span></div>`}
+    <div class="mem-m"><span class="k">Effective working set</span><span class="v big">${num(c.workingRep)} GB <small style="color:var(--faint)">/replica</small></span></div>
+    ${c.tenants>1?`<div class="mem-m"><span class="k">Per tenant (${c.tenants} sharing)</span><span class="v">${num(c.workingPerTenant)} GB vs ${num(c.headroomPerTenant)} GB headroom</span></div>`:""}
     <div class="mem-m"><span class="k">Replica HBM (${c.tp} × ${c.hbm} GB)</span><span class="v">${num(c.hbmPerRep)} GB</span></div>
     <div class="mem-m"><span class="k">− weights · − 10% reserve</span><span class="v">${num(c.weightsGB)} · ${num(c.hbmPerRep*0.1)} GB</span></div>
     <div class="mem-m"><span class="k">KV headroom per replica</span><span class="v ok">${num(c.headroomRep)} GB</span></div>
@@ -1145,6 +1227,8 @@ sync();
      <div style="font-size:10.5px;color:var(--faint);font-family:var(--mono);margin:-4px 0 8px 190px">${o.note}</div>`).join("");
 
   $m("memNarr").innerHTML=`<b style="color:var(--${c.vclass})">${c.verdict}.</b> ${c.why}
+   ${c.iso&&c.forfeited>0?` <b style="color:var(--hot)">Isolation is carrying ${num(c.forfeited)} GB per replica of that.</b> Hostile tenancy forbids cross-tenant prefix dedup, so the capacity you would have saved by sharing has to be bought instead — that is not waste, it is the cost of not leaking one tenant's prompts to another through cache-hit timing.`:""}
+   ${!c.iso&&c.tenants>1?` <b style="color:var(--warn)">Note:</b> this assumes ${c.tenants} tenants can safely share a prefix cache. If any two of them are commercial rivals, flip isolation to hostile — the ${num(c.dedupSaved)} GB currently being saved by sharing is exactly the side channel.`:""}
    ${c.spillGB>0&&g("tensorNow")<60?` The honest caveat: this whole calculation assumes the stall is <b>capacity</b>, and DCGM is how you prove that rather than assume it — if field 1005 comes back hot, you have a bandwidth problem wearing a capacity costume, and no amount of CXL fixes it.`:""}`;
  }
 
@@ -1171,7 +1255,11 @@ code{background:#f2f4f6;padding:2px 5px;border-radius:4px;font-size:12px}@media 
 ${row("KV precision",g("kvbits")+" bytes/element")}${row("KV per token",num(c.kvPerTok)+" B ("+(c.kvPerTok/1024).toFixed(0)+" KB)")}
 ${row("Serving topology",c.replicas+" replica(s) × "+c.tp+" GPUs")}
 ${row("Context × concurrency",num(g("ctx"))+" tokens × "+g("conc")+" in-flight per replica")}
-${row("KV working set",num(c.workingRep)+" GB per replica · "+num(c.workingGB)+" GB fleet")}
+${row("Isolation model",c.iso?"<b>Hostile — tenants isolated</b>":"Cooperative / single tenant")}
+${row("Tenants per replica",c.tenants)}
+${row("Raw working set",num(c.workingRaw)+" GB per replica")}
+${c.iso?row("<b>Prefix dedup forfeited to isolation</b>","<b>+"+num(c.forfeited)+" GB</b>"):row("Saved by cross-tenant prefix dedup","−"+num(c.dedupSaved)+" GB")}
+${row("Effective KV working set",num(c.workingRep)+" GB per replica · "+num(c.workingGB)+" GB fleet")}
 ${row("Replica HBM",num(c.hbmPerRep)+" GB ("+c.tp+" × "+c.hbm+" GB)")}${row("KV headroom after weights + reserve",num(c.headroomRep)+" GB per replica")}
 ${row("<b>Spill past HBM</b>",c.spillGB>0?"<b>"+num(c.spillRep)+" GB per replica · "+num(c.spillGB)+" GB fleet ("+c.spillPct.toFixed(0)+"%)</b>":"none")}
 ${row("Concurrency HBM alone supports",num(c.fitsSeqs)+" sequences per replica")}</table>
@@ -1184,6 +1272,9 @@ ${row("MemoryAI — "+c.servers+" server(s) × "+g("memTB")+" TB",usd2(c.cxlCost
 ${row("Alternative — buy "+c.gpusToBuy+" more GPUs",usd2(c.gpuAltCost))}
 ${row("NVMe tier (not a hot-path substitute)",usd2(c.nvmeCost))}
 ${row("<b>Return on CXL spend</b>","<b>"+c.roi.toFixed(2)+"× · net "+usd2(c.net)+"</b>")}</table>
+${c.iso?`<h2>Multi-tenancy</h2>
+<p style="font-size:13px">This assessment assumes <b>hostile tenancy</b>: tenants sharing the fleet are not mutually trusting, so cross-tenant prefix/KV cache sharing is disabled. That is a security requirement, not a tuning choice — shared prefix caches are a documented timing side channel (vLLM advisory GHSA-4qjh-9fv9-r85r; see also <i>The Early Bird Catches the Leak</i> and <i>InputSnatch</i>) that lets one tenant reconstruct another's prompts by measuring time-to-first-token. The <b>${num(c.forfeited)} GB per replica</b> booked above is the capacity cost of that decision.</p>
+<p style="font-size:13px">For reference on the isolation layers: <b>CXL separates capacity</b> (MLD/DCD, hardware, up to 16 logical devices per host), <b>NVIDIA MIG separates compute</b> (hardware — crossbar ports, L2 banks, memory controllers and DRAM buses assigned per instance), and <b>NVIDIA Confidential Computing separates trust</b> (manufacture-fused signing key, remote attestation, encrypted VRAM, NVLink encryption across up to 8 Blackwell GPUs). Note that <b>MIG and NVLink are mutually exclusive</b> — enabling MIG disables NVLink peer-to-peer — so an architecture cannot rely on both at once.</p>`:""}
 <div class="note"><b>Sourcing &amp; limits.</b> The assumed post-CXL tensor-active figure and the achievable ceiling are <b>editable assumptions seeded from vendor- and industry-reported results — they are not DugganUSA measurements</b> and will not reproduce identically on your models. The MemoryAI server price is a placeholder pending a real quote. CXL ~200–500 ns vs NVMe ~100 µs is an architectural fact; the business multipliers are workload-specific. DCGM field IDs and semantics are NVIDIA's. 2026 DRAM supply is concentrated across three vendors and in shortage — allocation risk is a real term of any CXL commitment. Confirm all capacity, pricing, and supply with Penguin Solutions before raising a purchase order. Certainty capped at 95%.</div>`;
  }
  function dl(name,content,type){
