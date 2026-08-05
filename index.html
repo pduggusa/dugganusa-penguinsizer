@@ -269,6 +269,17 @@
   .dt-step.future .dt-q{opacity:.42} .dt-step.future .dt-out{opacity:.18}
   .dt-step.active .dt-arm span{border-color:var(--cool);color:var(--cool)}
   .dt-youarehere{display:inline-block;font-family:var(--mono);font-size:9px;background:var(--cool);color:#04222a;border-radius:999px;padding:2px 7px;margin-left:8px;letter-spacing:.5px;font-weight:650}
+  /* yes/no answer buttons */
+  .dt-ans{display:flex;gap:6px;align-items:center;margin-top:9px;flex-wrap:wrap}
+  .dt-ans button{background:#0a1119;border:1px solid var(--line);color:var(--dim);font-family:var(--sans);font-size:11.5px;font-weight:600;padding:5px 15px;border-radius:7px;cursor:pointer;transition:all .15s}
+  .dt-ans button:hover{border-color:var(--cool-dim);color:var(--ink)}
+  .dt-ans button.on{background:var(--cool);border-color:var(--cool);color:#04222a}
+  .dt-ans button.dim{opacity:.35}
+  .dt-hint{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-left:2px}
+  .dt-step.resolved .dt-q{border-color:var(--ok);box-shadow:0 0 0 1px rgba(52,211,153,.22)}
+  .dt-step.resolved .dt-q .n{background:var(--ok);color:#04222a;border-color:var(--ok)}
+  .dt-step.resolved .dt-youarehere{background:var(--ok)}
+  .dt-step.future .dt-ans{pointer-events:none}
   .dt-iso{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:13px;margin-bottom:8px}
   .dt-icard{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-left:3px solid var(--e);border-radius:12px;padding:14px 15px}
   .dt-icard.dt-trap{background:linear-gradient(180deg,#1a1016,var(--panel2))}
@@ -650,10 +661,15 @@
         <p class="lede">Six gates, in order. Each one can end the conversation, and <b style="color:var(--ink)">most of them end it by telling you not to buy memory</b>. Answer them top to bottom — the first YES wins and you stop. Your current numbers from the MemoryAI tab light the path you're actually on; change them there or upload real telemetry on the DCGM tab and this redraws.</p>
 
         <div class="dt-tools">
+          <span class="dt-lbl">Drive it by</span>
+          <div class="seg" id="dtMode" style="max-width:290px">
+            <button data-m="auto" class="on">My numbers</button><button data-m="manual">I'll answer</button>
+          </div>
           <span class="dt-lbl">Workload shape</span>
-          <div class="seg" id="dtWork" style="max-width:340px">
+          <div class="seg" id="dtWork" style="max-width:300px">
             <button data-w="interactive" class="on">Interactive serving</button><button data-w="batch">Offline / batch</button>
           </div>
+          <button class="rk-btn" id="dtReset" style="display:none">↺ Start over</button>
           <span class="dt-live" id="dtLive"></span>
         </div>
 
@@ -1679,10 +1695,34 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const FINAL={icon:"✅",col:"var(--ok)",out:"CHOOSE: MemoryAI — buy it",
   d:"GPUs are stalling on capacity, the work is latency-sensitive, and the memory costs materially less than the GPUs it frees. <b>This is the case the product exists for.</b>"};
 
+ let MODE="auto", ANS=[];          // ANS[i] = "yes" | "no" | undefined
+ function fires(s,a){ return s.invert ? a==="no" : a==="yes"; }
+ // resolve the walk: returns {at, terminal} — `at` is the gate we stopped on
+ function resolveManual(){
+  for(let i=0;i<STEPS.length;i++){
+   const a=ANS[i];
+   if(a===undefined) return {at:i,terminal:false,pending:true};
+   if(fires(STEPS[i],a)) return {at:i,terminal:true};
+  }
+  return {at:STEPS.length,terminal:true};
+ }
+ function resolveAuto(){
+  let c=null; try{ c=window.__memAI&&window.__memAI.verdict(); }catch(e){}
+  if(!c) return null;
+  const S=window.__memAI.read();
+  c.tensorNowV=parseFloat(S.tensorNow)||0; c.dramNowV=parseFloat(S.dramNow)||0;
+  for(let i=0;i<STEPS.length;i++) if(STEPS[i].hit(c)) return {at:i,terminal:true,c};
+  return {at:STEPS.length,terminal:true,c};
+ }
  function render(){
   const html=STEPS.map((s,i)=>`
    <div class="dt-step" data-i="${i}">
-     <div class="dt-q"><div class="n">${i+1}</div><div class="t">${s.q}</div><div class="m">${s.m}</div></div>
+     <div class="dt-q"><div class="n">${i+1}</div><div class="t">${s.q}</div><div class="m">${s.m}</div>
+       <div class="dt-ans" data-for="${i}">
+         <button data-a="yes">Yes</button><button data-a="no">No</button>
+         <span class="dt-hint">${s.invert?"“No” ends it":"“Yes” ends it"}</span>
+       </div>
+     </div>
      <div class="dt-arm"><span>${s.arm}</span></div>
      <div class="dt-out" style="--e:${s.col}"><div class="h">${s.icon} ${s.out}</div><div class="d">${s.d}</div></div>
    </div>
@@ -1693,32 +1733,57 @@ ${c.iso?`<h2>Multi-tenancy</h2>
      <div class="dt-out" style="--e:${FINAL.col}"><div class="h">${FINAL.icon} ${FINAL.out}</div><div class="d">${FINAL.d}</div></div>
    </div>`;
   $t("dtTree").innerHTML=html;
-  light();
+  $t("dtTree").addEventListener("click",e=>{
+   const btn=e.target.closest(".dt-ans button"); if(!btn)return;
+   const i=+btn.parentElement.dataset.for, a=btn.dataset.a;
+   if(MODE!=="manual"){ MODE="manual"; ANS=[]; syncMode(); }
+   ANS[i]=a; ANS.length=i+1;              // answering a gate discards everything below it
+   paint();
+  });
+  paint();
  }
- function light(){
-  let c=null;
-  try{ c=window.__memAI&&window.__memAI.verdict(); }catch(e){}
-  if(!c){$t("dtLive").textContent="";return;}
-  const S=window.__memAI.read();
-  c.tensorNowV=parseFloat(S.tensorNow)||0; c.dramNowV=parseFloat(S.dramNow)||0;
-  let at=STEPS.length;                       // default: fell through every gate
-  for(let i=0;i<STEPS.length;i++){ if(STEPS[i].hit(c)){at=i;break;} }
+ function paint(){
+  const r = MODE==="manual" ? resolveManual() : resolveAuto();
+  if(!r){ $t("dtLive").textContent=""; return; }
+  const {at,terminal,pending}=r;
   document.querySelectorAll("#dtTree .dt-step").forEach(el=>{
-   const i=+el.dataset.i; el.classList.remove("passed","active","future");
+   const i=+el.dataset.i;
+   el.classList.remove("passed","active","future");
    el.classList.add(i<at?"passed":i===at?"active":"future");
+   el.classList.toggle("resolved", i===at && terminal);
    const t=el.querySelector(".dt-q .t");
    const tag=el.querySelector(".dt-youarehere"); if(tag)tag.remove();
-   if(i===at)t.insertAdjacentHTML("beforeend",'<span class="dt-youarehere">YOU ARE HERE</span>');
+   if(i===at) t.insertAdjacentHTML("beforeend",
+     `<span class="dt-youarehere">${MODE==="manual"?(terminal?"YOUR ANSWER":"ANSWER THIS"):"YOU ARE HERE"}</span>`);
+   // reflect chosen answers on the buttons
+   el.querySelectorAll(".dt-ans button").forEach(b=>{
+    const chosen = MODE==="manual" && ANS[i]===b.dataset.a;
+    b.classList.toggle("on",chosen);
+    b.classList.toggle("dim", MODE==="manual" && ANS[i]!==undefined && !chosen);
+   });
   });
-  const label=at<STEPS.length?STEPS[at].out:FINAL.out;
-  $t("dtLive").innerHTML=`your inputs land on gate <b>${at+1>STEPS.length?"✓":at+1}</b> → <b>${label.replace("CHOOSE: ","")}</b>`;
+  const label = at<STEPS.length ? STEPS[at].out : FINAL.out;
+  if(MODE==="manual"){
+   $t("dtLive").innerHTML = pending
+    ? `walking it yourself · <b style="color:var(--warn)">gate ${at+1}</b> — answer above`
+    : `you answered your way to <b>${label.replace("CHOOSE: ","")}</b>`;
+  } else {
+   $t("dtLive").innerHTML=`your inputs land on gate <b>${at+1>STEPS.length?"✓":at+1}</b> → <b>${label.replace("CHOOSE: ","")}</b>`;
+  }
+  $t("dtReset").style.display = MODE==="manual" ? "" : "none";
  }
+ function syncMode(){
+  document.querySelectorAll("#dtMode button").forEach(x=>x.classList.toggle("on",x.dataset.m===MODE));
+ }
+ document.querySelectorAll("#dtMode button").forEach(b=>b.onclick=()=>{
+  MODE=b.dataset.m; if(MODE==="manual")ANS=[]; syncMode(); paint();});
+ $t("dtReset").onclick=()=>{ANS=[];paint();};
  document.querySelectorAll("#dtWork button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("#dtWork button").forEach(x=>x.classList.remove("on"));
-  b.classList.add("on");WORK=b.dataset.w;light();});
+  b.classList.add("on");WORK=b.dataset.w;paint();});
  // re-light whenever this tab is opened (MemoryAI inputs may have moved)
- document.querySelector('#tabs button[data-v="tree"]').addEventListener("click",()=>setTimeout(light,0));
- render();
+ document.querySelector('#tabs button[data-v="tree"]').addEventListener("click",()=>setTimeout(paint,0));
+ syncMode(); render();
 })();
 </script>
 
