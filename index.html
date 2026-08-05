@@ -259,6 +259,8 @@
   .dt-out{border:1px solid var(--line);border-left:3px solid var(--e,var(--cool));border-radius:12px;padding:12px 14px;background:linear-gradient(180deg,var(--panel),var(--panel2));transition:opacity .2s,box-shadow .2s;opacity:.5}
   .dt-out .h{font-size:13px;font-weight:650;color:var(--e,var(--cool));display:flex;align-items:center;gap:7px}
   .dt-out .d{font-size:11.5px;color:var(--dim);line-height:1.5;margin-top:5px} .dt-out .d b{color:var(--ink)}
+  .dt-rv{font-size:11px;color:var(--faint);line-height:1.5;margin-top:8px;border-top:1px solid #16212e;padding-top:7px}
+  .dt-rv b{color:var(--cool);font-weight:600}
   .dt-no{display:flex;align-items:center;gap:9px;padding:7px 0 7px 22px;font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:1px}
   .dt-no::before{content:"";width:1px;height:22px;background:var(--line);margin-left:-1px}
   /* live path state */
@@ -468,12 +470,12 @@
             <div class="eli5-c"><b>The KV cache is the chef's notes</b> on every order still in progress. Long conversations mean long notes. A hundred customers at once means a hundred sets of notes.</div>
             <div class="eli5-c"><b>Run out of counter and the chef stops cooking.</b> Either they walk to the basement filing cabinet (that's NVMe — a <i>hundred thousand</i> nanoseconds) or they bin the notes and redo the work. Either way: a very expensive person, standing still.</div>
             <div class="eli5-c eli5-win"><b>MemoryAI is a second counter</b> bolted to the first. A slightly longer reach (200–500 ns — you'd never see it), far more room, and much cheaper per square foot than hiring a second chef.</div>
-            <div class="eli5-c eli5-warn"><b>The whole question is whether your chef is actually standing around.</b> If they're cooking flat out, more counter does nothing and you need another chef. DCGM tells you which one you've got — and this page will happily tell you to go buy GPUs instead.</div>
+            <div class="eli5-c eli5-warn"><b>The whole question is whether your chef is actually standing around.</b> If they are cooking flat out, more counter will not help and another chef is the better spend. DCGM tells you which situation you are in — and this page will say so either way.</div>
           </div>
           <div class="eli5-f">Everything below is that same idea with the arithmetic attached. <b>Step 1</b> measures whether the chef is idle. <b>Step 2</b> checks whether the notes actually fit on the counter. <b>Step 3</b> compares the price of more counter against the price of another chef.</div>
         </div>
 
-        <p class="lede">A B300 costs about the same as a house and can do <b style="color:var(--ink)">15.3 petaFLOPS</b>. When the KV cache outgrows HBM, it does <b style="color:var(--ink)">nothing at all</b> — very quickly, while drawing 1.4 kW. This tab answers one question with numbers instead of vibes: <b style="color:var(--ink)">are your GPUs actually starving, and if so is CXL memory the cheapest way to feed them?</b> Measure first (DCGM below), then do the arithmetic. If you're compute-bound, this whole tab should tell you to go away and buy GPUs — and it will.</p>
+        <p class="lede">A B300 costs about the same as a house and can do <b style="color:var(--ink)">15.3 petaFLOPS</b>. When the KV cache outgrows HBM, it does <b style="color:var(--ink)">nothing at all</b> — very quickly, while drawing 1.4 kW. This tab answers one question with numbers instead of vibes: <b style="color:var(--ink)">are your GPUs actually starving, and if so is CXL memory the cheapest way to feed them?</b> Measure first (DCGM below), then do the arithmetic. If compute is your real constraint, this tab will say so plainly and point you at GPUs instead.</p>
 
         <div class="mem-hero" id="memHero"></div>
         <div class="mem-tools">
@@ -490,24 +492,24 @@
         <p class="mem-fine">Or scrape the same field IDs from <b>dcgm-exporter</b> into Prometheus if you'd rather look at a week than a minute. The field IDs are what matter — the transport doesn't.</p>
         <div class="mem-tbl-wrap">
         <table class="mem-tbl">
-          <thead><tr><th>DCGM field</th><th>ID</th><th>Reading that indicts</th><th>What it actually means</th></tr></thead>
+          <thead><tr><th>DCGM field</th><th>ID</th><th>Reading that points here</th><th>What it actually means</th></tr></thead>
           <tbody>
-            <tr><td><b>DCGM_FI_DEV_GPU_UTIL</b></td><td>203</td><td class="hot">&gt; 85%</td><td>The number that lies. It only means a kernel was <i>resident</i> — not that math happened. Never buy or refuse to buy on this alone.</td></tr>
+            <tr><td><b>DCGM_FI_DEV_GPU_UTIL</b></td><td>203</td><td class="hot">&gt; 85%</td><td>The one to distrust on its own — it only means a kernel was <i>resident</i>, not that math happened. Read it alongside 1004 rather than instead of it.</td></tr>
             <tr><td><b>DCGM_FI_PROF_PIPE_TENSOR_ACTIVE</b></td><td>1004</td><td class="hot">&lt; 35%</td><td><b>The truth.</b> Fraction of cycles the tensor pipes were actually busy. High 203 + low 1004 = the GPU is holding a seat, not working.</td></tr>
             <tr><td><b>DCGM_FI_PROF_DRAM_ACTIVE</b></td><td>1005</td><td class="warn">&lt; 30%</td><td>Not even HBM bandwidth is saturated. You're not compute-bound <i>or</i> bandwidth-bound — you're waiting on something off-chip. That's the memory wall.</td></tr>
-            <tr><td><b>DCGM_FI_PROF_DRAM_ACTIVE</b></td><td>1005</td><td class="ok">&gt; 70% w/ low 1004</td><td><b>Different wall.</b> HBM bandwidth-bound, not capacity-bound. CXL will <i>not</i> fix this. Don't buy MemoryAI for it.</td></tr>
+            <tr><td><b>DCGM_FI_PROF_DRAM_ACTIVE</b></td><td>1005</td><td class="ok">&gt; 70% w/ low 1004</td><td><b>A different wall.</b> Bandwidth-bound rather than capacity-bound — added capacity won't move this one. Worth resolving first, then reassessing capacity.</td></tr>
             <tr><td><b>DCGM_FI_DEV_FB_USED / FB_TOTAL</b></td><td>252 / 250</td><td class="hot">&gt; 95%</td><td>HBM is full. You are evicting and recomputing KV, or rejecting/truncating requests. This is the capacity wall MemoryAI is built for.</td></tr>
             <tr><td><b>DCGM_FI_PROF_PCIE_RX_BYTES</b></td><td>1010</td><td class="hot">sustained + bursty</td><td>You are <i>already</i> paging KV cache across PCIe. You've built a worse version of CXL by hand. Textbook case.</td></tr>
-            <tr><td><b>DCGM_FI_DEV_POWER_USAGE</b></td><td>155</td><td class="warn">&lt; 60% of TDP</td><td>Under 840 W on a 1,400 W B300 while "busy" = idle silicon. You are paying to cool a paperweight.</td></tr>
+            <tr><td><b>DCGM_FI_DEV_POWER_USAGE</b></td><td>155</td><td class="warn">&lt; 60% of TDP</td><td>Under 840 W on a 1,400 W B300 while "busy" suggests the silicon is waiting rather than working — corroborating evidence, not a verdict on its own.</td></tr>
             <tr><td><b>DCGM_FI_PROF_SM_OCCUPANCY</b></td><td>1003</td><td class="warn">low + low 1004</td><td>Batches too small to fill the machine — usually because KV headroom caps concurrency. More memory raises the batch ceiling.</td></tr>
           </tbody>
         </table>
         </div>
         <div class="mem-verdictbox">
-          <div class="mem-vrow"><span class="mem-vk">203 high · 1004 low · 1005 low · 252 pinned</span><span class="mem-vv ok">→ Memory-capacity bound. MemoryAI is in play. Do the math below.</span></div>
-          <div class="mem-vrow"><span class="mem-vk">1004 already &gt; 60%</span><span class="mem-vv hot">→ Compute-bound. Buy GPUs. Close this tab.</span></div>
-          <div class="mem-vrow"><span class="mem-vk">1005 &gt; 70% with 1004 low</span><span class="mem-vv hot">→ HBM bandwidth-bound. CXL is the wrong tool.</span></div>
-          <div class="mem-vrow"><span class="mem-vk">252 comfortably under FB_TOTAL</span><span class="mem-vv warn">→ No capacity wall today. Revisit when context or concurrency grows.</span></div>
+          <div class="mem-vrow"><span class="mem-vk">203 high · 1004 low · 1005 low · 252 pinned</span><span class="mem-vv ok">→ Memory-capacity bound. This is the regime MemoryAI is built for — run the numbers below.</span></div>
+          <div class="mem-vrow"><span class="mem-vk">1004 already &gt; 60%</span><span class="mem-vv hot">→ Compute-bound today. GPUs are the better dollar — revisit as concurrency and context grow.</span></div>
+          <div class="mem-vrow"><span class="mem-vk">1005 &gt; 70% with 1004 low</span><span class="mem-vv hot">→ HBM bandwidth-bound. Address that constraint first, then re-run this.</span></div>
+          <div class="mem-vrow"><span class="mem-vk">252 comfortably under FB_TOTAL</span><span class="mem-vv warn">→ Headroom to spare today. Worth rechecking as context, concurrency, or tenant count grows.</span></div>
         </div>
 
         <!-- STEP 2 — THE ARITHMETIC -->
@@ -517,9 +519,9 @@
         <div class="mem-out" id="memOut"></div>
 
         <div class="callout">
-          <div class="callout-h">⚠ If you're reading this like memory-overcommit guidance — stop</div>
+          <div class="callout-h">⚠ A note if this reads like memory-overcommit guidance</div>
           <p>Most CXL literature is written in the fleet-efficiency register, and for good reason: Microsoft's <b>Pond</b> paper justified pooling with <b>~25% of Azure DRAM stranded</b> and <b>50% of VMs never touching 50% of their rented memory</b>. That is a textbook overcommit statistic, and for that use case the analogy is exact.</p>
-          <p><b>It does not transfer to KV cache</b>, and assuming it does will make you under-provision. Overcommit works on two assumptions that both fail here:</p>
+          <p><b>It transfers poorly to KV cache</b>, and carrying the assumption across tends to under-provision the tier. Overcommit rests on two conditions that do not hold here:</p>
           <p>① <b>Demand is anti-correlated.</b> Tenants peak at different times, so peak-of-sum beats sum-of-peaks. But LLM serving follows the same diurnal curve on every replica and a viral hour hits all of them at once — the pool runs dry exactly when you need it.</p>
           <p>② <b>There are cold pages to reclaim.</b> Ballooning works because guests hoard idle memory. A KV cache <i>is</i> the hot working set of in-flight requests. Nothing about it is idle. There is nothing to steal.</p>
           <p class="callout-x">Size this tier to the <b>working set</b>, not to average utilization — which is what Step 2 does, per replica, deliberately. And note the far tier is a <b>design point, not a failure mode</b>: at 200–500 ns it is NUMA-far, not swap-far. You plan to sit on it permanently.</p>
@@ -542,7 +544,7 @@
         </div>
 
         <div class="callout hot">
-          <div class="callout-h">🚨 Cross-tenant prefix caching is a leak, not a feature</div>
+          <div class="callout-h">🚨 Cross-tenant prefix caching — a documented side channel, not a free optimisation</div>
           <p>Sharing KV for common prefixes across tenants is the single biggest memory saving in multi-tenant serving — and it is a <b>documented cross-tenant data-leak vector</b>, not an optimisation you get for free. Cache hits return measurably faster, so an attacker probes time-to-first-token, learns which prefixes are resident, and <b>incrementally reconstructs another tenant's prompt</b> — system instructions, PII, medical and financial detail — with no memory access and no special privilege.</p>
           <p>This is not theoretical: it carries a vLLM security advisory (<b>GHSA-4qjh-9fv9-r85r</b>) and a research literature (<i>The Early Bird Catches the Leak</i>, <i>InputSnatch</i>), with <b>PrefixWall</b> and <b>SafeKV</b> as proposed mitigations.</p>
           <p class="callout-x">Set isolation to <b>hostile</b> in the controls and the model forfeits that saving, because in a real Pepsi-and-Coke deployment you must. The forfeited capacity is shown as its own line — <b>that number is the price of isolation</b>, and it is usually the honest reason to buy more memory rather than a reason not to.</p>
@@ -555,14 +557,33 @@
         <div class="mem-narr" id="memNarr"></div>
 
         <!-- WHEN IT DOESN'T -->
-        <h3 class="mem-h">When the smart spend is <span style="color:var(--hot)">not</span> MemoryAI</h3>
+        <h3 class="mem-h">Day one or later — adding the memory tier at install time</h3>
+        <p class="lede">A separate question from <i>whether</i>, and one that lands earlier: specify the memory tier with the cluster, or retrofit it once the workload proves it needs it? The honest answer is that <b style="color:var(--ink)">install time is cheaper and later is better-informed</b>, and which matters more depends on how well you already know your workload.</p>
+        <div class="why">
+          <div class="scard"><h4><span class="dot" style="background:var(--ok)"></span>For — specify it at install</h4>
+            <p><b>One integration, one validation, one change window.</b> Adding a memory tier to a live cluster means a fresh qualification cycle, a maintenance window against a running SLA, and re-tuning a serving stack that people now depend on. Doing it inside the original bring-up is materially less disruptive.<br/><br/>
+            <b>Supply is the real argument.</b> DDR5 is tight across three suppliers and CXL capacity is allocated. A tier specified in the original order is a tier you have; a tier you decide you want in nine months is a lead-time conversation.<br/><br/>
+            <b>You size power, cooling and rack space once.</b> Retrofitting means finding kW and U in a rack that was planned without them — often the binding constraint, and the one nobody costs in advance.</p></div>
+          <div class="scard"><h4><span class="dot" style="background:var(--warn)"></span>Against — wait and measure</h4>
+            <p><b>You are buying against a forecast.</b> Every number on this page is workload-specific, and pre-production traffic estimates are routinely wrong in both directions. Ninety days of real DCGM data is worth more than any sizing exercise, including this one.<br/><br/>
+            <b>Capital sits idle if you are wrong.</b> Unused CXL is expensive shelf-space in a market where the same spend could have been GPUs — and if you turn out to be compute-bound, that is exactly the wrong asset.<br/><br/>
+            <b>The technology is moving.</b> CXL 3.x features and controller generations are still landing. A tier bought a year later is a better tier, at a price that may well have moved.</p></div>
+        </div>
+        <div class="callout">
+          <div class="callout-h">The practical middle — what most buyers should actually do</div>
+          <p><b>Buy the headroom, defer the capacity.</b> The costs that are painful to retrofit are structural: PCIe lanes, rack U, power envelope, cooling, and the validation cycle. The cost that is easy to defer is <b>DRAM itself</b>. Specify a platform and a rack design that can accept the memory tier — then populate it when your own telemetry says to.</p>
+          <p>Concretely: reserve the U and the kW at design time, confirm the platform's CXL AIC slot count with your Penguin rep, and treat the modules as a follow-on order gated on 90 days of production DCGM. That converts an expensive forecasting bet into a cheap option.</p>
+          <p class="callout-x">Two cases override this. If your workload is <b>already in production elsewhere</b> and you have the telemetry, you are not forecasting — specify it day one and take the integration saving. If you are on a <b>hard SLA from launch</b> with long context or high concurrency, the retrofit window may never be politically available, and day one is the only realistic answer.</p>
+        </div>
+
+        <h3 class="mem-h">When the smart spend is <span style="color:var(--warn)">somewhere else first</span></h3>
         <div class="why">
           <div class="scard"><h4><span class="dot" style="background:var(--hot)"></span>You're compute-bound</h4>
-            <p>Tensor-active (1004) already above ~60%. The silicon is working. Memory buys you nothing — <b>every dollar belongs on GPUs</b>. This is the single most common misdiagnosis, because GPU_UTIL 203 reads 99% in both cases.</p></div>
+            <p>Tensor-active (1004) already above ~60% means the silicon is working and there is little idle capacity for memory to unlock. <b>GPUs are the better dollar today.</b> Worth rechecking as you scale concurrency — capacity is commonly the next constraint after compute. This is the most common misdiagnosis, because GPU_UTIL 203 reads ~99% in both cases.</p></div>
           <div class="scard"><h4><span class="dot" style="background:var(--hot)"></span>Batch, short-context, or latency-tolerant work</h4>
-            <p>Offline batch inference, classification, embeddings, short prompts, low concurrency. Cold data can absolutely afford a 100 µs fetch. <b>NVMe is the correct answer</b> and it's ~150× cheaper per GB. Take the cheap win.</p></div>
+            <p>Offline batch inference, classification, embeddings, short prompts, low concurrency — cold data can comfortably afford a 100 µs fetch. <b>NVMe is the right tier here</b>, at roughly 150× less per GB. Take the cheaper win now; the calculus changes if the workload turns interactive or agentic.</p></div>
           <div class="scard"><h4><span class="dot" style="background:var(--warn)"></span>Memflation &amp; supply concentration</h4>
-            <p>CXL rides DDR5, and 2026 DRAM is in a hard shortage — DDR5 roughly tripled-to-quadrupled from mid-2025, with <b>three suppliers</b> and no new entrants. NAND has a broader base and trended <i>down</i>. Dedicated CXL supply contracts add real allocation risk. Only worth it if GPU spend is your dominant cost line.</p></div>
+            <p>CXL rides DDR5, and 2026 DRAM is in a hard shortage — DDR5 roughly tripled-to-quadrupled from mid-2025, with <b>three suppliers</b> and no new entrants. NAND has a broader base and trended <i>down</i>. Dedicated CXL supply contracts carry real allocation risk, so the case is strongest where GPU spend is your dominant cost line. A current quote is worth having before you decide either way.</p></div>
           <div class="scard"><h4><span class="dot" style="background:var(--ok)"></span>…and when it clearly is</h4>
             <p>High concurrency, long context (32K+), agentic multi-step loops, prefix-cache reuse across sessions — anywhere KV working set exceeds HBM and GPUs visibly stall. <b>CXL costs materially less per GB than HBM while sitting ~200–500× closer than SSD.</b> Modest memory spend unlocks GPU capacity that would otherwise cost far more to add in GPUs.</p></div>
         </div>
@@ -658,7 +679,7 @@
       <!-- DECISION TREE -->
       <section class="view" id="v-tree">
         <h2 class="sec">🎯 Choose X when Y — the whole decision on one page</h2>
-        <p class="lede">Six gates, in order. Each one can end the conversation, and <b style="color:var(--ink)">most of them end it by telling you not to buy memory</b>. Answer them top to bottom — the first YES wins and you stop. Your current numbers from the MemoryAI tab light the path you're actually on; change them there or upload real telemetry on the DCGM tab and this redraws.</p>
+        <p class="lede">Six gates, in order. Most of them resolve <b style="color:var(--ink)">somewhere other than a memory purchase</b> — which is the point, because the fastest way to trust a recommendation is to see what would have overturned it. Each outcome carries the condition that would bring you back. Your current numbers from the MemoryAI tab light the path you're actually on; change them there or upload real telemetry on the DCGM tab and this redraws.</p>
 
         <div class="dt-tools">
           <span class="dt-lbl">Drive it by</span>
@@ -694,13 +715,13 @@
             <div class="dt-ih">Separate <b>TRUST</b></div>
             <div class="dt-ip">NVIDIA Confidential Computing</div>
             <div class="dt-id">Choose when: you must run on infrastructure whose <b>operator</b> you don't trust. Signing key fused at manufacture, remote attestation, encrypted VRAM, and NVLink encryption across up to 8 Blackwell GPUs.</div>
-            <div class="dt-if">~2–5% published overhead for H100 inference. This is the row people think doesn't exist.</div>
+            <div class="dt-if">~2–5% published overhead for H100 inference. The layer most often assumed to be missing.</div>
           </div>
           <div class="dt-icard dt-trap" style="--e:var(--hot)">
-            <div class="dt-ih">⛔ Separate <b>NOTHING</b></div>
+            <div class="dt-ih">⚠ Separates <b>NEITHER</b></div>
             <div class="dt-ip">MIG + NVLink together</div>
-            <div class="dt-id">Not an architecture. <b>Enabling MIG disables NVLink peer-to-peer</b>, on both NVLink and PCIe form, and MIG-backed vGPUs aren't supported for NVSwitch.</div>
-            <div class="dt-if">Pick hard intra-GPU partitioning <b>or</b> the fabric. Any diagram showing both is drawing something that cannot be built.</div>
+            <div class="dt-id">Worth knowing before it reaches a design review: <b>enabling MIG disables NVLink peer-to-peer</b>, in both NVLink and PCIe form, and MIG-backed vGPUs are not supported for NVSwitch.</div>
+            <div class="dt-if">Pick hard intra-GPU partitioning <b>or</b> the fabric. A diagram showing both is describing a configuration the hardware will not permit.</div>
           </div>
         </div>
 
@@ -709,18 +730,18 @@
         <table class="mem-tbl">
           <thead><tr><th>Choose…</th><th>When</th><th>Because</th></tr></thead>
           <tbody>
-            <tr><td class="hot"><b>More GPUs</b></td><td>tensor-active (1004) &gt; 60%</td><td>The silicon is working. Memory buys nothing. This is the most common misdiagnosis because GPU_UTIL reads ~99% either way.</td></tr>
-            <tr><td class="hot"><b>Not CXL</b></td><td>DRAM-active (1005) &gt; 70% with tensor low</td><td>HBM bandwidth-bound. CXL adds capacity, not bandwidth. Wrong wall.</td></tr>
-            <tr><td class="warn"><b>Nothing yet</b></td><td>KV working set fits HBM headroom</td><td>No capacity wall to buy your way out of. Revisit when context or concurrency grows.</td></tr>
-            <tr><td class="ok"><b>NVMe</b></td><td>batch, short context, latency-tolerant</td><td>Cold data can afford 100 µs, and NAND is roughly 150× cheaper per GB. Take the cheap win.</td></tr>
+            <tr><td class="hot"><b>GPUs first</b></td><td>tensor-active (1004) &gt; 60%</td><td>Silicon is working, so little idle capacity is available for memory to unlock. Recheck as concurrency grows. Most common misdiagnosis — GPU_UTIL reads ~99% either way.</td></tr>
+            <tr><td class="hot"><b>Bandwidth first</b></td><td>DRAM-active (1005) &gt; 70% with tensor low</td><td>Bandwidth-bound rather than capacity-bound. Resolve that, then reassess — capacity is often the next wall.</td></tr>
+            <tr><td class="warn"><b>Headroom today</b></td><td>KV working set fits HBM headroom</td><td>Nothing to solve right now. Step 2 gives the concurrency at which you would cross — check against it when traffic changes.</td></tr>
+            <tr><td class="ok"><b>NVMe tier</b></td><td>batch, short context, latency-tolerant</td><td>Cold data affords 100 µs and NAND is ~150× less per GB. Reopens if the work turns interactive or agentic.</td></tr>
             <tr><td class="ok"><b>MemoryAI (CXL)</b></td><td>KV spills, GPUs stall, work is interactive</td><td>~200–500 ns keeps the GPU fed where NVMe cannot, and costs far less than the GPUs it frees.</td></tr>
             <tr><td class="ok"><b>MemoryAI + isolation</b></td><td>…and tenants are hostile</td><td>Prefix dedup must be off — it's a TTFT side channel. Budget the forfeited capacity explicitly.</td></tr>
-            <tr><td class="warn"><b>Pilot, don't commit</b></td><td>return under ~2×</td><td>2026 DRAM is short across three suppliers. A thin return doesn't justify allocation risk.</td></tr>
+            <tr><td class="warn"><b>Pilot first</b></td><td>return under ~2×</td><td>Thin returns do not yet justify allocation risk in a short DRAM market. A current quote often moves this.</td></tr>
           </tbody>
         </table>
         </div>
         <footer style="margin-top:18px">
-          <span class="note">⚠ The gates are ordered by <b>how cheaply they end the conversation</b>, not by how likely they are. Two DCGM reads settle most cases before any capacity arithmetic runs, which is deliberate — the fastest correct answer here is usually "don't buy this." Thresholds (60% tensor-active, 70% DRAM-active, 2× return) are editable judgement calls, not physical constants; the DCGM field semantics behind them are NVIDIA's. Outcome colour is decorative only — every node carries an icon and a written verdict, so the tree reads correctly in greyscale. Certainty capped at 95%.</span>
+          <span class="note">⚠ The gates are ordered by <b>how cheaply they can be settled</b>, not by how likely they are. Two DCGM reads resolve most cases before any capacity arithmetic runs, which is deliberate — a recommendation is worth more when you can see what would have overturned it. Every outcome carries the condition that brings you back. Thresholds (60% tensor-active, 70% DRAM-active, 2× return) are editable judgement calls, not physical constants; the DCGM field semantics behind them are NVIDIA's. Outcome colour is decorative only — every node carries an icon and a written verdict, so the tree reads correctly in greyscale. Certainty capped at 95%.</span>
         </footer>
       </section>
 
@@ -1260,22 +1281,27 @@ sync();
   const roi=cxlCost>0?valueRec/cxlCost:0;
   const net=valueRec-cxlCost;
   // --- verdict -------------------------------------------------------------------
+  // how close this build is to the capacity wall, and where the wall actually sits
+  const headroomUse=headroomRep>0?workingRep/headroomRep*100:0;
+  const wallAtConc=perSeqGB>0?Math.floor(headroomRep/perSeqGB):0;
+  const wallAtCtx=(perSeqGB>0&&g("conc")>0)?Math.floor(headroomRep/(perSeqGB/g("ctx"))/g("conc")):0;
   let verdict,vclass,why;
-  if(g("tensorNow")>=60){verdict="COMPUTE-BOUND — buy GPUs";vclass="hot";
-   why="Tensor-active (DCGM 1004) is already at "+g("tensorNow")+"%. The silicon is working. Memory buys you nothing here — put the money on GPUs.";}
-  else if(g("dramNow")>=70&&g("tensorNow")<40){verdict="BANDWIDTH-BOUND — wrong wall";vclass="hot";
-   why="DRAM-active (1005) at "+g("dramNow")+"% with tensor at "+g("tensorNow")+"% means HBM bandwidth is the limit, not capacity. CXL adds capacity, not HBM bandwidth. It will not fix this.";}
-  else if(spillGB<=0){verdict="KV FITS — no wall today";vclass="warn";
-   why="Each replica's "+num(workingRep)+" GB working set fits inside "+num(headroomRep)+" GB of KV headroom on "+tp+" GPUs. There is no capacity problem to buy your way out of. Revisit when context or concurrency grows — you have room for "+num(fitsSeqs)+" concurrent sequences per replica at this context.";}
+  if(g("tensorNow")>=60){verdict="COMPUTE-BOUND — GPUs first";vclass="hot";
+   why="Tensor-active (DCGM 1004) is at "+g("tensorNow")+"%, so the silicon is genuinely working and more memory wouldn't have much to feed. GPUs are the better dollar <b>today</b>. Worth another look once you push concurrency or context up — capacity is usually the <i>next</i> wall after compute, not an alternative to it.";}
+  else if(g("dramNow")>=70&&g("tensorNow")<40){verdict="BANDWIDTH-BOUND — different wall first";vclass="hot";
+   why="DRAM-active (1005) at "+g("dramNow")+"% with tensor at "+g("tensorNow")+"% points at HBM <i>bandwidth</i> as the current limit rather than capacity, and CXL adds capacity. Fix that constraint first — then re-run this, because capacity is very often what you hit next.";}
+  else if(spillGB<=0){verdict="FITS TODAY — worth rechecking";vclass="warn";
+   why="Each replica's "+num(workingRep)+" GB working set fits inside "+num(headroomRep)+" GB of KV headroom on "+tp+" GPUs — you're using <b>"+headroomUse.toFixed(0)+"%</b> of it. No capacity problem to solve right now. You'd cross the line at roughly <b>"+num(wallAtConc)+" concurrent sequences</b> per replica at this context"+(wallAtCtx>0?", or around <b>"+num(wallAtCtx)+" tokens</b> of context at today's concurrency":"")+" — so check again if traffic, context length, or tenant count moves.";}
   else if(roi>=2){verdict="GO — MemoryAI clears the bar";vclass="ok";
    why="KV spills "+spillGB.toFixed(0)+" GB past HBM and tensor-active sits at "+g("tensorNow")+"%. "+servers+" MemoryAI server"+(servers===1?"":"s")+" at "+usd2(cxlCost)+" recovers roughly "+gpuEquiv.toFixed(1)+" GPUs of effective capacity ("+usd2(valueRec)+") — a "+roi.toFixed(1)+"× return, and "+usd2(gpuAltCost-cxlCost)+" cheaper than buying the "+gpusToBuy+" GPUs it would take to get there.";}
-  else if(roi>=1){verdict="MARGINAL — negotiate hard";vclass="warn";
-   why="Return is "+roi.toFixed(2)+"×. Real but thin. It turns on the server price ("+usd2(g("memCost"))+" is a placeholder — get a quote) and on whether tensor-active really recovers to "+g("tensorAft")+"%. Pilot before you commit to supply.";}
-  else{verdict="NO — GPUs are the better dollar";vclass="hot";
-   why="Recovered capacity is worth "+usd2(valueRec)+" against "+usd2(cxlCost)+" of CXL — a "+roi.toFixed(2)+"× return. Under a DRAM shortage that is not a trade worth the allocation risk.";}
+  else if(roi>=1){verdict="MARGINAL — pilot it";vclass="warn";
+   why="Return is "+roi.toFixed(2)+"×. Real, but thin enough that the inputs decide it. It turns on the server price ("+usd2(g("memCost"))+" is a placeholder — a real quote may well move this into GO) and on whether tensor-active recovers to "+g("tensorAft")+"% on your models. Pilot and measure before committing to supply.";}
+  else{verdict="NOT YET — GPUs are the better dollar";vclass="hot";
+   why="At today's numbers the recovered capacity is worth "+usd2(valueRec)+" against "+usd2(cxlCost)+" of CXL — a "+roi.toFixed(2)+"× return, which doesn't justify allocation risk in a tight DRAM market. This one is <b>very</b> sensitive to inputs: a real server quote, a higher spill, or a better recovered tensor-active figure can all flip it. Worth re-running after a quote and a longer DCGM capture.";}
   return{gpus,capex,hbm,yrs,kvPerTok,perSeqGB,workingGB,hbmTotal,weightsGB,reserveGB,headroomGB,
    tp,replicas,hbmPerRep,headroomRep,workingRep,spillRep,
    iso,tenants,shareRate,workingRaw,dedupSaved,forfeited,headroomPerTenant,workingPerTenant,
+   headroomUse,wallAtConc,wallAtCtx,
    spillGB,spillPct,fitsSeqs,idleFrac,gpuCapital,stranded,burnHr,burnYr,recFrac,gpuEquiv,valueRec,
    servers,cxlCost,gpusToBuy,gpuAltCost,nvmeCost,roi,net,verdict,vclass,why};
  }
@@ -1582,10 +1608,10 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const gap=have("util")?stats.util.mean-t.mean:null;
   const hbmGB=have("fbtot")?stats.fbtot.mean/1024:null;
   let read,rc;
-  if(t.mean>=60){read="Compute-bound — the silicon is working. Buy GPUs, not memory.";rc="hot";}
-  else if(dr.mean>=70&&t.mean<40){read="HBM bandwidth-bound. This is a different wall — CXL adds capacity, not bandwidth. MemoryAI is the wrong purchase for this fleet.";rc="hot";}
+  if(t.mean>=60){read="Compute-bound — the silicon is working, so there is little idle capacity for memory to unlock. GPUs are the better dollar today; worth rechecking as concurrency and context grow.";rc="hot";}
+  else if(dr.mean>=70&&t.mean<40){read="HBM bandwidth-bound — a different constraint from capacity, and added capacity won't move it. Worth resolving that first, then reassessing; capacity is often what you meet next.";rc="hot";}
   else if(t.mean<35&&dr.mean<30){read="Memory-capacity bound. Neither the tensor pipes nor HBM bandwidth are saturated — the GPUs are waiting on something off-chip. This is the regime MemoryAI exists for.";rc="ok";}
-  else{read="Mixed signal. Tensor-active is low but not damningly so, and bandwidth isn't pinned. Capture a longer window under peak load before committing capital.";rc="warn";}
+  else{read="Mixed signal — tensor-active is low but not conclusively so, and bandwidth isn't pinned. A longer capture under peak load will settle it before any capital decision.";rc="warn";}
   show(`
    <div class="mem-panel dcgm-ok" style="margin-bottom:14px">
     <h5>Parsed — ${p.fmt}</h5>
@@ -1611,7 +1637,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
       if(tv==null&&dv==null)return "";
       const bad=tv!=null&&tv<35;
       return `<tr><td><b>${gid}</b></td><td class="${bad?"hot":"ok"}">${tv!=null?tv.toFixed(1)+"%":"—"}</td><td>${dv!=null?dv.toFixed(1)+"%":"—"}</td><td>${bad?"<span style='color:var(--hot)'>starving</span>":"<span style='color:var(--ok)'>healthy</span>"}</td></tr>`;}).join("")
-    }</tbody></table></div><p class="mem-fine">Per-GPU means. One starving rank inside a healthy fleet is usually a placement or sharding problem, not a memory-tier problem — fix that before buying anything.</p>`:""}`);
+    }</tbody></table></div><p class="mem-fine">Per-GPU means. One starving rank inside an otherwise healthy fleet usually points at placement or sharding rather than the memory tier — worth resolving that first.</p>`:""}`);
 
   $d("dcgmApply").onclick=()=>{
    const patch={tensorNow:+t.mean.toFixed(1),dramNow:+dr.mean.toFixed(1)};
@@ -1668,32 +1694,39 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  let WORK="interactive";
  const STEPS=[
   {q:'Is <b>tensor-active</b> above 60%?',m:"DCGM 1004 · PIPE_TENSOR_ACTIVE",arm:"IF YES",
-   icon:"🔥",col:"var(--hot)",out:"CHOOSE: More GPUs",
-   d:"You are <b>compute-bound</b> — the silicon is genuinely working. Memory buys you nothing. This is the most common misdiagnosis, because GPU_UTIL (203) reads ~99% whether the tensor pipes are busy or idle.",
+   icon:"🔥",col:"var(--hot)",out:"CHOOSE: GPUs first",
+   d:"You are <b>compute-bound</b> — the silicon is genuinely working, so there is little idle capacity for memory to unlock. GPUs are the better dollar today. This is the most common misdiagnosis, because GPU_UTIL (203) reads ~99% whether the tensor pipes are busy or idle.",
+   revisit:"Come back as you raise concurrency or context length — capacity is commonly the next constraint after compute, not an alternative to it.",
    hit:c=>c.tensorNowV>=60},
   {q:'Is <b>DRAM-active</b> above 70% while tensor stays low?',m:"DCGM 1005 · DRAM_ACTIVE",arm:"IF YES",
-   icon:"🧱",col:"var(--hot)",out:"CHOOSE: Not CXL — wrong wall",
-   d:"You are <b>HBM bandwidth-bound</b>, not capacity-bound. CXL adds capacity; it does not add HBM bandwidth. Rearchitect the workload or add GPUs — buying a memory tier here fixes nothing.",
+   icon:"🧱",col:"var(--hot)",out:"CHOOSE: Address bandwidth first",
+   d:"You are <b>HBM bandwidth-bound</b> rather than capacity-bound, and added capacity won't move that particular limit. Rearchitecting the workload or adding GPUs is the higher-value move right now.",
+   revisit:"Re-run this once bandwidth is no longer the binding constraint — capacity is very often the wall you meet next.",
    hit:c=>c.dramNowV>=70&&c.tensorNowV<40},
   {q:'Does the KV working set exceed HBM headroom, <b>per replica</b>?',m:"Step 2 arithmetic · not fleet-wide",arm:"IF NO",
-   icon:"✋",col:"var(--warn)",out:"CHOOSE: Buy nothing yet",
-   d:"There is <b>no capacity wall</b> to buy your way out of. Revisit when context length, concurrency, or tenant count grows — all three push the same direction.",
+   icon:"✋",col:"var(--warn)",out:"CHOOSE: You have headroom today",
+   d:"The KV working set still fits inside HBM, so there is <b>no capacity wall to solve right now</b>. That is a good position to be in — and a moving one.",
+   revisit:"Context length, concurrency, and tenant count all push the same direction. Step 2 shows the concurrency at which you would cross the line; check against it when traffic changes.",
    hit:c=>c.spillGB<=0,invert:true},
   {q:'Is the spilled cache in the <b>active hot path</b>?',m:"interactive serving vs offline batch",arm:"IF NO",
-   icon:"💾",col:"var(--ok)",out:"CHOOSE: NVMe, not CXL",
-   d:"Cold data can afford a ~100 µs fetch, and NAND runs roughly <b>150× cheaper per GB</b> than DRAM in the 2026 market. Take the cheap win and skip the CXL supply risk entirely.",
+   icon:"💾",col:"var(--ok)",out:"CHOOSE: NVMe tier",
+   d:"Cold data can comfortably afford a ~100 µs fetch, and NAND runs roughly <b>150× less per GB</b> than DRAM in the 2026 market. That is the right tier for this shape of work.",
+   revisit:"If the workload turns interactive or agentic — long sessions, multi-step loops, latency SLAs — 100 µs stops being affordable and this decision reopens.",
    hit:()=>WORK==="batch",invert:true},
   {q:'Are any two tenants <b>commercial rivals</b>?',m:"hostile vs cooperative tenancy",arm:"IF YES",
    icon:"🥤",col:"var(--ok)",out:"CHOOSE: MemoryAI + isolation",
-   d:"Buy the tier, and <b>switch cross-tenant prefix dedup off</b> — it is a time-to-first-token side channel, not a free optimisation. Budget the forfeited capacity as a line item; it is the price of not leaking prompts.",
+   d:"A good fit, with one configuration requirement: <b>switch cross-tenant prefix dedup off</b> — it is a time-to-first-token side channel rather than a free optimisation. Budget the forfeited capacity as a line item; it is the price of not leaking prompts between tenants.",
+   revisit:"Step 2b quantifies exactly what isolation costs you in GB. That figure is usually the clearest argument for the tier, not against it.",
    hit:c=>c.iso},
   {q:'Does recovered GPU capacity beat the CXL spend by <b>2× or more</b>?',m:"Step 3 · return on spend",arm:"IF NO",
-   icon:"🤝",col:"var(--warn)",out:"CHOOSE: Pilot, don't commit",
-   d:"A thin return does not justify <b>allocation risk</b> in a DRAM market with three suppliers and a shortage. Pilot it, measure it on your own fleet, and negotiate the server price before signing supply.",
+   icon:"🤝",col:"var(--warn)",out:"CHOOSE: Pilot before committing",
+   d:"The return is real but thin, and a thin return does not yet justify <b>allocation risk</b> in a DRAM market with three suppliers and a shortage. Pilot it and measure on your own fleet.",
+   revisit:"This gate is the most input-sensitive of the six. A current quote, a longer DCGM capture, or a higher measured spill can each move it into a clear yes — worth re-running after any of them.",
    hit:c=>c.roi<2,invert:true}
  ];
  const FINAL={icon:"✅",col:"var(--ok)",out:"CHOOSE: MemoryAI — buy it",
-  d:"GPUs are stalling on capacity, the work is latency-sensitive, and the memory costs materially less than the GPUs it frees. <b>This is the case the product exists for.</b>"};
+  d:"GPUs are stalling on capacity, the work is latency-sensitive, and the memory costs materially less than the GPUs it would otherwise take. <b>This is the case the product exists for</b> — worth a conversation with Penguin Solutions and a real quote to replace the placeholder price.",
+  revisit:"Confirm the assumed post-CXL tensor-active recovery against a pilot on your own models before final commitment."};
 
  let MODE="auto", ANS=[];          // ANS[i] = "yes" | "no" | undefined
  function fires(s,a){ return s.invert ? a==="no" : a==="yes"; }
@@ -1724,13 +1757,13 @@ ${c.iso?`<h2>Multi-tenancy</h2>
        </div>
      </div>
      <div class="dt-arm"><span>${s.arm}</span></div>
-     <div class="dt-out" style="--e:${s.col}"><div class="h">${s.icon} ${s.out}</div><div class="d">${s.d}</div></div>
+     <div class="dt-out" style="--e:${s.col}"><div class="h">${s.icon} ${s.out}</div><div class="d">${s.d}</div>${s.revisit?`<div class="dt-rv">↻ <b>Check again when:</b> ${s.revisit}</div>`:""}</div>
    </div>
    <div class="dt-no">${s.invert?"IF YES":"IF NO"} ↓</div>`).join("")
    +`<div class="dt-step" data-i="${STEPS.length}">
      <div class="dt-q"><div class="n">✓</div><div class="t">All six gates cleared.</div><div class="m">the only branch that ends in a purchase</div></div>
      <div class="dt-arm"><span>THEN</span></div>
-     <div class="dt-out" style="--e:${FINAL.col}"><div class="h">${FINAL.icon} ${FINAL.out}</div><div class="d">${FINAL.d}</div></div>
+     <div class="dt-out" style="--e:${FINAL.col}"><div class="h">${FINAL.icon} ${FINAL.out}</div><div class="d">${FINAL.d}</div>${FINAL.revisit?`<div class="dt-rv">↻ <b>Before you commit:</b> ${FINAL.revisit}</div>`:""}</div>
    </div>`;
   $t("dtTree").innerHTML=html;
   $t("dtTree").addEventListener("click",e=>{
