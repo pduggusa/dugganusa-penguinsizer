@@ -208,6 +208,26 @@
   .presets.wl button{font-size:11.5px;padding:6px 11px}
   .presets.wl button.on{background:rgba(52,211,153,.14);border-color:var(--ok);color:var(--ok)}
   .wl-d{font-size:11px;color:var(--faint);line-height:1.5;margin-top:7px} .wl-d b{color:var(--dim)}
+  .presets.wl{gap:6px}
+  .presets.wl button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:7px 10px;border-left:3px solid var(--faint)}
+  .presets.wl button .wl-n{font-size:11.5px}
+  .presets.wl button .wl-b{font-family:var(--mono);font-size:8.5px;letter-spacing:.6px;color:var(--b);opacity:.95}
+  .presets.wl button.fit-strong,.presets.wl button.fit-good{border-left-color:var(--ok)}
+  .presets.wl button.fit-strong{background:rgba(52,211,153,.07)}
+  .presets.wl button.fit-thin{border-left-color:var(--warn)}
+  .presets.wl button.fit-no{border-left-color:var(--hot)}
+  .presets.wl button.fit-none{border-left-color:var(--faint);opacity:.72}
+  .presets.wl button.on{border-color:var(--cool);box-shadow:0 0 0 1px rgba(34,211,238,.3)}
+  .presets.wl button.on .wl-n{color:var(--ink);font-weight:640}
+  .wl-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:9px;font-size:10px;color:var(--faint)}
+  .wl-legend span{display:flex;align-items:center;gap:5px}
+  .wl-legend i{width:9px;height:3px;border-radius:2px;display:inline-block}
+  .mem-f.scen{background:#0a1119;border:1px solid var(--cool-dim);border-radius:10px;padding:11px 12px}
+  .scen-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:9px}
+  .scen-f{display:flex;flex-direction:column;gap:3px}
+  .scen-l{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .scen-f select,.scen-f input{width:100%;background:#0d141d;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font-family:var(--mono);font-size:12px}
+  .scen-f select:focus,.scen-f input:focus{outline:none;border-color:var(--cool)}
   /* references */
   .ref-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:13px;margin-bottom:8px}
   .ref-c{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-left:3px solid var(--e,var(--cool));border-radius:12px;padding:14px 15px}
@@ -1401,16 +1421,16 @@ sync();
   {k:"tensorCap",l:"Achievable tensor %",v:60,     step:1,   hint:"healthy ceiling"},
   {k:"tensorAft",l:"Tensor % after CXL", v:50,     step:1,   hint:"vendor-derived"},
   {k:"params",   l:"Model params (B)",   v:70,     step:1,   hint:"weights"},
-  {k:"wbits",    l:"Weight precision",   v:1,      step:0.5, hint:"bytes/param",sel:[["2","fp16 (2B)"],["1","fp8 (1B)"],["0.5","fp4 (0.5B)"]]},
+  {k:"wbits",    l:"Weight precision",   v:1,      step:0.5, hint:"bytes/param",top:1,sel:[["2","fp16 (2B)"],["1","fp8 (1B)"],["0.5","fp4 (0.5B)"]]},
   {k:"layers",   l:"Layers",             v:80,     step:1,   hint:"transformer"},
   {k:"kvheads",  l:"KV heads",           v:8,      step:1,   hint:"GQA groups"},
   {k:"headdim",  l:"Head dim",           v:128,    step:8,   hint:"per head"},
-  {k:"kvbits",   l:"KV precision",       v:2,      step:0.5, hint:"bytes/elem",sel:[["2","fp16 (2B)"],["1","fp8 (1B)"],["0.5","fp4 (0.5B)"]]},
+  {k:"kvbits",   l:"KV precision",       v:2,      step:0.5, hint:"bytes/elem",top:1,sel:[["2","fp16 (2B)"],["1","fp8 (1B)"],["0.5","fp4 (0.5B)"]]},
   {k:"ctx",      l:"Avg context (tokens)",v:32768, step:1024,hint:"per sequence"},
   {k:"conc",     l:"Concurrent / replica",v:256,   step:8,   hint:"in-flight seqs"},
   {k:"tp",       l:"GPUs per replica",   v:8,      step:1,   hint:"TP × PP shard"},
-  {k:"iso",      l:"Isolation model",    v:0,      step:1,   hint:"tenant trust",sel:[["0","Cooperative / single"],["1","Hostile — isolated"]]},
-  {k:"tenants",  l:"Tenants / replica",  v:1,      step:1,   hint:"sharing the GPUs"},
+  {k:"iso",      l:"Isolation model",    v:0,      step:1,   hint:"tenant trust",top:1,sel:[["0","Cooperative / single tenant"],["1","Hostile — tenants isolated"]]},
+  {k:"tenants",  l:"Tenants / replica",  v:1,      step:1,   hint:"sharing the GPUs",top:1},
   {k:"prefixShare",l:"Prefix dedup %",   v:15,     step:5,   hint:"KV saved by sharing"},
   {k:"memTB",    l:"MemoryAI TB / srv",  v:11,     step:1,   hint:"3 DDR5 + 8×1TB CXL"},
   {k:"memCost",  l:"$ / MemoryAI srv",   v:250000, step:5000,hint:"PLACEHOLDER — quote it"},
@@ -1547,14 +1567,59 @@ sync();
    servers,cxlCost,gpusToBuy,gpuAltCost,nvmeCost,roi,net,verdict,vclass,why};
  }
 
+ /* Evaluate every workload profile against the current fleet/model so the chips can be
+  * colour-coded by fit and the strongest case can lead. Ranking is by the TTFT reduction
+  * the tier delivers — that figure is derived from bandwidth and prefill cost, so it
+  * scales with workload severity. (Return on spend is deliberately NOT the ranking key:
+  * it is driven by the tensor-active recovery YOU assume, so a barely-spilling profile
+  * can post a flattering multiple. TTFT gain is the honest severity signal.) */
+ function evalWL(w){
+  const saved=S; S=Object.assign({},S,w.set);
+  let c=null; try{ c=compute(); }catch(e){}
+  S=saved; return c;
+ }
+ function wlFit(c){
+  if(!c) return {t:"na",badge:"—",col:"var(--faint)",why:"could not evaluate"};
+  if(c.spillGB<=0) return {t:"none",badge:"HBM COPES",col:"var(--faint)",
+   why:"KV fits inside HBM at this shape — no capacity wall to solve today."};
+  if(c.roi>=2&&c.cxlSavePct>=30) return {t:"strong",badge:"STRONG FIT",col:"var(--ok)",
+   why:`spills ${Math.round(c.spillRep)} GB/replica · TTFT −${c.cxlSavePct.toFixed(0)}% · ${c.roi.toFixed(1)}× return`};
+  if(c.roi>=2) return {t:"good",badge:"GOOD FIT",col:"var(--ok)",
+   why:`spills ${Math.round(c.spillRep)} GB/replica · TTFT −${c.cxlSavePct.toFixed(0)}% · ${c.roi.toFixed(1)}× return`};
+  if(c.roi>=1) return {t:"thin",badge:"PILOT",col:"var(--warn)",
+   why:`spills, but return is ${c.roi.toFixed(1)}× — worth a quote and a pilot before committing`};
+  return {t:"no",badge:"GPUs FIRST",col:"var(--hot)",
+   why:`return of ${c.roi.toFixed(1)}× does not yet justify the spend at these inputs`};
+ }
+ function rankWL(){
+  return WORKLOADS.map((w,i)=>{const c=evalWL(w),f=wlFit(c);
+   return {i,w,c,f,score:(c&&c.spillGB>0&&c.roi>=2)?c.cxlSavePct:-1};})
+   .sort((a,b)=>b.score-a.score);
+ }
  function renderCtl(){
+  const ranked=rankWL(), byI={}; ranked.forEach(r=>byI[r.i]=r);
+  const top=F.filter(f=>f.top), rest=F.filter(f=>!f.top);
   $m("memCtl").innerHTML=
    `<div class="mem-f" style="grid-column:1/-1"><label>Workload profile — start here</label><div class="presets wl" id="memWl">${
-     WORKLOADS.map((w,i)=>`<button data-w="${i}" title="${w.d}">${w.n}</button>`).join("")}</div>
+     WORKLOADS.map((w,i)=>{const f=byI[i].f;
+      return `<button data-w="${i}" class="fit-${f.t}" title="${w.d}"><span class="wl-n">${w.n}</span><span class="wl-b" style="--b:${f.col}">${f.badge}</span></button>`;}).join("")}</div>
+     <div class="wl-legend">
+       <span><i style="background:var(--ok)"></i>strong / good fit — KV spills and the tier pays</span>
+       <span><i style="background:var(--warn)"></i>pilot — spills, but the return is thin</span>
+       <span><i style="background:var(--faint)"></i>HBM copes — no capacity wall at this shape</span>
+     </div>
      <div class="wl-d" id="memWlD">Pick the pattern closest to your traffic. It sets context, concurrency, prompt length, cache reuse and the TTFT target together — those move as a group, and setting one without the others is how sizing goes wrong.</div></div>`+
+   `<div class="mem-f scen" style="grid-column:1/-1"><label>Scenario</label><div class="scen-row">${
+     top.map(f=>`<div class="scen-f"><span class="scen-l">${f.l}</span>${
+      f.sel?`<select data-mk="${f.k}">${f.sel.map(o=>`<option value="${o[0]}"${String(S[f.k])===o[0]?" selected":""}>${o[1]}</option>`).join("")}</select>`
+          :`<input type="number" data-mk="${f.k}" value="${S[f.k]}" step="${f.step}" min="1"/>`}</div>`).join("")}
+     </div><div class="wl-d">${String(S.iso)==="1"
+       ? "Tenants are treated as mutually hostile: cross-tenant prefix dedup is switched off, and the capacity that would have saved is booked as the price of isolation."
+       : "Tenants are treated as cooperative, so prefix dedup is credited. If any two of them are commercial rivals, switch this to hostile — the saving is the side channel."}
+       <b style="color:var(--dim)">KV precision is the highest-leverage field on this page</b> — it scales the entire working set linearly, so fp16→fp8 halves it. Set it to what you actually serve at, not what you wish you served at.</div></div>`+
    `<div class="mem-f" style="grid-column:1/-1"><label>Model preset</label><div class="presets" id="memPre">${
      PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join("")}</div></div>`+
-   F.map(f=>`<div class="mem-f"><label>${f.l}</label>${
+   rest.map(f=>`<div class="mem-f"><label>${f.l}</label>${
     f.sel?`<select data-mk="${f.k}">${f.sel.map(o=>`<option value="${o[0]}"${String(S[f.k])===o[0]?" selected":""}>${o[1]}</option>`).join("")}</select>`
         :`<input type="number" data-mk="${f.k}" value="${S[f.k]}" step="${f.step}"/>`
    }<div class="hint">${f.hint}</div></div>`).join("");
@@ -1568,7 +1633,8 @@ sync();
    save();renderCtl();paint();
    const d=$m("memWlD");if(d)d.innerHTML=`<b>${w.n}</b> — ${w.d}`;});
   if(S._wl!=null){const b=$m("memWl").querySelector(`[data-w="${S._wl}"]`);
-   if(b){b.classList.add("on");$m("memWlD").innerHTML=`<b>${WORKLOADS[S._wl].n}</b> — ${WORKLOADS[S._wl].d}`;}}
+   if(b){b.classList.add("on");const w=WORKLOADS[S._wl],f=byI[S._wl].f;
+    $m("memWlD").innerHTML=`<b>${w.n}</b> — ${w.d} <span style="color:${f.col}">${f.why}</span>`;}}
  }
  const save=()=>{try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}};
 
@@ -1750,6 +1816,12 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  $m("memReset").onclick=()=>{S=F.reduce((a,f)=>(a[f.k]=f.v,a),{});save();renderCtl();paint();};
  // consumed by the DCGM Upload tab so measured telemetry can drive this model directly
  window.__memAI={apply(p){Object.assign(S,p);save();renderCtl();paint();},read:()=>({...S}),verdict:()=>compute()};
+ // Front-load the strongest case: on a first visit, elect the highest-ranked profile
+ // rather than opening on arbitrary defaults. A returning user's choice is preserved.
+ if(S._wl==null){
+  const best=rankWL()[0];
+  if(best&&best.score>=0){Object.assign(S,best.w.set);S._wl=String(best.i);save();}
+ }
  renderCtl();paint();
 })();
 </script>
