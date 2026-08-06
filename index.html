@@ -319,6 +319,94 @@
   .dt-iso{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:13px;margin-bottom:8px}
   .dt-icard{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-left:3px solid var(--e);border-radius:12px;padding:14px 15px}
   .dt-icard.dt-trap{background:linear-gradient(180deg,#1a1016,var(--panel2))}
+  /* advanced rack planner */
+  .rk-modebar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:16px}
+  .rk-modenote{font-size:11.5px;color:var(--faint);line-height:1.45;flex:1;min-width:220px}
+  .adv-ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+  .adv-out{margin-bottom:8px}
+  .adv-namectl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:9px}
+  .adv-namectl .mem-f.wide{grid-column:span 2}
+  .adv-namectl input{width:100%;background:#0a1119;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font-family:var(--mono);font-size:12px}
+  .adv-namectl input:focus{outline:none;border-color:var(--cool-dim)}
+  .adv-tokens{font-size:10.5px;color:var(--faint);font-family:var(--mono);margin-bottom:11px} .adv-tokens b{color:var(--dim)}
+  .adv-cable-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:9px}
+  .acs{background:#0a1119;border:1px solid var(--line);border-radius:9px;padding:9px 12px;display:flex;justify-content:space-between;gap:9px;font-size:12px}
+  .acs .k{color:var(--dim)} .acs .v{font-family:var(--mono);color:var(--ink)} .acs .v.warn{color:var(--warn)}
+  /* rack tiles — overview, click to expand */
+  .rk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:7px;margin-bottom:14px}
+  .rk-tile{background:#0a1119;border:1px solid var(--line);border-left:3px solid var(--cool-dim);border-radius:8px;padding:8px 10px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;font-family:var(--sans);transition:all .12s}
+  .rk-tile:hover{border-color:var(--cool);transform:translateY(-1px)}
+  .rk-tile.network{border-left-color:var(--grace)}
+  .rk-tile.on{background:rgba(34,211,238,.1);border-color:var(--cool);box-shadow:0 0 0 1px rgba(34,211,238,.3)}
+  .rk-tile .tn{font-family:var(--mono);font-size:11px;color:var(--ink);font-weight:640}
+  .rk-tile .tt{font-size:10px;color:var(--cool)}
+  .rk-tile .tb{font-size:9.5px;color:var(--faint);font-family:var(--mono)}
+  .rk-card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--cool-dim);border-radius:14px;padding:15px 17px;margin-bottom:14px}
+  .rk-cardh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:13px}
+  .rk-cardh h4{margin:0;font-size:15px;font-family:var(--mono);color:var(--cool)}
+  .rk-cardh .s{font-size:11.5px;color:var(--faint);margin-top:2px}
+  .rk-cardb{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:16px}
+  @media(max-width:1000px){.rk-cardb{grid-template-columns:1fr}}
+  .rk-elevh{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--faint);margin-bottom:7px}
+  .rk-rackbox{border:2px solid var(--line);border-radius:6px;overflow:hidden;background:#070d14}
+  .rk-band{display:flex;align-items:center;gap:8px;padding:0 8px;border-bottom:1px solid #0d141d;font-size:10px;overflow:hidden}
+  .rk-band .ru{font-family:var(--mono);font-size:9px;color:var(--faint);min-width:16px}
+  .rk-band .rl{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rk-band.compute{background:rgba(34,211,238,.14)} .rk-band.compute .rl{color:#a5e9f5}
+  .rk-band.nvswitch{background:rgba(167,139,250,.18)} .rk-band.nvswitch .rl{color:#cbb8fd}
+  .rk-band.power{background:rgba(251,191,36,.13)} .rk-band.power .rl{color:#f6d38a}
+  .rk-band.manifold{background:rgba(52,211,153,.10)} .rk-band.manifold .rl{color:#8fe0c0}
+  .rk-band.ibleaf{background:rgba(34,211,238,.2)} .rk-band.ethleaf{background:rgba(52,211,153,.16)}
+  .rk-band.oob{background:rgba(148,163,184,.15)} .rk-band.patch{background:rgba(251,113,133,.12)}
+  .rk-band.bus{background:rgba(251,191,36,.1)} .rk-band.cart{background:rgba(167,139,250,.12)} .rk-band.pdu{background:rgba(148,163,184,.12)}
+  .rk-ports{max-height:640px;overflow-y:auto;min-width:0}
+  .rk-elev{min-width:0} .rk-rackbox{min-width:0}
+  .rk-band .rl{min-width:0;flex:1}
+  .rk-dev{min-width:0;overflow-wrap:anywhere}
+  .rk-dev .dn{overflow-wrap:anywhere} .rk-dev .pn{overflow-wrap:anywhere}
+  .rk-dev .pr{flex-wrap:wrap}
+  @media(max-width:640px){.rk-cardh{flex-wrap:wrap}.rk-cardh h4{font-size:13px;overflow-wrap:anywhere}}
+  .rk-dev{border:1px solid var(--line);border-radius:7px;padding:7px 9px;margin-bottom:6px;background:#0a1119}
+  .rk-dev .dn{font-family:var(--mono);font-size:10.5px;color:var(--cool);margin-bottom:4px}
+  .rk-dev .pr{display:flex;justify-content:space-between;gap:9px;font-size:10px;padding:1px 0}
+  .rk-dev .pn{font-family:var(--mono);color:var(--dim)} .rk-dev .pd{color:var(--faint);text-align:right}
+  /* keys, cable colours, limits, AI bar */
+  .adv-key{background:#0a1119;border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-top:10px}
+  .adv-key .kh{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--faint);margin-bottom:8px} .adv-key .kh b{color:var(--dim)}
+  .adv-key .kg{display:flex;flex-wrap:wrap;gap:11px}
+  .adv-key .ki{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)}
+  .adv-key .ki i{width:14px;height:4px;border-radius:2px;display:inline-block;flex:none}
+  .adv-key .kn{font-size:11px;color:var(--faint);line-height:1.55;margin-top:9px;border-top:1px solid #16212e;padding-top:8px}
+  .adv-key .kn b{color:var(--dim)}
+  .cw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  .lim-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+  .lim{border:1px solid var(--line);border-left:3px solid var(--faint);border-radius:8px;padding:8px 10px;background:#0a1119}
+  .lim.ok{border-left-color:var(--ok)} .lim.near{border-left-color:var(--warn)} .lim.bad{border-left-color:var(--hot);background:rgba(251,113,133,.07)}
+  .lim .ln{font-size:11px;color:var(--ink)}
+  .lim .lv{font-family:var(--mono);font-size:14px;margin:3px 0}
+  .lim.ok .lv{color:var(--ok)} .lim.near .lv{color:var(--warn)} .lim.bad .lv{color:var(--hot)}
+  .lim .lw{font-size:9.5px;color:var(--faint);line-height:1.35}
+  .lim .ls{font-family:var(--mono);font-size:9.5px;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+  .lim.ok .ls{color:var(--ok)} .lim.near .ls{color:var(--warn)} .lim.bad .ls{color:var(--hot)}
+  .adv-limits{background:#0a1119;border:1px solid var(--line);border-radius:10px;padding:12px 13px}
+  .adv-limits .kh{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--faint)} .adv-limits .kh b{color:var(--cool)}
+  .adv-limits .kn{font-size:11px;color:var(--faint);line-height:1.6;margin-top:10px;border-top:1px solid #16212e;padding-top:9px}
+  .adv-aibar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .adv-aibar input{flex:1;min-width:260px;background:#0a1119;border:1px solid var(--cool-dim);color:var(--ink);border-radius:8px;padding:8px 11px;font-family:var(--sans);font-size:12.5px}
+  .adv-aibar input:focus{outline:none;border-color:var(--cool)}
+  .adv-aistat{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .adv-aistat.busy{color:var(--cool)} .adv-aistat.ok{color:var(--ok)} .adv-aistat.bad{color:var(--hot)}
+  /* build sheet */
+  .bs-sum{margin-bottom:8px}
+  .bs-tcat{border:1px solid var(--line);border-left:3px solid var(--e);border-radius:12px;padding:14px 15px;margin-bottom:13px;background:linear-gradient(180deg,var(--panel),var(--panel2))}
+  .bs-th{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:5px}
+  .bs-th .c{font-size:14px;font-weight:650;color:var(--e)}
+  .bs-th .s{font-size:10.5px;font-family:var(--mono);color:var(--faint)}
+  .bs-why{font-size:12px;color:var(--dim);line-height:1.55;margin-bottom:11px}
+  .bs-tcat .mem-tbl{min-width:0}
+  .bs-tcat table{width:100%;border-collapse:collapse;font-size:12px;display:block;overflow-x:auto}
+  .bs-tools{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  @media(max-width:640px){.bs-tcat table{font-size:11px}}
   .dt-ih{font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--faint)} .dt-ih b{color:var(--e)}
   .dt-ip{font-size:13.5px;font-weight:650;color:var(--ink);margin:4px 0 8px}
   .dt-id{font-size:12px;color:var(--dim);line-height:1.55} .dt-id b{color:var(--ink)}
@@ -345,6 +433,7 @@
     <button data-v="dcgm">DCGM Upload</button>
     <button data-v="tree">🎯 Decide</button>
     <button data-v="ref">📚 References</button>
+    <button data-v="sheet">📋 Build Sheet</button>
   </nav>
 
   <div class="grid">
@@ -354,11 +443,11 @@
         <h3>Target</h3>
         <div class="seg" id="mode">
           <button data-m="gpus" class="on">GPUs</button><button data-m="exaflops">EF FP4</button>
-          <button data-m="superpods">Pods</button><button data-m="nodes">Nodes</button>
+          <button data-m="superpods">SUs</button><button data-m="nodes">Nodes</button>
         </div>
         <div class="field" style="margin-top:10px">
           <label><span id="tlabel">GPUs</span> <b id="tval">576</b></label>
-          <input type="range" id="target" min="8" max="4608" step="8" value="576"/>
+          <input type="range" id="target" min="8" max="9216" step="8" value="576"/>
         </div>
         <div class="field" style="margin-top:12px">
           <label>Quantization</label>
@@ -466,7 +555,32 @@
       <section class="view" id="v-rack">
         <h2 class="sec">Rack Power, Thermals &amp; Cabling Planner</h2>
         <p class="lede">Build up to <b style="color:var(--ink)">5 racks</b>. Per-phase current, breaker &amp; connector; DTC liquid/air heat split, CFM &amp; loop flow; and a full <b style="color:var(--ink)">structured-cabling BOM</b> (DAC/AOC/optic + fiber) from the standard 8-GPU port topology, with slack for slide-out service. Every field recalculates live. Save the BOM to JSON and reload it next session. <span class="note">Typical/reference values — override any field with real numbers.</span></p>
-        <div class="rk-toolbar">
+        <div class="rk-modebar">
+          <span class="dt-lbl">Mode</span>
+          <div class="seg" id="rkMode" style="max-width:330px">
+            <button data-m="simple" class="on">Simple — up to 5 racks</button><button data-m="advanced">Advanced — SuperPOD scale</button>
+          </div>
+          <span class="rk-modenote" id="rkModeNote">Hand-configure individual racks: power, thermal, per-rack cabling and a SKU-rational BOM.</span>
+        </div>
+
+        <!-- ADVANCED -->
+        <div id="rkAdv" style="display:none">
+          <div class="adv-ctl" id="advCtl"></div>
+          <div class="adv-out" id="advOut"></div>
+          <h3 class="mem-h">Rack elevations — reference layout</h3>
+          <p class="lede" id="advElevNote">Drawn from published U-heights and tray counts, not from vendor stencil art. Tray <i>order</i> varies by OEM integrator, so treat the sequence as a reference elevation and confirm against the as-built drawing before it becomes a floor plan.</p>
+          <div class="adv-elev" id="advElev"></div>
+          <h3 class="mem-h">Fibre plant — trunking and inter-floor runs</h3>
+          <div class="adv-cable" id="advCable"></div>
+          <h3 class="mem-h">Naming convention</h3>
+          <p class="lede">TIA-606-C shaped: every cable carries a unique identifier at both ends, and the identifier encodes location, device and port. The pattern below is editable — <b style="color:var(--ink)">and it covers management and BMC ports, not just fabric</b>, because those are the ones that get labelled last and traced most often at 3am.</p>
+          <div class="adv-name" id="advName"></div>
+          <footer style="margin-top:18px">
+            <span class="note">⚠ <b>Provenance.</b> Switch counts come from NVIDIA's <b>DGX SuperPOD GB300 Reference Architecture, Tables 3 and 4</b>, transcribed rather than derived. Those tables define 2, 4, 8 and 16 SU; any other SU count is <b>rounded up to the next published design</b> and labelled as such — we do not interpolate a spine count, because topology is not a linear function. Single-SU counts are inferred from the RA narrative and flagged separately. Optics reach and connector types are NVIDIA's published transceiver specs. Fibre lengths, trunk sizing and floor runs are <b>your inputs</b> — this tool arranges them, it does not survey your building. Sizing-grade, not an installation drawing. 95% cap.</span>
+          </footer>
+        </div>
+
+        <div class="rk-toolbar" id="rkSimpleBar">
           <div class="grow"><input type="text" id="rkProject" placeholder="Project / customer name…" autocomplete="off"/></div>
           <button class="rk-btn" id="rkAdd">+ Add rack</button>
           <button class="rk-btn" id="rkImport">↙ Import from Size It</button>
@@ -930,6 +1044,33 @@
         </footer>
       </section>
 
+      <!-- BUILD SHEET -->
+      <section class="view" id="v-sheet">
+        <h2 class="sec">📋 Build Sheet — rows, racks and the tag taxonomy</h2>
+        <p class="lede">The row-by-row breakdown an installer works from, and the asset tagging schema that has to exist <b style="color:var(--ink)">before</b> the first rack lands. Derived from whatever the Rack Planner's Advanced mode is currently set to — change the target there and this follows.</p>
+        <div class="bs-sum" id="bsSum"></div>
+        <h3 class="mem-h">Row and rack breakdown</h3>
+        <div class="mem-tbl-wrap"><table class="mem-tbl">
+          <thead><tr><th>Row</th><th>Racks</th><th>Identifiers</th><th>Contents</th><th>GPUs</th><th>Load</th><th class="desc">Notes</th></tr></thead>
+          <tbody id="bsRows"></tbody></table></div>
+        <h3 class="mem-h">Per-rack manifest</h3>
+        <div class="mem-tbl-wrap" style="max-height:520px;overflow-y:auto"><table class="mem-tbl">
+          <thead><tr><th>Rack</th><th>Row</th><th>SU</th><th>Type</th><th>Devices</th><th>Ports</th><th>Load</th></tr></thead>
+          <tbody id="bsRacks"></tbody></table></div>
+
+        <h3 class="mem-h">Asset tagging — sovereign adaptation</h3>
+        <p class="lede">Microsoft's Cloud Adoption Framework and AWS's tagging guidance both assume a <b style="color:var(--ink)">hyperscaler owns the substrate</b>. The provider asserts jurisdiction, vets the staff, controls physical custody and attests to it. A sovereign on-prem AI factory inverts that: <b style="color:var(--ink)">you are the substrate</b>, so the guarantees a cloud provider would have made on your behalf have to become properties you carry yourself. That is the whole adaptation — the four commercial categories below are lifted straight from CAF and AWS, and the fifth is the one their frameworks have no reason to include.</p>
+        <div class="bs-tags" id="bsTags"></div>
+        <div class="bs-tools">
+          <button class="rk-btn primary" id="bsCsv">⬇ Build sheet (CSV)</button>
+          <button class="rk-btn" id="bsJson">⬇ Full build (JSON)</button>
+          <span class="mem-local">🔒 generated in your browser · nothing uploaded</span>
+        </div>
+        <footer style="margin-top:18px">
+          <span class="note">⚠ Row assignment is a naive fill at your stated racks-per-row and takes no account of your actual floor plan, hot/cold aisle orientation, structural loading or CRAC placement. A GB300 NVL72 rack is roughly 1,500 kg populated, which is a structural question in many buildings before it is a networking one. Tag <b>keys</b> are recommendations; tag <b>values</b> and any enforcement policy are yours. Nothing here is a compliance attestation — a tag records an intent, it does not prove one. 95% cap.</span>
+        </footer>
+      </section>
+
       <footer>
         <b>Anchors:</b> NVIDIA GB300 NVL72 / DGX B300 reference architecture + Penguin Relion/Altus datasheets (2026). B300 288 GB HBM3e, 15.3 PF FP4/GPU; B200 192 GB, 9 PF. GB300 rack = 72 GPU / 142 kW (18 compute trays × 4 B300 + 2 Grace, 9 NVLink switch trays, 6–8× 33 kW power shelves); SuperPOD = 8 racks / 576 GPU. Node builds packed at max(space, power) per rack. Partial-rack power is modelled non-linearly: fixed rack overhead (~26.8 kW of NVSwitch trays, power shelves, in-rack OOB) + 6.4 kW per compute tray.<br/>
         <span class="note">⚠ Tray-level sizing exposes what NVIDIA's floor-tile rounding costs you — but the <b>NVL72 rack is the purchasable SKU</b>. NVIDIA does not list a partially-populated rack; treat tray counts as a planning and BOM figure, and confirm partial population with your Penguin rep before it becomes a quote.</span><br/>
@@ -1062,10 +1203,10 @@ function renderAll(){const rows=model();renderSize(rows);renderWhy(rows);renderR
 $("presets").innerHTML=MODELS.map((m,i)=>`<button data-i="${i}">${m.n}</button>`).join("");
 document.querySelectorAll("#presets button").forEach(b=>b.onclick=()=>{const m=MODELS[b.dataset.i];$("model").value=m.p;$("tokens").value=m.t;document.querySelectorAll("#presets button").forEach(x=>x.classList.remove("on"));b.classList.add("on");sync();});
 document.querySelectorAll("#mode button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#mode button").forEach(x=>x.classList.remove("on"));b.classList.add("on");MODE=b.dataset.m;const t=$("target"),l=$("tlabel");
- if(MODE==="gpus"){t.min=8;t.max=4608;t.step=8;t.value=576;l.textContent="GPUs";}
- if(MODE==="exaflops"){t.min=.5;t.max=50;t.step=.5;t.value=9;l.textContent="EF FP4";}
- if(MODE==="superpods"){t.min=1;t.max=16;t.step=1;t.value=1;l.textContent="SuperPODs";}
- if(MODE==="nodes"){t.min=1;t.max=512;t.step=1;t.value=64;l.textContent="Nodes";}sync();});
+ if(MODE==="gpus"){t.min=8;t.max=9216;t.step=8;t.value=576;l.textContent="GPUs";}
+ if(MODE==="exaflops"){t.min=.5;t.max=141;t.step=.5;t.value=9;l.textContent="EF FP4";}
+ if(MODE==="superpods"){t.min=1;t.max=16;t.step=1;t.value=1;l.textContent="Scalable Units";}
+ if(MODE==="nodes"){t.min=1;t.max=1152;t.step=1;t.value=64;l.textContent="Nodes";}sync();});
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("on"));b.classList.add("on");VIEW=b.dataset.v;document.querySelectorAll(".view").forEach(v=>v.classList.remove("on"));$("v-"+VIEW).classList.add("on");});
 document.querySelectorAll("#quant button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#quant button").forEach(x=>x.classList.remove("on"));b.classList.add("on");QUANT=b.dataset.q;
  const n=$("qnote");
@@ -1358,6 +1499,11 @@ sync();
   const needed=Math.ceil((spec.rackScale?pick.grains:pick.grains)/perRack);
   const racks=Math.min(MAX_RACKS,Math.max(1,needed));
   const total=spec.rackScale?pick.grains:pick.grains;
+  if(needed>MAX_RACKS&&window.__advImport&&spec.rackScale){
+   if(confirm(`Import ${pick.label}: ${pick.gpus.toLocaleString()} GPUs needs ${needed} racks, and Simple mode holds ${MAX_RACKS}.\n\nSwitch to ADVANCED mode and build the full ${pick.gpus.toLocaleString()}-GPU design instead?\n\nCancel to import a truncated ${MAX_RACKS}-rack version here.`)){
+    window.__advImport(pick.gpus); return;
+   }
+  }
   const msg=`Import ${pick.label}: ${total} ${spec.unit}${total===1?"":"s"} (${pick.gpus.toLocaleString()} GPUs).\n\n`+
    `That needs ${needed} rack${needed===1?"":"s"} at ${perRack} per rack; this planner holds ${MAX_RACKS}, so `+
    (needed>MAX_RACKS?`only the first ${MAX_RACKS} will be built — the BOM will cover ${MAX_RACKS*perRack} of ${total}.`
@@ -1396,7 +1542,7 @@ sync();
  window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
  // ---- tab layout: rack planner runs full-width (hide the sizing rail) -------------
  const grid=document.querySelector(".grid");
- document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{grid.classList.toggle("full",["rack","mem","dcgm","tree","ref"].includes(b.dataset.v));}));
+ document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{grid.classList.toggle("full",["rack","mem","dcgm","tree","ref","sheet"].includes(b.dataset.v));}));
  render();
 })();
 </script>
@@ -2194,6 +2340,670 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  // re-light whenever this tab is opened (MemoryAI inputs may have moved)
  document.querySelector('#tabs button[data-v="tree"]').addEventListener("click",()=>setTimeout(paint,0));
  syncMode(); render();
+})();
+</script>
+
+<script>
+/* ===== ADVANCED RACK PLANNER — SuperPOD scale ======================================
+ * Switch counts are TRANSCRIBED from NVIDIA's DGX SuperPOD GB300 Reference
+ * Architecture (Tables 3 and 4), never derived. Where the RA gives a number we use
+ * it; where it does not, the UI says so instead of interpolating. A fabric BOM that
+ * quietly invents a spine count is worse than one that admits a gap.
+ * ---------------------------------------------------------------------------------*/
+(function(){
+ const $a=id=>document.getElementById(id);
+ const NUMF=n=>Math.round(n).toLocaleString();
+ /* Function colour for cable identification. Applied with boots/labels over a
+  * TIA-598-compliant jacket — it never replaces the standards-mandated jacket colour. */
+ const CCOL={compute:'#22d3ee','ib-uplink':'#0ea5e9',storage:'#34d399','eth-uplink':'#059669',
+             bmc:'#94a3b8','oob-uplink':'#fbbf24'};
+ const ECOL={compute:'#22d3ee',nvswitch:'#a78bfa',power:'#fbbf24',manifold:'#34d399',
+             ibleaf:'#0ea5e9',ethleaf:'#059669',oob:'#94a3b8',patch:'#fb7185',
+             bus:'#fbbf24',cart:'#a78bfa',pdu:'#94a3b8'};
+
+ const FABRIC={
+  su:{racks:8,gpus:576,ibLeafPerSU:8,rails:4,leafPerRail:2},
+  sw:{ibLeaf:{model:'Q3400-RD Quantum-X800',ports:144,speed:'800G',u:4},
+      ibSpine:{model:'Q3400-RD Quantum-X800',ports:144,speed:'800G',u:4},
+      ethLeaf:{model:'SN5600D',ports:64,speed:'400G',u:2},
+      ethSpine:{model:'SN5600D',ports:64,speed:'400G',u:2},
+      oob:{model:'SN2201',ports:48,speed:'1G',u:1}},
+  /* NVIDIA RA Table 3 (InfiniBand) + Table 4 (Ethernet). Verbatim. */
+  table:{
+   2:{gpus:1152,ibLeaf:16,ibSpine:8,ethComputeLeaf:4,ethStorageLeaf:8,ethSpine:2,storageBW:'64x400GbE',mgmtOob:'2+2'},
+   4:{gpus:2304,ibLeaf:32,ibSpine:18,ethComputeLeaf:8,ethStorageLeaf:16,ethSpine:2,storageBW:'128x400GbE',mgmtOob:'2+2'},
+   8:{gpus:4608,ibLeaf:64,ibSpine:36,ethComputeLeaf:12,ethStorageLeaf:32,ethSpine:4,storageBW:'256x400GbE',mgmtOob:'2+2'},
+   16:{gpus:9216,ibLeaf:128,ibSpine:72,ethComputeLeaf:24,ethStorageLeaf:64,ethSpine:8,storageBW:'1024x400GbE',mgmtOob:'2+2'}},
+  maxSU:16,
+  uplink:{ethComputeLeafLinks:24,blocking:'1:3',storageLeafLinks:72,mgmtLeafLinks:24}
+ };
+ function fabricFor(n){
+  const su=Math.max(1,Math.min(FABRIC.maxSU,Math.ceil(n)));
+  const rows=Object.keys(FABRIC.table).map(Number).sort((a,b)=>a-b);
+  if(su===1) return {su,exact:false,single:true,basisSU:1,
+    basis:'inferred from the RA narrative — 1 SU is not a row in Table 3/4',
+    gpus:576,ibLeaf:8,ibSpine:0,ethComputeLeaf:4,ethStorageLeaf:4,ethSpine:0,
+    storageBW:'not specified for 1 SU',mgmtOob:'2+2',
+    note:'A single SU needs no spine layer — every rail is one hop inside the SU. These counts are read from the RA narrative, not from Table 3/4.'};
+  const exact=FABRIC.table[su]||null;
+  const key=rows.find(r=>r>=su)||rows[rows.length-1];
+  return {su,exact:!!exact,single:false,basisSU:exact?su:key,
+   basis:exact?`RA Table 3/4, exact ${su}-SU row`:`rounded up to the published ${key}-SU design (no interpolation)`,
+   ...(exact||FABRIC.table[key])};
+ }
+
+ // ---- state ----------------------------------------------------------------------
+ const LS='penguin-adv-planner-v1';
+ let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
+   ||{gpus:4608,floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
+      site:'DC1',room:'R01',row:'A',patRack:'{site}{room}{row}{rack}',
+      patDev:'{rack}U{u}{dev}',patPort:'{dev}{port}'};
+ let SEL=null;
+ const save=()=>{try{localStorage.setItem(LS,JSON.stringify(A));}catch(e){}};
+ const gi=k=>{const n=parseFloat(A[k]);return isNaN(n)?0:n;};
+
+ // ---- derive ----------------------------------------------------------------------
+ function derive(){
+  const gpus=Math.max(576,Math.min(9216,gi('gpus')));
+  const suNeeded=gpus/FABRIC.su.gpus;
+  const f=fabricFor(suNeeded);
+  const computeRacks=Math.ceil(suNeeded)*FABRIC.su.racks;
+  const realGpus=Math.ceil(suNeeded)*FABRIC.su.gpus;
+
+  // network rack packing: switches at their published U, 42U usable per network rack
+  const swU=f.ibLeaf*FABRIC.sw.ibLeaf.u + f.ibSpine*FABRIC.sw.ibSpine.u
+          + (f.ethComputeLeaf+f.ethStorageLeaf+f.ethSpine)*FABRIC.sw.ethLeaf.u;
+  const oobCount=computeRacks;                       // one SN2201 pair rolls up per rack
+  const netRacks=Math.max(1,Math.ceil(swU/42));
+
+  // ---- link classes ---------------------------------------------------------------
+  // Per NVL72 rack: 18 compute trays x 4 ConnectX-8 = 72 compute-fabric links (1/GPU),
+  // 18 x 2 BlueField-3 ports = 36 storage/in-band links, 18 tray BMC + 9 switch-tray BMC.
+  const perRack={compute:72,storage:36,bmc:27,mgmt:18};
+  const ibDown=computeRacks*perRack.compute;
+  // IB leaf radix 144, 72 down => 72 up = non-blocking. DERIVED from the published
+  // radix, not quoted from the RA — labelled as such in the UI.
+  const ibUp=f.ibSpine>0?f.ibLeaf*72:0;
+  const ethDown=computeRacks*perRack.storage;
+  const ethUp=f.ethSpine>0?f.ethComputeLeaf*FABRIC.uplink.ethComputeLeafLinks:0;
+  const bmc=computeRacks*perRack.bmc;
+  const oobUp=oobCount*2;
+
+  const floors=Math.max(1,gi('floors'));
+  const perFloorRacks=Math.ceil((computeRacks+netRacks)/floors);
+  const interFloor=floors>1?ibUp+ethUp:0;            // spine layer assumed on one floor
+  const trunkLinks=Math.max(1,Math.floor(gi('trunkFibers')/8)); // 8 fibres per 800G DR8
+  const risers=interFloor?Math.ceil(interFloor/trunkLinks):0;
+
+  const L=[
+   {cls:'compute',n:ibDown,speed:'800G',media:'OSFP + MPO-12/APC SMF',reach:gi('rowRunM'),
+    desc:'Compute tray ConnectX-8 to IB leaf (1 rail per GPU)',opt:'MMS4X00-NM twin-port DR8 500m'},
+   {cls:'ib-uplink',n:ibUp,speed:'800G',media:'OSFP + MPO-12/APC SMF',reach:gi('rowRunM')+(floors>1?gi('interFloorM'):0),
+    desc:'IB leaf to spine — 72 up per leaf (derived from 144 radix, non-blocking)',opt:'MMS4X00-NM twin-port DR8 500m'},
+   {cls:'storage',n:ethDown,speed:'400G',media:'OSFP + MPO-12/APC SMF',reach:gi('rowRunM'),
+    desc:'BlueField-3 B3240 to Ethernet leaf (storage + in-band)',opt:'400G DR4'},
+   {cls:'eth-uplink',n:ethUp,speed:'400G',media:'OSFP + MPO-12/APC SMF',reach:gi('rowRunM')+(floors>1?gi('interFloorM'):0),
+    desc:'Ethernet compute leaf to spine — 24 links, 1:3 blocking (RA-quoted)',opt:'400G DR4'},
+   {cls:'bmc',n:bmc,speed:'1G',media:'Cat6A copper',reach:3,
+    desc:'Compute-tray and switch-tray BMC to in-rack SN2201',opt:'RJ45'},
+   {cls:'oob-uplink',n:oobUp,speed:'25G',media:'DAC / AOC',reach:gi('rowRunM'),
+    desc:'In-rack SN2201 OOB uplink to aggregation',opt:'SFP28'},
+  ].filter(x=>x.n>0);
+
+  const totalLinks=L.reduce((a,x)=>a+x.n,0);
+  const spares=Math.ceil(totalLinks*gi('spares')/100);
+
+  // rack inventory for the elevation grid
+  const racks=[];
+  for(let s=0;s<Math.ceil(suNeeded);s++)
+   for(let r=0;r<FABRIC.su.racks;r++)
+    racks.push({kind:'compute',su:s+1,idx:racks.length+1});
+  for(let n=0;n<netRacks;n++) racks.push({kind:'network',su:null,idx:racks.length+1});
+
+  return {gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
+   ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
+   interFloor,trunkLinks,risers,racks};
+ }
+
+ // ---- naming ----------------------------------------------------------------------
+ const pad=(n,w)=>String(n).padStart(w,'0');
+ function rackName(i){
+  const perRow=Math.max(1,gi('racksPerRow'));
+  const rowIdx=Math.floor((i-1)/perRow);
+  const rowLetter=String.fromCharCode(A.row.charCodeAt(0)+rowIdx);
+  const pos=((i-1)%perRow)+1;
+  return (A.patRack||'{site}{room}{row}{rack}')
+   .replace('{site}',A.site).replace('{room}',A.room)
+   .replace('{row}',rowLetter).replace('{rack}',pad(pos,2));
+ }
+ const devName=(rack,u,dev)=>(A.patDev||'{rack}U{u}{dev}')
+   .replace('{rack}',rack).replace('{u}',pad(u,2)).replace('{dev}',dev);
+ const portName=(dev,port)=>(A.patPort||'{dev}{port}').replace('{dev}',dev).replace('{port}',port);
+ /* Identifiers must survive DNS labels, DCIM imports and shell globbing. Dashes read as
+  * minus in parsers and are illegal at label boundaries, so they are rejected outright.
+  * Fixed-width numeric fields make a concatenated identifier parseable by POSITION. */
+ const BAD=/[-\s/\\:,;'"|]/;
+ function validatePattern(pat){
+  const errs=[];
+  if(BAD.test(pat.replace(/\{[a-z]+\}/g,''))) errs.push('contains a dash, space or delimiter — identifiers must be dash-free and DNS-safe');
+  const toks=(pat.match(/\{[a-z]+\}/g)||[]);
+  if(!toks.length) errs.push('no tokens — the pattern would be a constant');
+  return errs;
+ }
+
+ /* Reference elevation for a GB300 NVL72 rack. Tray ORDER varies by OEM integrator;
+  * counts do not. Rendered as data so the caveat is honest and the drawing is checkable. */
+ function elevation(kind){
+  if(kind==='network') return [
+   {u:2,n:1,t:'manifold',label:'Blanking / plumbing'},
+   {u:4,n:4,t:'ibleaf',label:'Q3400-RD IB leaf',dev:'IBL'},
+   {u:2,n:4,t:'ethleaf',label:'SN5600D Ethernet leaf',dev:'ETL'},
+   {u:1,n:2,t:'oob',label:'SN2201 OOB',dev:'OOB'},
+   {u:1,n:8,t:'patch',label:'MPO-12/APC patch panel',dev:'PP'},
+  ];
+  return [
+   {u:1,n:2,t:'manifold',label:'Coolant manifold',dev:'MAN'},
+   {u:1,n:4,t:'power',label:'Power shelf 33 kW',dev:'PS'},
+   {u:1,n:10,t:'compute',label:'Compute tray — 4x B300 + 2x Grace',dev:'CT'},
+   {u:1,n:9,t:'nvswitch',label:'NVLink switch tray',dev:'NVS'},
+   {u:1,n:8,t:'compute',label:'Compute tray — 4x B300 + 2x Grace',dev:'CT'},
+   {u:1,n:4,t:'power',label:'Power shelf 33 kW',dev:'PS'},
+   {u:1,n:2,t:'manifold',label:'Coolant manifold',dev:'MAN'},
+  ];
+ }
+ const PORTS={CT:[['IB1..IB4','4x ConnectX-8 800G compute fabric'],['ST1..ST2','2x BlueField-3 B3240 storage / in-band'],['BMC','out-of-band BMC'],['MGT','1GbE debug / NVOS']],
+              NVS:[['BMC','switch-tray BMC'],['COM1..COM2','2x COMe RJ45 for NVOS']],
+              PS:[['AC','busway tap-off']],MAN:[],
+              IBL:[['P01..P144','144x 800G OSFP']],ETL:[['P01..P64','64x 400G']],
+              OOB:[['P01..P48','48x 1GbE']],PP:[['F01..F12','MPO-12/APC']]};
+ // ---- controls --------------------------------------------------------------------
+ const F=[
+  {k:'gpus',l:'Target GPUs',step:576,hint:'576 per SU'},
+  {k:'floors',l:'Floors',step:1,hint:'vertical spread'},
+  {k:'racksPerRow',l:'Racks per row',step:1,hint:'naming + runs'},
+  {k:'rowRunM',l:'Row run (m)',step:5,hint:'rack to leaf'},
+  {k:'interFloorM',l:'Inter-floor run (m)',step:5,hint:'riser length'},
+  {k:'trunkFibers',l:'Trunk fibres',step:12,hint:'12/24/48/96/144'},
+  {k:'spares',l:'Spares %',step:1,hint:'on all links'},
+ ];
+ const NF=[{k:'site',l:'Site'},{k:'room',l:'Room'},{k:'row',l:'First row'},
+  {k:'patRack',l:'Rack pattern',wide:1},{k:'patDev',l:'Device pattern',wide:1},{k:'patPort',l:'Port pattern',wide:1}];
+
+ function renderCtl(){
+  $a('advCtl').innerHTML=F.map(f=>`<div class="mem-f"><label>${f.l}</label>
+    <input type="number" data-ak="${f.k}" value="${A[f.k]}" step="${f.step}"/><div class="hint">${f.hint}</div></div>`).join('');
+  $a('advCtl').querySelectorAll('[data-ak]').forEach(el=>el.addEventListener('input',e=>{
+   A[e.target.dataset.ak]=e.target.value;save();paint();}));
+ }
+ /* Real limits an identifier has to survive. Exceeding the physical label width is the
+  * one nobody checks at design time and everybody discovers at install. */
+ const LIMITS=[
+  {k:'flag',   n:'Cable flag label',    max:24, why:'practical print width on a wrap-around flag'},
+  {k:'panel',  n:'Patch panel port',    max:12, why:'printed strip above a 24-port field'},
+  {k:'netbios',n:'NetBIOS / short host',max:15, why:'hard truncation, still used by AD tooling'},
+  {k:'dns',    n:'DNS label',           max:63, why:'RFC 1035 per-label limit'},
+  {k:'dcim',   n:'DCIM device name',    max:64, why:'NetBox and most DCIM device-name column'},
+  {k:'ifdesc', n:'Interface description',max:240,why:'switch CLI description field'},
+ ];
+ function renderNameCtl(){
+  $a('advName').innerHTML=`<div class="adv-namectl">${NF.map(f=>`<div class="mem-f${f.wide?' wide':''}"><label>${f.l}</label>
+    <input type="text" data-nk="${f.k}" value="${A[f.k]}"/></div>`).join('')}</div>
+   <div class="adv-aibar">
+     <input type="text" id="advAiAsk" placeholder="Describe the convention you want — e.g. 'site code, then row letter and two-digit rack, then U position, all uppercase, no separators'"/>
+     <button class="rk-btn primary" id="advAiGo">✨ Ask the assistant</button>
+     <span class="adv-aistat" id="advAiStat"></span>
+   </div>
+   <div class="adv-tokens">tokens — <b>{site} {room} {row} {rack}</b> for racks · <b>{rack} {u} {dev}</b> for devices · <b>{dev} {port}</b> for ports · dashes and delimiters are rejected</div>
+   <div id="advNameErr"></div>
+   <div class="mem-tbl-wrap" style="margin-bottom:12px"><table class="mem-tbl"><thead><tr><th>Class</th><th>Example identifier</th><th>Len</th><th class="desc">Applies to</th></tr></thead><tbody id="advNameTbl"></tbody></table></div>
+   <div class="adv-limits" id="advLimits"></div>
+   <div class="bs-tools">
+     <button class="rk-btn primary" id="advNameCsv">⬇ Every identifier (CSV)</button>
+     <button class="rk-btn" id="advNameJson">⬇ Every identifier (JSON)</button>
+     <span class="adv-aistat" id="advNameCount"></span>
+     <span class="mem-local">🔒 generated in your browser · nothing uploaded</span>
+   </div>`;
+  $a('advName').querySelectorAll('[data-nk]').forEach(el=>el.addEventListener('input',e=>{
+   A[e.target.dataset.nk]=e.target.value;save();paint();}));
+  $a('advAiGo').onclick=aiNaming;
+  $a('advAiAsk').addEventListener('keydown',e=>{if(e.key==='Enter')aiNaming();});
+  $a('advNameCsv').onclick=()=>exportNames('csv');
+  $a('advNameJson').onclick=()=>exportNames('json');
+ }
+
+ /* Walk every rack, every device, every port and emit the full identifier list.
+  * This is the artifact the cable contractor and the DCIM import both need, and it is
+  * the only way to prove the scheme survives contact with the real device count. */
+ function assetRows(){
+  const d=derive(), out=[];
+  d.racks.forEach((r,i)=>{
+   const nm=rackName(i+1), rows=elevation(r.kind);
+   const perRow=Math.max(1,gi('racksPerRow'));
+   const rowLetter=String.fromCharCode(A.row.charCodeAt(0)+Math.floor(i/perRow));
+   out.push({rack:nm,row:rowLetter,su:r.su||'',u:'',asset_type:'rack',
+     device:nm,port:'',identifier:nm,length:nm.length,description:r.kind==='compute'?'GB300 NVL72 compute rack':'Network rack'});
+   let u=48;
+   for(const b of rows) for(let k=0;k<b.n;k++){
+    u-=b.u; const uPos=u+1;
+    if(!b.dev) continue;
+    const dev=`${b.dev}${pad(k+1,2)}`, dn=devName(nm,uPos,dev);
+    out.push({rack:nm,row:rowLetter,su:r.su||'',u:uPos,asset_type:b.t,
+      device:dn,port:'',identifier:dn,length:dn.length,description:b.label});
+    (PORTS[b.dev]||[]).forEach(pt=>{
+     // expand P01..P144 style ranges into a count rather than literal rows
+     const m=pt[0].match(/^([A-Z]+)(\d+)\.\.[A-Z]*(\d+)$/);
+     if(m){const a=+m[2],z=+m[3],w=m[2].length;
+      for(let n=a;n<=z;n++){const pn=portName(dn,`${m[1]}${pad(n,w)}`);
+       out.push({rack:nm,row:rowLetter,su:r.su||'',u:uPos,asset_type:'port',
+         device:dn,port:`${m[1]}${pad(n,w)}`,identifier:pn,length:pn.length,description:pt[1]});}}
+     else{const pn=portName(dn,pt[0]);
+      out.push({rack:nm,row:rowLetter,su:r.su||'',u:uPos,asset_type:'port',
+        device:dn,port:pt[0],identifier:pn,length:pn.length,description:pt[1]});}
+    });
+   }
+  });
+  return out;
+ }
+ function exportNames(fmt){
+  const rows=assetRows();
+  const st=$a('advNameCount'); if(st) st.textContent=`${NUMF(rows.length)} identifiers`;
+  const stamp=new Date().toISOString().slice(0,10);
+  const blob=(n,c,t)=>{const b=new Blob([c],{type:t});const a=document.createElement('a');
+   a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+  if(fmt==='csv'){
+   const cols=['rack','row','su','u','asset_type','device','port','identifier','length','description'];
+   const esc=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+   blob(`asset-identifiers-${stamp}.csv`,
+     [cols.join(','),...rows.map(r=>cols.map(c=>esc(r[c])).join(','))].join('\n'),'text/csv');
+  }else{
+   const longest=rows.reduce((m,r)=>Math.max(m,r.length),0);
+   blob(`asset-identifiers-${stamp}.json`,JSON.stringify({
+     tool:'penguin-asset-identifiers-v1',generated:new Date().toISOString(),
+     patterns:{rack:A.patRack,device:A.patDev,port:A.patPort},
+     site:A.site,room:A.room,first_row:A.row,racks_per_row:gi('racksPerRow'),
+     count:rows.length,longest_identifier:longest,
+     limits_checked:LIMITS.map(L=>({field:L.n,max:L.max,fits:longest<=L.max})),
+     note:'Identifiers are dash-free and fixed-width so they parse by position. Verify the longest against your physical label width before printing.',
+     assets:rows},null,2),'application/json');
+  }
+ }
+
+ /* Natural-language naming via the existing Mistral worker. The model PROPOSES; this
+  * function is what decides. Anything with a dash, a delimiter or an unknown token is
+  * rejected locally and never reaches the config — an LLM is not permitted to hand us
+  * an identifier scheme that breaks DNS. */
+ const OK_TOKENS=['{site}','{room}','{row}','{rack}','{u}','{dev}','{port}'];
+ async function aiNaming(){
+  const q=$a('advAiAsk').value.trim(); if(!q)return;
+  const st=$a('advAiStat'); st.textContent='thinking…'; st.className='adv-aistat busy';
+  const ask=`You are proposing data-centre identifier patterns for a rack build. Reply with ONLY three lines, no prose, no markdown:
+RACK=<pattern>
+DEVICE=<pattern>
+PORT=<pattern>
+Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} {u} {dev} for DEVICE; {dev} {port} for PORT. Literal text between tokens is allowed but MUST NOT contain dashes, spaces, slashes, colons or any punctuation. The user's request: ${q}`;
+  try{
+   const r=await fetch(CHAT_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({messages:[{role:'user',content:ask}]})});
+   const d=await r.json();
+   if(!r.ok||!d.reply){st.textContent='⚠ '+(d.error||'assistant unavailable');st.className='adv-aistat bad';return;}
+   const get=k=>{const m=d.reply.match(new RegExp('^'+k+'\\s*=\\s*(.+)$','mi'));return m?m[1].trim():null;};
+   const prop={patRack:get('RACK'),patDev:get('DEVICE'),patPort:get('PORT')};
+   const errs=[];
+   for(const [k,v] of Object.entries(prop)){
+    if(!v){errs.push(`${k}: no pattern returned`);continue;}
+    validatePattern(v).forEach(e=>errs.push(`${k}: ${e}`));
+    (v.match(/\{[a-z]+\}/g)||[]).forEach(t=>{if(!OK_TOKENS.includes(t))errs.push(`${k}: unknown token ${t}`);});
+   }
+   if(errs.length){st.innerHTML='⚠ rejected — '+errs[0];st.className='adv-aistat bad';
+    $a('advNameErr').innerHTML=`<div class="callout hot"><div class="callout-h">Proposal rejected locally</div>
+      <p>The assistant returned a scheme this tool will not apply:</p>${errs.map(e=>`<p style="font-family:var(--mono);font-size:11.5px">${e}</p>`).join('')}
+      <p class="callout-x">The model proposes, the validator decides. An identifier that breaks a DNS label or a parser costs more to unpick than it saves to generate.</p></div>`;
+    return;}
+   Object.assign(A,prop);save();$a('advNameErr').innerHTML='';
+   st.textContent='✓ validated and applied';st.className='adv-aistat ok';
+   renderNameCtl();paint();$a('advAiStat').textContent='✓ validated and applied';
+  }catch(e){st.textContent='⚠ cannot reach the assistant';st.className='adv-aistat bad';}
+ }
+
+ function paint(){
+  const d=derive();
+  const f=d.f;
+  // ---- summary + fabric BOM -------------------------------------------------------
+  $a('advOut').innerHTML=`
+   <div class="mem-hero" style="margin-bottom:14px">
+     <div class="mem-k" style="--e:var(--cool)"><div class="n" style="color:var(--cool)">${NUMF(d.realGpus)}</div>
+       <div class="l">GPUs across ${Math.ceil(d.suNeeded)} scalable unit${Math.ceil(d.suNeeded)===1?'':'s'}</div>
+       <div class="s">${d.computeRacks} compute + ${d.netRacks} network racks</div></div>
+     <div class="mem-k" style="--e:var(--grace)"><div class="n" style="color:var(--grace)">${NUMF(d.totalLinks)}</div>
+       <div class="l">fabric + management links</div><div class="s">+${NUMF(d.spares)} spares at ${gi('spares')}%</div></div>
+     <div class="mem-k" style="--e:var(--ok)"><div class="n" style="color:var(--ok)">${f.ibLeaf}<span style="font-size:13px;color:var(--faint)"> leaf</span> ${f.ibSpine}<span style="font-size:13px;color:var(--faint)"> spine</span></div>
+       <div class="l">InfiniBand switches — ${FABRIC.sw.ibLeaf.model}</div><div class="s">${f.exact?'RA table exact':'rounded up — see basis'}</div></div>
+     <div class="mem-k" style="--e:${d.risers?'var(--warn)':'var(--faint)'}"><div class="n" style="color:${d.risers?'var(--warn)':'var(--faint)'}">${d.risers||'—'}</div>
+       <div class="l">inter-floor fibre trunks</div><div class="s">${d.floors} floor${d.floors===1?'':'s'} · ${d.trunkLinks} links per ${gi('trunkFibers')}F trunk</div></div>
+   </div>
+   <div class="callout" style="border-left-color:${f.exact?'var(--ok)':'var(--warn)'}">
+     <div class="callout-h" style="color:${f.exact?'var(--ok)':'var(--warn)'}">Basis: ${f.basis}</div>
+     <p>Switch counts below are transcribed from NVIDIA's DGX SuperPOD GB300 Reference Architecture, Tables 3 and 4. ${f.exact?'This configuration lands on a published row exactly.':'Your target does not land on a published row, so the counts shown are the next design up. We do not interpolate a spine count — topology is not a linear function of GPU count.'}${f.note?` <b>${f.note}</b>`:''}</p>
+   </div>
+   <div class="mem-tbl-wrap" style="margin-bottom:14px"><table class="mem-tbl">
+     <thead><tr><th>Fabric role</th><th>Model</th><th>Qty</th><th>Ports each</th><th>Basis</th></tr></thead><tbody>
+     <tr><td><b>InfiniBand leaf</b></td><td>${FABRIC.sw.ibLeaf.model}</td><td>${f.ibLeaf}</td><td>${FABRIC.sw.ibLeaf.ports} x ${FABRIC.sw.ibLeaf.speed}</td><td class="ok">RA Table 3 — 8 per SU, 4 rails x 2</td></tr>
+     <tr><td><b>InfiniBand spine</b></td><td>${FABRIC.sw.ibSpine.model}</td><td>${f.ibSpine||'—'}</td><td>${FABRIC.sw.ibSpine.ports} x ${FABRIC.sw.ibSpine.speed}</td><td class="ok">RA Table 3</td></tr>
+     <tr><td>Ethernet compute leaf</td><td>${FABRIC.sw.ethLeaf.model}</td><td>${f.ethComputeLeaf}</td><td>${FABRIC.sw.ethLeaf.ports} x ${FABRIC.sw.ethLeaf.speed}</td><td class="ok">RA Table 4</td></tr>
+     <tr><td>Ethernet storage leaf</td><td>${FABRIC.sw.ethLeaf.model}</td><td>${f.ethStorageLeaf}</td><td>${FABRIC.sw.ethLeaf.ports} x ${FABRIC.sw.ethLeaf.speed}</td><td class="ok">RA Table 4</td></tr>
+     <tr><td>Ethernet spine</td><td>${FABRIC.sw.ethSpine.model}</td><td>${f.ethSpine||'—'}</td><td>${FABRIC.sw.ethSpine.ports} x ${FABRIC.sw.ethSpine.speed}</td><td class="ok">RA Table 4</td></tr>
+     <tr><td>OOB management</td><td>${FABRIC.sw.oob.model}</td><td>${d.oobCount}</td><td>${FABRIC.sw.oob.ports} x ${FABRIC.sw.oob.speed}</td><td class="warn">one per compute rack — derived, RA rolls OOB into the SU aggregation layer</td></tr>
+     <tr><td>Mgmt leaf + OOB spine</td><td>${FABRIC.sw.ethLeaf.model}</td><td>${f.mgmtOob}</td><td>—</td><td class="ok">RA Table 4</td></tr>
+     </tbody></table></div>`;
+
+  // ---- elevation overview: tiles, click to expand ---------------------------------
+  const tiles=d.racks.map((r,i)=>{
+   const nm=rackName(i+1);
+   const on=SEL===i;
+   return `<button class="rk-tile ${r.kind}${on?' on':''}" data-rk="${i}">
+     <span class="tn">${nm}</span>
+     <span class="tt">${r.kind==='compute'?`SU${r.su} · NVL72`:'network'}</span>
+     <span class="tb">${r.kind==='compute'?'72 GPU · 142 kW':`${FABRIC.sw.ibLeaf.model.split(' ')[0]} + SN5600D`}</span>
+   </button>`;}).join('');
+  $a('advElev').innerHTML=`<div class="adv-key" style="margin-bottom:12px">
+     <div class="kh">Rack key — click any rack to expand its elevation and every labelled port</div>
+     <div class="kg">${[['compute','Compute tray'],['nvswitch','NVLink switch tray'],['power','Power shelf'],['manifold','Coolant manifold'],['ibleaf','IB leaf'],['ethleaf','Ethernet leaf'],['oob','OOB switch'],['patch','Patch panel'],['cart','NVLink cartridge'],['pdu','PDU']]
+       .map(([k,l])=>`<span class="ki"><i style="background:${ECOL[k]}"></i>${l}</span>`).join('')}</div>
+   </div><div class="rk-grid">${tiles}</div><div id="rkDetail"></div>`;
+  $a('advElev').querySelectorAll('[data-rk]').forEach(b=>b.onclick=()=>{
+   const i=+b.dataset.rk; SEL=(SEL===i?null:i); paint();
+   if(SEL!==null){const el=$a('rkDetail'); if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});}});
+  if(SEL!==null&&d.racks[SEL]) $a('rkDetail').innerHTML=detailCard(d.racks[SEL],SEL);
+
+  // ---- cable plant ----------------------------------------------------------------
+  const STD=[1,2,3,5,7,10,15,20,30,50,75,100,150,200,300,500];
+  const stock=m=>STD.find(x=>x>=m)||500;
+  $a('advCable').innerHTML=`
+   <div class="mem-tbl-wrap" style="margin-bottom:12px"><table class="mem-tbl">
+    <thead><tr><th>Link class</th><th>Qty</th><th>Speed</th><th>Media</th><th>Computed reach</th><th>Stock length</th><th class="desc">Notes</th></tr></thead><tbody>
+    ${d.L.map(l=>`<tr><td><span class="cw" style="background:${CCOL[l.cls]||'#888'}"></span><b>${l.cls}</b></td><td>${NUMF(l.n)}</td><td>${l.speed}</td><td>${l.media}</td>
+      <td>${l.reach} m</td><td class="ok">${stock(l.reach)} m</td><td class="desc">${l.desc}<br/><span style="color:var(--faint)">${l.opt}</span></td></tr>`).join('')}
+    </tbody></table></div>
+   <div class="adv-key">
+     <div class="kh">Cable key — function colour is <b>site convention</b>; jacket and connector colour is <b>standards-mandated</b></div>
+     <div class="kg">${Object.entries(CCOL).map(([k,v])=>`<span class="ki"><i style="background:${v}"></i>${k}</span>`).join('')}</div>
+     <div class="kn">Per <b>TIA-598</b>: an OS2 single-mode jacket is <b style="color:#eab308">yellow</b> and an <b>APC</b> connector body is <b style="color:#22c55e">green</b> — never mixed with blue UPC. Those two are not yours to choose. Function colour is applied with boots, labels or velcro on top of a compliant jacket, and it is the layer you standardise per site.</div>
+   </div>
+   <div class="adv-cable-sum">
+     <div class="acs"><span class="k">Total links</span><span class="v">${NUMF(d.totalLinks)}</span></div>
+     <div class="acs"><span class="k">Spares at ${gi('spares')}%</span><span class="v">${NUMF(d.spares)}</span></div>
+     <div class="acs"><span class="k">Transceivers (2 per optical link)</span><span class="v">${NUMF(d.L.filter(l=>l.media.includes('SMF')).reduce((a,l)=>a+l.n,0)*2)}</span></div>
+     <div class="acs"><span class="k">Inter-floor links</span><span class="v ${d.interFloor?'warn':''}">${d.interFloor?NUMF(d.interFloor):'none — single floor'}</span></div>
+     <div class="acs"><span class="k">${gi('trunkFibers')}F trunks needed</span><span class="v ${d.risers?'warn':''}">${d.risers||'—'}</span></div>
+     <div class="acs"><span class="k">Fibres per trunk in use</span><span class="v">${d.trunkLinks} links x 8 = ${d.trunkLinks*8} of ${gi('trunkFibers')}</span></div>
+   </div>
+   <h3 class="mem-h" style="margin-top:22px">Complete bill of materials — every asset class</h3>
+   <div class="mem-tbl-wrap" style="margin-bottom:12px"><table class="mem-tbl">
+    <thead><tr><th>Category</th><th>Item</th><th>Qty</th><th>+Spares</th><th>Order</th><th class="desc">Basis</th></tr></thead><tbody>
+    ${bom(d).map(b=>`<tr><td>${b.cat}</td><td><b>${b.item}</b></td><td>${NUMF(b.qty)}</td>
+      <td style="color:var(--faint)">${b.sp?'+'+NUMF(b.sp):'—'}</td><td class="ok">${NUMF(b.qty+b.sp)}</td>
+      <td class="desc">${b.basis}</td></tr>`).join('')}
+    </tbody></table></div>
+   <div class="callout" style="margin-top:12px">
+     <div class="callout-h">How the trunk maths works</div>
+     <p>An 800G DR8 link over MPO-12/APC uses <b>8 of the 12 fibres</b> — four transmit, four receive. So a trunk carries <b>floor(fibres ÷ 8)</b> links, and the spare fibres in each MPO-12 are strand overhead you pay for and do not light. At ${gi('trunkFibers')}F that is <b>${d.trunkLinks} link${d.trunkLinks===1?'':'s'} per trunk</b>.</p>
+     <p>Reach is your input, not a survey. NVIDIA's DR8 optics are rated to <b>500 m over single-mode</b>, and MPO-12/APC type-B crossover jumpers are manufactured 1–500 m, so anything inside 500 m is a single hop with no mid-span. Beyond that you are into a different optic, not a longer cable.</p>
+     ${d.floors>1?`<p class="callout-x">You have set <b>${d.floors} floors</b>, so leaf-to-spine crosses a riser. This model assumes <b>the spine layer sits on one floor</b> and every other floor trunks up to it — the common design, but confirm it against your actual room allocation before ordering ${d.risers} trunks.</p>`:''}
+   </div>`;
+
+  // ---- naming preview -------------------------------------------------------------
+  const r0=rackName(1), ct=devName(r0,8,'CT01'), nvs=devName(r0,20,'NVS01');
+  const nb=$a('advNameTbl');
+  if(nb) nb.innerHTML=[
+   ['Rack',r0,'cabinet label, both faces'],
+   ['Compute tray',ct,'device label at the tray ear'],
+   ['Compute fabric port',portName(ct,'IB1'),'each of 4 ConnectX-8 ports per tray'],
+   ['Storage / in-band port',portName(ct,'ST1'),'each of 2 BlueField-3 ports per tray'],
+   ['<b>Tray BMC</b>',`<b>${portName(ct,'BMC')}</b>`,'<b>out-of-band — one per compute tray</b>'],
+   ['<b>Tray management</b>',`<b>${portName(ct,'MGT')}</b>`,'<b>1GbE debug / NVOS</b>'],
+   ['NVLink switch tray',nvs,'9 per NVL72 rack'],
+   ['<b>Switch-tray BMC</b>',`<b>${portName(nvs,'BMC')}</b>`,'<b>often unlabelled in practice — the 3am problem</b>'],
+   ['IB leaf switch',devName(rackName(d.computeRacks+1),12,'IBL01'),'in the network rack'],
+   ['IB leaf port',portName(devName(rackName(d.computeRacks+1),12,'IBL01'),'P001'),'144 per leaf'],
+   ['Patch panel port',portName(devName(rackName(d.computeRacks+1),40,'PP01'),'F01'),'MPO-12/APC'],
+   ['Cable, both ends',`${portName(ct,'IB1')} :: ${portName(devName(rackName(d.computeRacks+1),12,'IBL01'),'P001')}`,'TIA-606-C: unique ID within 300 mm of each termination'],
+  ].map(r=>{const raw=String(r[1]).replace(/<[^>]+>/g,'');
+    return `<tr><td>${r[0]}</td><td style="font-family:var(--mono);color:var(--cool)">${r[1]}</td><td style="font-family:var(--mono);color:var(--faint)">${raw.length}</td><td class="desc">${r[2]}</td></tr>`;}).join('');
+  // ---- field-limit check: the one nobody runs until install day ---------------------
+  const longest=Math.max(...[r0,ct,portName(ct,'BMC'),portName(ct,'IB1'),
+    portName(devName(rackName(d.computeRacks+1),12,'IBL01'),'P001')].map(x=>x.length));
+  const lp=$a('advLimits');
+  if(lp) lp.innerHTML=`<div class="kh" style="margin-bottom:8px">Field limits — longest identifier in this scheme is <b style="color:var(--cool)">${longest} characters</b></div>
+   <div class="lim-g">${LIMITS.map(L=>{
+     const ok=longest<=L.max, near=!ok?false:longest>L.max*0.85;
+     return `<div class="lim ${ok?(near?'near':'ok'):'bad'}"><div class="ln">${L.n}</div>
+       <div class="lv">${longest} / ${L.max}</div><div class="lw">${L.why}</div>
+       <div class="ls">${ok?(near?'tight':'fits'):'OVER by '+(longest-L.max)}</div></div>`;}).join('')}</div>
+   <div class="kn">The two that bite are physical. A cable flag has a printable width measured in millimetres, and a patch-panel strip has less. An identifier that fits DNS comfortably can still be unreadable on the label that a technician is actually holding at 3am, which is the moment the whole scheme is for. Shorten the site and room fields before you shorten the device or port fields, because the device and port are what disambiguate.</div>`;
+ }
+
+ /* Full BOM across every asset class the build actually needs, not just cables.
+  * Switch quantities carry their RA-table provenance; passive and optic counts are
+  * derived from the link classes and say so. */
+ function bom(d){
+  const f=d.f, sp=n=>Math.ceil(n*gi('spares')/100);
+  const STD=[1,2,3,5,7,10,15,20,30,50,75,100,150,200,300,500];
+  const stock=m=>STD.find(x=>x>=m)||500;
+  const opt=d.L.filter(l=>l.media.includes('SMF'));
+  const optLinks=opt.reduce((a,l)=>a+l.n,0);
+  const rows=[
+   ['Rack','GB300 NVL72 compute rack',d.computeRacks,`${Math.ceil(d.suNeeded)} SU x 8 racks — RA`],
+   ['Rack','Network rack (42U usable)',d.netRacks,`${NUMF(d.swU)}U of switching packed at 42U/rack — derived`],
+   ['Compute','Compute tray (4x B300 + 2x Grace)',d.computeRacks*18,'18 per NVL72 rack — RA'],
+   ['Compute','NVLink switch tray',d.computeRacks*9,'9 per NVL72 rack — RA'],
+   ['Power','Power shelf 33 kW',d.computeRacks*8,'6-8 per rack, 8 assumed — RA range'],
+   ['Switch',FABRIC.sw.ibLeaf.model+' — IB leaf',f.ibLeaf,'RA Table 3'],
+   ['Switch',FABRIC.sw.ibSpine.model+' — IB spine',f.ibSpine,'RA Table 3'],
+   ['Switch',FABRIC.sw.ethLeaf.model+' — Eth compute leaf',f.ethComputeLeaf,'RA Table 4'],
+   ['Switch',FABRIC.sw.ethLeaf.model+' — Eth storage leaf',f.ethStorageLeaf,'RA Table 4'],
+   ['Switch',FABRIC.sw.ethSpine.model+' — Eth spine',f.ethSpine,'RA Table 4'],
+   ['Switch',FABRIC.sw.oob.model+' — OOB management',d.oobCount,'one per compute rack — derived'],
+   ['Optic','800G OSFP DR8 transceiver (MMS4X00-NM)',optLinks*2,'2 per optical link — derived'],
+   ['Fibre','MPO-12/APC jumper '+stock(gi('rowRunM'))+'m',d.ibDown+d.ethDown,'rack to leaf, stock length — derived'],
+   ['Fibre','MPO-12/APC jumper '+stock(gi('rowRunM')+(d.floors>1?gi('interFloorM'):0))+'m',d.ibUp+d.ethUp,'leaf to spine — derived'],
+   ['Fibre',gi('trunkFibers')+'F trunk assembly',d.risers,d.risers?`inter-floor riser, ${d.trunkLinks} links each — derived`:'single floor, none required'],
+   ['Copper','Cat6A patch (3m)',d.bmc,'BMC and switch-tray OOB — derived'],
+   ['Copper','SFP28 DAC/AOC',d.oobUp,'SN2201 uplinks — derived'],
+   ['Passive','MPO-12/APC patch panel (12-port)',Math.ceil((d.ibDown+d.ibUp+d.ethDown+d.ethUp)/12),'structured field, 12 links per panel — derived'],
+   ['Passive','Cable manager (1U)',(d.computeRacks+d.netRacks)*2,'2 per rack — convention'],
+  ];
+  return rows.filter(r=>r[2]>0).map(r=>({cat:r[0],item:r[1],qty:r[2],sp:sp(r[2]),basis:r[3]}));
+ }
+ function detailCard(r,i){
+  const nm=rackName(i+1), rows=elevation(r.kind);
+  let u=48, bands=[];
+  for(const b of rows) for(let k=0;k<b.n;k++){
+   const top=u; u-=b.u;
+   bands.push({top,u:b.u,t:b.t,label:b.label,dev:b.dev?`${b.dev}${pad(k+1,2)}`:null,uPos:u+1});
+  }
+  const dl=bands.filter(b=>b.dev);
+  return `<div class="rk-card">
+    <div class="rk-cardh"><div><h4>${nm}</h4><div class="s">${r.kind==='compute'?`Scalable Unit ${r.su} · GB300 NVL72 · 72 GPU · 142 kW`:'Network rack · leaf, spine and OOB'}</div></div>
+      <button class="rk-btn" data-close="1">close</button></div>
+    <div class="rk-cardb">
+      <div class="rk-elev">
+        <div class="rk-elevh">FRONT</div>
+        <div class="rk-rackbox">${bands.map(b=>`<div class="rk-band ${b.t}" style="height:${b.u*13}px" title="${b.label}">
+          <span class="ru">${pad(b.uPos,2)}</span><span class="rl">${b.dev?b.dev+' — ':''}${b.label}</span></div>`).join('')}</div>
+      </div>
+      <div class="rk-elev">
+        <div class="rk-elevh">REAR</div>
+        <div class="rk-rackbox">
+          <div class="rk-band manifold" style="height:52px"><span class="ru">48</span><span class="rl">Coolant return manifold · quick-disconnects</span></div>
+          <div class="rk-band bus" style="height:${r.kind==='compute'?'160':'80'}px"><span class="ru">—</span><span class="rl">${r.kind==='compute'?'DC busbar · power shelf output':'A/B PDU feeds'}</span></div>
+          <div class="rk-band cart" style="height:${r.kind==='compute'?'190':'150'}px"><span class="ru">—</span><span class="rl">${r.kind==='compute'?'NVLink copper cable cartridge — spine backplane, NOT a cable-BOM item':'MPO-12/APC patch field · trunk terminations'}</span></div>
+          <div class="rk-band pdu" style="height:60px"><span class="ru">—</span><span class="rl">Rack PDU A / B · ${r.kind==='compute'?'busway tap-off':'IEC 60309'}</span></div>
+        </div>
+      </div>
+      <div class="rk-ports">
+        <div class="rk-elevh">LABELLED DEVICES &amp; PORTS</div>
+        <div class="rk-plist">${dl.map(b=>{
+          const dn=devName(nm,b.uPos,b.dev), ps=PORTS[b.dev.replace(/\d+$/,'')]||[];
+          return `<div class="rk-dev"><div class="dn">${dn}</div>
+            ${ps.length?ps.map(p=>`<div class="pr"><span class="pn">${portName(dn,p[0])}</span><span class="pd">${p[1]}</span></div>`).join(''):'<div class="pr"><span class="pd">no cabled ports</span></div>'}
+          </div>`;}).join('')}</div>
+      </div>
+    </div></div>`;
+ }
+
+ // ---- mode switching ---------------------------------------------------------------
+ document.querySelectorAll('#rkMode button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#rkMode button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  const adv=b.dataset.m==='advanced';
+  $a('rkAdv').style.display=adv?'':'none';
+  ['rkSimpleBar','rkRacks','rkAggWrap'].forEach(id=>{const el=$a(id);if(el)el.style.display=adv?'none':'';});
+  document.querySelectorAll('#v-rack .rk-agg').forEach(el=>{if(el.id!=='rkAggWrap')el.style.display=adv?'none':'';});
+  $a('rkModeNote').textContent=adv
+   ? 'Derived from NVIDIA’s published SuperPOD reference architecture: up to 16 scalable units / 9,216 GPUs. Click any rack to expand its elevation and port labels.'
+   : 'Hand-configure individual racks: power, thermal, per-rack cabling and a SKU-rational BOM.';
+  if(adv){renderCtl();renderNameCtl();paint();}
+ });
+ document.addEventListener('click',e=>{if(e.target&&e.target.dataset&&e.target.dataset.close){SEL=null;paint();}});
+ // published for the Build Sheet tab
+ window.__ADV_MODEL=()=>{const d=derive();
+  return {...d,racksPerRow:gi('racksPerRow'),rowStart:A.row,name:rackName};};
+ // import target from Size It
+ window.__advImport=(gpus)=>{A.gpus=Math.max(576,Math.min(9216,gpus));save();
+  const b=document.querySelector('#rkMode button[data-m="advanced"]'); if(b)b.click();};
+})();
+</script>
+
+<script>
+/* ===== BUILD SHEET — rows, per-rack manifest, sovereign tag taxonomy ===============
+ * Reads the Advanced planner's derived model. CAF and AWS supply the four commercial
+ * tag categories verbatim; the sovereignty category is the adaptation, because both
+ * frameworks assume a hyperscaler is asserting jurisdiction and custody on your behalf.
+ * ---------------------------------------------------------------------------------*/
+(function(){
+ const $s=id=>document.getElementById(id);
+ const N=n=>Math.round(n).toLocaleString();
+
+ const TAGS=[
+  {cat:'Sovereignty',src:'DugganUSA — the adaptation',col:'var(--hot)',
+   why:'CAF and AWS have no equivalent because a hyperscaler asserts these for you. On-prem, they are properties of your own estate and nobody else will carry them.',
+   rows:[
+    ['Jurisdiction','ISO-3166 code of the legal system governing the asset','DE','the three-layer test starts here: where does it sit, whose law applies, who can compel access'],
+    ['DataResidency','Where data derived on this asset may physically reside','EU-only','constrains failover and backup targets, not just primary storage'],
+    ['DataClassification','public | internal | confidential | restricted','restricted','drives which workloads may be scheduled on the asset at all'],
+    ['ExportControl','Dual-use / ITAR / EAR applicability','EAR99','GPUs are export-controlled goods; the tag travels with the asset through RMA'],
+    ['SovereignTier','Sovereignty risk tier of workloads permitted here','tier1','map every workload to a tier before the first rack lands'],
+    ['LegalEntity','Which legal entity owns and operates the asset','acme-gmbh','ownership and operation can differ, and that difference is the whole point'],
+    ['PersonnelClearance','Clearance required for physical or logical access','national-sc','the control a cloud provider performs invisibly becomes yours to record'],
+    ['CustodyChain','Reference to the physical custody record','custody-2026-0142','who has touched it, from factory to floor'],
+   ]},
+  {cat:'Technical',src:'CAF functional tags + AWS technical',col:'var(--cool)',
+   why:'Lifted directly from both frameworks. Identifies the resource to the engineers who work on it.',
+   rows:[
+    ['WorkloadName','Application or service the asset serves','inference-prod',''],
+    ['Environment','prod | staging | dev | dr','prod','CAF names this as a core functional tag'],
+    ['AssetType','rack | computetray | nvswitch | leaf | spine | oob','computetray',''],
+    ['ScalableUnit','SU number this asset belongs to','su03','the RA unit of scale, so the natural grouping key'],
+    ['Row','Row identifier','a',''],
+    ['RackId','Rack identifier matching the physical label','dc1r01a03','must match the printed label exactly or it is worse than absent'],
+   ]},
+  {cat:'Business',src:'CAF + AWS business tags',col:'var(--grace)',
+   why:'Cost allocation and ownership. Identical to the cloud guidance because the questions are identical.',
+   rows:[
+    ['CostCenter','Chargeback code','cc4471',''],
+    ['Owner','Accountable individual or team','ai-platform',''],
+    ['BusinessUnit','Funding unit','research',''],
+    ['Criticality','business impact if unavailable','high',''],
+    ['ProjectCode','Capital project this was funded under','ai-factory-ph2','on-prem is capex, so the project code outlives the deployment'],
+   ]},
+  {cat:'Security & compliance',src:'CAF classification + AWS security',col:'var(--ok)',
+   why:'Present in both frameworks; the regime list is what changes for a sovereign build.',
+   rows:[
+    ['ComplianceRegime','FedRAMP | IL5 | HIPAA | GDPR | EU-AI-Act','eu-ai-act',''],
+    ['KeyCustodian','Who holds the keys for data on this asset','hsm-cluster-1','the answer that determines whether sovereignty is real'],
+    ['AttestationRequired','Whether attestation is required before workload placement','true','pairs with GPU confidential computing'],
+    ['PatchWindow','Approved maintenance window','sun-0200-0600',''],
+   ]},
+  {cat:'Automation',src:'AWS automation tags',col:'var(--warn)',
+   why:'AWS calls these out as a distinct category. On-prem they drive DCIM sync and provisioning rather than lifecycle scripts.',
+   rows:[
+    ['ProvisioningState','discovered | staged | commissioned | decommissioned','commissioned',''],
+    ['DcimSync','Whether this asset is authoritative in DCIM','true',''],
+    ['InstallDate','Commissioning date','2026-11-04',''],
+    ['WarrantyEnd','Support expiry','2031-11-03','drives the refresh conversation four years out'],
+   ]},
+ ];
+
+ function model(){
+  const ADV=window.__ADV_MODEL&&window.__ADV_MODEL();
+  return ADV||null;
+ }
+ function paint(){
+  const d=model();
+  if(!d){$s('bsSum').innerHTML='<div class="callout"><div class="callout-h">No build configured yet</div><p>Open the <b>Rack Planner</b> tab, switch to <b>Advanced</b>, and set a GPU target. This sheet follows whatever you configure there.</p></div>';
+   $s('bsRows').innerHTML='';$s('bsRacks').innerHTML='';renderTags();return;}
+  const perRow=Math.max(1,d.racksPerRow);
+  $s('bsSum').innerHTML=`<div class="mem-hero" style="margin-bottom:6px">
+    <div class="mem-k" style="--e:var(--cool)"><div class="n" style="color:var(--cool)">${N(d.realGpus)}</div><div class="l">GPUs</div><div class="s">${Math.ceil(d.suNeeded)} scalable units</div></div>
+    <div class="mem-k" style="--e:var(--grace)"><div class="n" style="color:var(--grace)">${d.racks.length}</div><div class="l">racks total</div><div class="s">${d.computeRacks} compute · ${d.netRacks} network</div></div>
+    <div class="mem-k" style="--e:var(--ok)"><div class="n" style="color:var(--ok)">${Math.ceil(d.racks.length/perRow)}</div><div class="l">rows at ${perRow} racks each</div><div class="s">naive fill — not a floor plan</div></div>
+    <div class="mem-k" style="--e:var(--warn)"><div class="n" style="color:var(--warn)">${N(d.computeRacks*142)}<span style="font-size:13px;color:var(--faint)"> kW</span></div><div class="l">compute rack load</div><div class="s">142 kW per NVL72 · excludes network</div></div>
+   </div>`;
+  // rows
+  const rows={};
+  d.racks.forEach((r,i)=>{const ri=Math.floor(i/perRow);(rows[ri]=rows[ri]||[]).push({...r,i:i+1});});
+  $s('bsRows').innerHTML=Object.entries(rows).map(([ri,rs])=>{
+   const letter=String.fromCharCode(d.rowStart.charCodeAt(0)+(+ri));
+   const comp=rs.filter(x=>x.kind==='compute').length, net=rs.length-comp;
+   return `<tr><td><b>${letter}</b></td><td>${rs.length}</td>
+     <td style="font-family:var(--mono);font-size:11px;color:var(--cool)">${d.name(rs[0].i)} … ${d.name(rs[rs.length-1].i)}</td>
+     <td>${comp?`${comp} compute`:''}${comp&&net?' + ':''}${net?`${net} network`:''}</td>
+     <td>${N(comp*72)}</td><td>${N(comp*142)} kW</td>
+     <td class="desc">${comp?`SU ${[...new Set(rs.filter(x=>x.kind==='compute').map(x=>x.su))].join(', ')}`:'switching and patch fields'}</td></tr>`;}).join('');
+  // per-rack manifest
+  $s('bsRacks').innerHTML=d.racks.map((r,i)=>{
+   const letter=String.fromCharCode(d.rowStart.charCodeAt(0)+Math.floor(i/perRow));
+   const dev=r.kind==='compute'?18+9+8+4:4+4+2+8;
+   const ports=r.kind==='compute'?72+36+27+18:0;
+   return `<tr><td style="font-family:var(--mono);color:var(--cool)">${d.name(i+1)}</td><td>${letter}</td>
+     <td>${r.su||'—'}</td><td>${r.kind}</td><td>${dev}</td><td>${ports?N(ports):'—'}</td>
+     <td>${r.kind==='compute'?'142 kW':'~8 kW'}</td></tr>`;}).join('');
+  renderTags();
+ }
+ function renderTags(){
+  $s('bsTags').innerHTML=TAGS.map(t=>`<div class="bs-tcat" style="--e:${t.col}">
+    <div class="bs-th"><span class="c">${t.cat}</span><span class="s">${t.src}</span></div>
+    <div class="bs-why">${t.why}</div>
+    <table class="mem-tbl"><thead><tr><th>Tag key</th><th>Meaning</th><th>Example</th><th class="desc">Why it matters here</th></tr></thead>
+    <tbody>${t.rows.map(r=>`<tr><td style="font-family:var(--mono);color:${t.col}">${r[0]}</td><td>${r[1]}</td>
+      <td style="font-family:var(--mono);color:var(--faint)">${r[2]}</td><td class="desc">${r[3]||'—'}</td></tr>`).join('')}</tbody></table>
+   </div>`).join('')
+   +`<div class="callout"><div class="callout-h">Two conventions worth keeping</div>
+      <p><b>Tag keys are case-insensitive, values are case-sensitive.</b> CAF's guidance is to keep keys lowercase and hold capitalisation consistent in values — the same discipline applies to a DCIM import, and it is the difference between one <i>Environment</i> and four.</p>
+      <p><b>Define naming before tagging.</b> CAF is explicit that the tagging strategy builds on the naming convention, not beside it. The <b>RackId</b> tag above must reproduce the printed rack label exactly; a tag that disagrees with the physical label is worse than no tag, because it will be believed.</p></div>`;
+ }
+ // exports
+ function csv(){
+  const d=model(); if(!d)return '';
+  const perRow=Math.max(1,d.racksPerRow);
+  const head=['rack_id','row','scalable_unit','type','gpus','load_kw'];
+  const body=d.racks.map((r,i)=>[d.name(i+1),String.fromCharCode(d.rowStart.charCodeAt(0)+Math.floor(i/perRow)),
+    r.su||'',r.kind,r.kind==='compute'?72:0,r.kind==='compute'?142:8].join(','));
+  return [head.join(','),...body].join('\\n');
+ }
+ const dl=(n,c,t)=>{const b=new Blob([c],{type:t});const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+ $s('bsCsv').onclick=()=>{const c=csv();if(c)dl('build-sheet-'+new Date().toISOString().slice(0,10)+'.csv',c,'text/csv');};
+ $s('bsJson').onclick=()=>{const d=model();if(!d)return;
+  dl('build-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({
+   tool:'penguin-build-sheet-v1',generated:new Date().toISOString(),
+   gpus:d.realGpus,scalable_units:Math.ceil(d.suNeeded),fabric:d.f,
+   racks:d.racks.map((r,i)=>({id:d.name(i+1),kind:r.kind,su:r.su})),
+   tag_schema:Object.fromEntries(TAGS.map(t=>[t.cat,Object.fromEntries(t.rows.map(r=>[r[0],r[1]]))])),
+   note:'Tag keys are recommendations; values and enforcement are yours. Not a compliance attestation.'
+  },null,2),'application/json');};
+ document.querySelector('#tabs button[data-v="sheet"]').addEventListener('click',()=>setTimeout(paint,0));
+ renderTags();
 })();
 </script>
 
