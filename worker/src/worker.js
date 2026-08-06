@@ -36,11 +36,16 @@ RULES:
 
 INTRODUCTIONS: If the user asks to connect, get an introduction, talk to a real person, or discuss next steps / buying, offer to introduce them to Greg Colburn at Penguin Solutions. Ask for their name and best email so the introduction can be made. Do not invent Greg's title, contact details, or commitments — just offer to facilitate the introduction.`;
 
+// CORS origin allowlist. The sizer moved to a custom domain, and a page served from an
+// origin missing here looks completely healthy while every chat request dies at the
+// browser — the failure is invisible server-side, so this list has to move WITH the site.
 const ALLOW = new Set([
-  'https://pduggusa.github.io',
+  'https://penguinai.dugganusa.com',   // primary — GitHub Pages custom domain
+  'https://pduggusa.github.io',        // kept: the pre-custom-domain URL still redirects here
   'http://localhost:8000', 'http://127.0.0.1:8000',
   'null', // local file:// open()
 ]);
+const DEFAULT_ORIGIN = 'https://penguinai.dugganusa.com';
 // The ONLY hosts the grounding tool may reach. Exact hostname match — no suffix logic.
 const FETCH_HOSTS = new Set([
   'www.penguinsolutions.com',
@@ -65,7 +70,7 @@ const TOOLS = [{
 }];
 
 function corsHeaders(origin) {
-  const o = ALLOW.has(origin) ? origin : 'https://pduggusa.github.io';
+  const o = ALLOW.has(origin) ? origin : DEFAULT_ORIGIN;
   return { 'Access-Control-Allow-Origin': o, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Vary': 'Origin' };
 }
 function json(obj, status, origin) {
