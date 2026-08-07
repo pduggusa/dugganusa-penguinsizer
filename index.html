@@ -436,6 +436,9 @@
   .wd-legend span{display:flex;align-items:center;gap:7px}
   .wd-legend i{width:16px;height:16px;border-radius:3px;border:1.5px solid;display:inline-block;flex:none}
   .wd-legend b{color:var(--ink);font-family:var(--mono)}
+  .wd-hub{touch-action:none}
+  .wd-hub:hover rect{stroke:#fff;filter:drop-shadow(0 0 6px rgba(167,139,250,.8))}
+  .wd-hub:active rect{stroke:#fff}
   .ph-tbl{margin-top:12px}
   /* build sheet */
   .bs-sum{margin-bottom:8px}
@@ -2566,7 +2569,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:4608,floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',
-      netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,
+      netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
       site:'DC1',room:'R01',row:'A',patRack:'{site}{room}{row}{rack}',
       patDev:'{rack}U{u}{dev}',patPort:'{dev}{port}'};
  let SEL=null;
@@ -2612,9 +2615,13 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const pitch=gi('rackPitchM')||0.6, rise=gi('trayRiseM')||6;
   const perRow=Math.max(1,gi('racksPerRow'));
   const place=A.netPlacement||'eor';
-  // left and right are both a FULL row worst case — the far rack is the whole row away.
-  // middle halves it because the farthest rack is only half a row from the hub.
-  const worstHops = place==='tor' ? 0 : place==='mor' ? Math.ceil(perRow/2) : (perRow-1);
+  /* Hub position is a CONTINUOUS fraction along the row, 0 = hard left, 1 = hard right.
+   * The worst-case rack is whichever end is further away, so hops = max(f, 1-f) x span.
+   * That reduces to the familiar cases — 0 or 1 gives a full row, 0.5 gives half — while
+   * letting the hub be dragged anywhere between. Reach drives stock length, so dragging
+   * the hub moves the BOM. */
+  const hubF = place==='tor' ? 0 : Math.max(0,Math.min(1, A.hubPos==null?1:+A.hubPos));
+  const worstHops = place==='tor' ? 0 : Math.ceil(Math.max(hubF,1-hubF)*(perRow-1));
   const rowRun = place==='tor' ? 2 : +(worstHops*pitch + rise).toFixed(1);
 
   // ---- VAST storage tier ----------------------------------------------------------
@@ -2699,7 +2706,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   for(let n=0;n<netRacks;n++) racks.push({kind:'network',vendor:'nvidia',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(netRacks/phases)))+1),idx:racks.length+1});
   for(let n=0;n<vRacks;n++) racks.push({kind:'storage',vendor:'vast',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(vRacks/phases)))+1),idx:racks.length+1});
 
-  return {rowRun,place,pitch,rise,worstHops,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
+  return {rowRun,place,pitch,rise,worstHops,hubF,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
    vc,vd,vCnodes,vAuto,manual,vModel,vU,vRacks,vKw,vBE,vFE,vBMC,vCON,
    gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
    ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
@@ -2761,7 +2768,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const F=[
   {k:'gpus',l:'Target GPUs',step:576,hint:'576 per SU'},
   {k:'floors',l:'Floors',step:1,hint:'vertical spread'},
-  {k:'racksPerRow',l:'Racks per row',step:1,hint:'naming + runs'},
+  {k:'racksPerRow',l:'Racks per row',step:1,hint:'rows are computed'},
   {k:'rackPitchM',l:'Rack pitch (m)',step:0.1,hint:'0.6 = 600mm'},
   {k:'trayRiseM',l:'Tray rise (m)',step:1,hint:'up+over+down'},
   {k:'interFloorM',l:'Inter-floor run (m)',step:5,hint:'riser length'},
@@ -2984,7 +2991,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    <div class="adv-key" id="advFloorPanel" style="margin-bottom:12px">
      <div class="kh">Per-floor asset split &amp; uplink oversubscription</div>
      <div class="kg" style="gap:18px">
-       <span class="ki"><b>${d.floors}</b> floor${d.floors===1?'':'s'} · <b>${d.rowsPerFloor}</b> rows each · <b>${NUMF(d.perFloorRacks)}</b> racks ${d.rowsPerFloorSet>0?'<em style="color:var(--cool)">(rows/floor drives floor count)</em>':'(even split)'}</span>
+       <span class="ki"><b>${d.totalRows}</b> rows total (computed: ${d.racks.length} racks &divide; ${gi('racksPerRow')} per row) · <b>${d.floors}</b> floor${d.floors===1?'':'s'} · <b>${d.rowsPerFloor}</b> rows each · <b>${NUMF(d.perFloorRacks)}</b> racks ${d.rowsPerFloorSet>0?'<em style="color:var(--cool)">(rows/floor drives floor count)</em>':'(even split)'}</span>
        <span class="ki"><b>${d.upPerLeaf}</b> IB uplinks/leaf · blocking <b>${d.ibBlocking===1?'1:1 non-blocking':'1:'+d.ibBlocking.toFixed(1)}</b></span>
        <span class="ki">spine on floor 1 · <b>${Math.round(d.offSpineFrac*100)}%</b> of leaf traffic crosses a riser</span>
      </div>
@@ -3035,7 +3042,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    const bundles=Object.entries(d.L.reduce((a,l)=>{a[l.cls]=(a[l.cls]||0)+l.n;return a;},{}))
      .filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
    const maxN=Math.max(...bundles.map(b=>b[1]),1);
-   const rowW=perRowW*(RW+GAP)+HUBW+GAP;
+   const rowW=perRowW*(RW+GAP)+GAP;
    const FLOORPAD=d.floors>1?Math.round(46*zoom):0;
    const W=Math.max(560,rowW+PAD*2), H=rows.length*ROWH+PAD*1.4+floorsOf.length*FLOORPAD;
    const svg=[];
@@ -3057,10 +3064,13 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     rowCounter++; const ri=rowCounter;
     const y=PAD*0.55+ri*ROWH+fi*FLOORPAD, rowLetter=String.fromCharCode(A.row.charCodeAt(0)+ri);
     // hub x position by placement
-    // hub index within the row: 0 = left, middle = centre, row.length = right
-    const hubIdx = place==='left' ? 0 : place==='mor' ? Math.floor(row.length/2) : row.length;
-    const xOf=i=>PAD+(i*(RW+GAP))+((place!=='tor'&&i>=hubIdx)?HUBW+GAP:0);
-    const hubX = place==='tor' ? null : PAD+hubIdx*(RW+GAP);
+    /* The hub is a MARKER for where the leaf aggregation sits, not an extra rack. The
+     * network racks are already in the rack list and drawn as racks — shifting the row to
+     * make space for a hub box double-counted them and made 5 racks per row render as 6.
+     * So it is drawn as a slim bar at the fractional position and consumes no slot. */
+    const xOf=i=>PAD+(i*(RW+GAP));
+    const rowSpan=row.length*(RW+GAP)-GAP;
+    const hubX = place==='tor' ? null : PAD+d.hubF*rowSpan;
     svg.push(`<text x="${PAD-14}" y="${y+RH*0.6}" fill="#5b6b7e" font-size="${11*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="end">${rowLetter}</text>`);
     // cable bundles first so racks draw on top
     row.forEach((r,i)=>{
@@ -3072,7 +3082,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       });
       return;
      }
-     const hx=hubX+HUBW/2;
+     const hx=hubX;
      bundles.forEach(([cls,n],bi)=>{
       const w=Math.max(0.8,(n/maxN)*5.5*zoom);
       const yy=y+RH+6*zoom+bi*(3.2*zoom);
@@ -3093,13 +3103,44 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      </g>`);
     });
     if(hubX!==null){
-     svg.push(`<g><rect x="${hubX}" y="${y-6*zoom}" width="${HUBW}" height="${RH+12*zoom}" rx="${4*zoom}" fill="url(#hubg)" stroke="#c4b5fd" stroke-width="1.4"/>
-       <text x="${hubX+HUBW/2}" y="${y+RH/2}" fill="#fff" font-size="${9*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle" transform="rotate(-90 ${hubX+HUBW/2} ${y+RH/2})">HUB</text></g>`);
+     const HB=Math.max(5,Math.round(8*zoom));
+     svg.push(`<g class="wd-hub" data-hub="1" data-span="${rowSpan}" data-x0="${PAD}" style="cursor:ew-resize">
+       <rect x="${hubX-HB/2-6}" y="${y-14*zoom}" width="${HB+12}" height="${RH+28*zoom}" rx="4" fill="transparent"/>
+       <rect x="${hubX-HB/2}" y="${y-10*zoom}" width="${HB}" height="${RH+20*zoom}" rx="${HB/2}" fill="url(#hubg)" stroke="#c4b5fd" stroke-width="1.2"/>
+       <text x="${hubX}" y="${y-14*zoom}" fill="#c4b5fd" font-size="${8*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle">⇄ hub</text></g>`);
     }
    });
    });
    svg.push('</svg>');
    wd.innerHTML=svg.join('');
+   /* Hub drag. Live-updates the reach readout on every pointermove but only repaints the
+    * whole board on release — a full repaint per move with 79 racks and 700 cable paths
+    * is not something a pointer event should be doing. */
+   const svgEl=wd.querySelector('svg');
+   wd.querySelectorAll('[data-hub]').forEach(g=>{
+    g.addEventListener('pointerdown',ev=>{
+     ev.preventDefault();
+     const span=+g.dataset.span, x0=+g.dataset.x0;
+     const box=svgEl.getBoundingClientRect();
+     const vb=svgEl.viewBox.baseVal, sx=vb.width/box.width;
+     const live=$a('wdHint');
+     const move=e2=>{
+      const vx=(e2.clientX-box.left)*sx;
+      const f=Math.max(0,Math.min(1,(vx-x0)/span));
+      A.hubPos=f;
+      const hops=Math.ceil(Math.max(f,1-f)*(Math.max(1,gi('racksPerRow'))-1));
+      const reach=+(hops*(gi('rackPitchM')||0.6)+(gi('trayRiseM')||6)).toFixed(1);
+      if(live) live.innerHTML=`hub at <b>${Math.round(f*100)}%</b> along the row · worst-case run <b>${reach} m</b> — release to apply`;
+     };
+     const up=e2=>{
+      window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up);
+      save(); paint();
+     };
+     // window, not the element: pointer capture on an SVG <g> does not reliably deliver
+     // pointermove to the group, and the first cut silently never fired.
+     window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
+    });
+   });
    wd.querySelectorAll('[data-wr]').forEach(g=>g.addEventListener('click',()=>{
     const i=+g.dataset.wr; SEL=(SEL===i?null:i); paint();
     const el=$a('rkDetail'); if(SEL!==null&&el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -3113,7 +3154,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      ${d.phases>1?`<span style="color:#fbbf24"><b>P1..P${d.phases}</b> build phase badge on each rack</span>`:''}`;
    wd.appendChild(vl);
    const hint=$a('wdHint');
-   if(hint) hint.innerHTML=`${d.racks.length} racks · ${rows.length} row${rows.length===1?'':'s'} of ${perRowW} · ${d.floors>1?`<b>${d.floors} floors</b> · `:''}hub <b>${place==='tor'?'top of rack':place==='mor'?'middle of row':place==='left'?'left of row':'right of row'}</b> · ${bundles.length} cable classes · thickest bundle ${NUMF(maxN)} links`;
+   if(hint) hint.innerHTML=`${d.racks.length} racks · ${rows.length} row${rows.length===1?'':'s'} of ${perRowW} · ${d.floors>1?`<b>${d.floors} floors</b> · `:''}hub <b>${place==='tor'?'top of rack':Math.round(d.hubF*100)+'% along the row'}</b><span style="color:#c4b5fd"> · drag it</span> · ${bundles.length} cable classes · thickest bundle ${NUMF(maxN)} links`;
   }
 
   // ---- cable colour board — deliberately large and obviously interactive ------------
@@ -3273,7 +3314,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  // ---- mode switching ---------------------------------------------------------------
  document.querySelectorAll('#rkPlace button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#rkPlace button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); A.netPlacement=b.dataset.p; save();
+  b.classList.add('on'); A.netPlacement=b.dataset.p;
+  // the presets are just anchor points on the same continuous axis the drag uses
+  A.hubPos = b.dataset.p==='left'?0 : b.dataset.p==='mor'?0.5 : 1;
+  save();
   if($a('rkAdv').style.display!=='none') paint();});
  document.querySelectorAll('#rkMode button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#rkMode button').forEach(x=>x.classList.remove('on'));
