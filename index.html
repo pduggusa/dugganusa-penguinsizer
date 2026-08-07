@@ -396,6 +396,39 @@
   .adv-aibar input:focus{outline:none;border-color:var(--cool)}
   .adv-aistat{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
   .adv-aistat.busy{color:var(--cool)} .adv-aistat.ok{color:var(--ok)} .adv-aistat.bad{color:var(--hot)}
+  .adv-import{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:linear-gradient(180deg,#101d2b,var(--panel2));border:1px solid var(--cool-dim);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+  .adv-importnote{font-size:11.5px;color:var(--faint);line-height:1.45;flex:1;min-width:220px}
+  .adv-importnote b{color:var(--cool)} .adv-importnote.ok{color:var(--ok)} .adv-importnote.bad{color:var(--hot)}
+  /* cable colour board — large, obvious, unmissable */
+  .colour-board{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px}
+  .cbrow{display:grid;grid-template-columns:64px minmax(150px,1.1fr) 130px 92px minmax(160px,1.2fr);gap:14px;align-items:center;
+         padding:11px 14px;border-bottom:1px solid #16212e;background:var(--panel2)}
+  .cbrow:last-child{border-bottom:0}
+  .cbrow:hover{background:#0f1721}
+  .cbrow.unused{opacity:.42}
+  @media(max-width:880px){.cbrow{grid-template-columns:52px 1fr;gap:8px}.cbrow .cbqty,.cbrow .cbsku{grid-column:2}}
+  .cbswatch{position:relative;width:60px;height:42px;border-radius:8px;border:2px solid rgba(255,255,255,.22);
+            cursor:pointer;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+  .cbswatch:hover{border-color:#fff;transform:scale(1.04)}
+  .cbswatch input[type=color]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
+  .cbpen{position:absolute;right:3px;bottom:1px;font-size:11px;color:rgba(0,0,0,.65);pointer-events:none}
+  .cbcls{font-size:13.5px;color:var(--ink);font-weight:620;font-family:var(--mono)}
+  .cbmand{font-family:var(--sans);font-style:normal;font-size:9.5px;color:var(--warn);background:rgba(251,191,36,.15);padding:1px 6px;border-radius:999px;margin-left:5px}
+  .cbwhy{font-size:10.5px;color:var(--faint);line-height:1.4;margin-top:2px}
+  .cbname{background:#0a1119;border:1px solid var(--cool-dim);color:var(--ink);border-radius:7px;padding:7px 9px;
+          font-family:var(--mono);font-size:12.5px;width:100%}
+  .cbname:focus{outline:none;border-color:var(--cool);box-shadow:0 0 0 2px rgba(34,211,238,.18)}
+  .cbqty{font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right}
+  .cbsku{font-size:11.5px;color:var(--faint);line-height:1.4} .cbsku b{color:var(--ok)}
+  /* wiring diagram */
+  .wd-tools{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:#0a1119;border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin-bottom:10px}
+  .wd-t{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim)}
+  .wd-t input[type=range]{width:120px}
+  .wd-hint{font-size:11px;color:var(--faint);font-family:var(--mono);margin-left:auto} .wd-hint b{color:var(--cool)}
+  .wd-wrap{border:1px solid var(--line);border-radius:12px;background:#070d14;padding:12px;overflow-x:auto;margin-bottom:16px}
+  .wd-rack rect{transition:stroke .12s,filter .12s}
+  .wd-rack:hover rect{stroke:#fff;filter:drop-shadow(0 0 4px rgba(34,211,238,.55))}
+  .wd-rack.on rect{filter:drop-shadow(0 0 6px rgba(255,255,255,.5))}
   /* build sheet */
   .bs-sum{margin-bottom:8px}
   .bs-tcat{border:1px solid var(--line);border-left:3px solid var(--e);border-radius:12px;padding:14px 15px;margin-bottom:13px;background:linear-gradient(180deg,var(--panel),var(--panel2))}
@@ -562,21 +595,36 @@
           </div>
           <span class="dt-lbl">Network placement</span>
           <div class="seg" id="rkPlace" style="max-width:330px">
-            <button data-p="eor" class="on">End of row</button><button data-p="mor">Middle of row</button><button data-p="tor">Top of rack</button>
+            <button data-p="left">Left of row</button><button data-p="mor">Middle of row</button><button data-p="eor" class="on">Right of row</button><button data-p="tor">Top of rack</button>
           </div>
           <span class="rk-modenote" id="rkModeNote">Hand-configure individual racks: power, thermal, per-rack cabling and a SKU-rational BOM.</span>
         </div>
 
         <!-- ADVANCED -->
         <div id="rkAdv" style="display:none">
+          <div class="adv-import">
+            <button class="rk-btn primary" id="advImportBtn">↙ Import target from Size It</button>
+            <span class="adv-importnote" id="advImportNote">Pulls the GPU count currently set on the Size It tab and rebuilds the whole design against it.</span>
+          </div>
           <div class="adv-ctl" id="advCtl"></div>
           <div class="adv-out" id="advOut"></div>
+          <h3 class="mem-h">Wiring diagram — rows, hub placement and cable runs</h3>
+          <p class="lede">Every rack in the build, laid out in rows at your <b style="color:var(--ink)">racks-per-row</b> setting, with the network hub drawn where your <b style="color:var(--ink)">placement</b> setting puts it. Cable bundles are drawn to scale — <b style="color:var(--ink)">thickness is link count, colour is the cable colour you set</b>. Click any rack to expand its labels and per-class link breakdown. It redraws when you change racks per row, placement or colours.</p>
+          <div class="wd-tools">
+            <label class="wd-t">Scale <input type="range" id="wdZoom" min="40" max="160" step="10" value="100"/></label>
+            <label class="wd-t"><input type="checkbox" id="wdLabels"/> always show labels</label>
+            <span class="wd-hint" id="wdHint">click a rack for detail</span>
+          </div>
+          <div class="wd-wrap"><div id="advWiring"></div></div>
           <h3 class="mem-h">Rack elevations — reference layout</h3>
           <p class="lede" id="advElevNote">Drawn from published U-heights and tray counts, not from vendor stencil art. Tray <i>order</i> varies by OEM integrator, so treat the sequence as a reference elevation and confirm against the as-built drawing before it becomes a floor plan.</p>
           <div class="adv-elev" id="advElev"></div>
           <h3 class="mem-h">Storage — VAST Data</h3>
           <p class="lede">Derived from the <b style="color:var(--ink)">VAST + NVIDIA Enterprise reference architecture</b> tables so storage follows the GPU target automatically. Set either box count above to override. Design profile: <select id="advVastDesign" class="rk-btn" style="padding:5px 9px"></select> <select id="advVastModel" class="rk-btn" style="padding:5px 9px"></select></p>
           <div class="adv-storage" id="advStorage"></div>
+          <h3 class="mem-h">🎨 Cable colours — each colour is a separate part number</h3>
+          <p class="lede">Change a colour or its name and <b style="color:var(--ink)">the bill of materials below re-splits on it immediately</b>. Red Cat6A and grey Cat6A are different SKUs, ordered and stocked separately, so the BOM treats them that way. The right-hand column shows the exact line each choice produces.</p>
+          <div class="colour-board" id="advColours"></div>
           <h3 class="mem-h">Fibre plant — trunking and inter-floor runs</h3>
           <div class="adv-cable" id="advCable"></div>
           <h3 class="mem-h">Naming convention</h3>
@@ -1064,6 +1112,12 @@
         <div class="mem-tbl-wrap" style="max-height:520px;overflow-y:auto"><table class="mem-tbl">
           <thead><tr><th>Rack</th><th>Row</th><th>SU</th><th>Type</th><th>Devices</th><th>Ports</th><th>Load</th></tr></thead>
           <tbody id="bsRacks"></tbody></table></div>
+
+        <h3 class="mem-h">Bill of materials</h3>
+        <p class="lede">The same BOM the Rack Planner derives, carried onto the build sheet so the sheet is self-contained. <b style="color:var(--ink)">Cable colours are separate line items</b> — change a colour in the planner and the split follows here.</p>
+        <div class="mem-tbl-wrap"><table class="mem-tbl">
+          <thead><tr><th>Category</th><th>Item</th><th>Qty</th><th>+Spares</th><th>Order</th><th class="desc">Basis</th></tr></thead>
+          <tbody id="bsBom"></tbody></table></div>
 
         <h3 class="mem-h">Asset tagging — sovereign adaptation</h3>
         <p class="lede">Microsoft's Cloud Adoption Framework and AWS's tagging guidance both assume a <b style="color:var(--ink)">hyperscaler owns the substrate</b>. The provider asserts jurisdiction, vets the staff, controls physical custody and attests to it. A sovereign on-prem AI factory inverts that: <b style="color:var(--ink)">you are the substrate</b>, so the guarantees a cloud provider would have made on your behalf have to become properties you carry yourself. That is the whole adaptation — the four commercial categories below are lifted straight from CAF and AWS, and the fifth is the one their frameworks have no reason to include.</p>
@@ -2532,6 +2586,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const pitch=gi('rackPitchM')||0.6, rise=gi('trayRiseM')||6;
   const perRow=Math.max(1,gi('racksPerRow'));
   const place=A.netPlacement||'eor';
+  // left and right are both a FULL row worst case — the far rack is the whole row away.
+  // middle halves it because the farthest rack is only half a row from the hub.
   const worstHops = place==='tor' ? 0 : place==='mor' ? Math.ceil(perRow/2) : (perRow-1);
   const rowRun = place==='tor' ? 2 : +(worstHops*pitch + rise).toFixed(1);
   const floors=Math.max(1,gi('floors'));
@@ -2869,8 +2925,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       <td>${l.reach} m</td><td class="ok">${stock(l.reach)} m</td><td class="desc">${l.desc}<br/><span style="color:var(--faint)">${l.opt}</span></td></tr>`).join('')}
     </tbody></table></div>
    <div class="adv-key">
-     <div class="kh">Cable key — colour is a <b>SKU attribute</b>, not decoration. Change any of these; the BOM splits on it.</div>
-     <div class="kg colpick">${Object.keys(CDEF).map(k=>`<span class="ki"><input type="color" data-col="${k}" value="${colOf(k)}"/><input type="text" class="cn" data-cn="${k}" value="${colName(k)}"/><b>${k}</b><em>${CDEF[k].why}</em></span>`).join('')}</div>
+     <div class="kh">Cable key — set the colours in the <b>Cable colours</b> panel above</div>
+     <div class="kg">${Object.keys(CDEF).map(k=>`<span class="ki"><i style="background:${colOf(k)}"></i>${k} · ${colName(k)}</span>`).join('')}</div>
      <div class="kn">Per <b>TIA-598</b>: an OS2 single-mode jacket is <b style="color:#eab308">yellow</b> and an <b>APC</b> connector body is <b style="color:#22c55e">green</b> — never mixed with blue UPC. Those two are not yours to choose. Function colour is applied with boots, labels or velcro on top of a compliant jacket, and it is the layer you standardise per site.</div>
    </div>
    <div class="adv-cable-sum">
@@ -2894,6 +2950,106 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      <p>Reach is your input, not a survey. NVIDIA's DR8 optics are rated to <b>500 m over single-mode</b>, and MPO-12/APC type-B crossover jumpers are manufactured 1–500 m, so anything inside 500 m is a single hop with no mid-span. Beyond that you are into a different optic, not a longer cable.</p>
      ${d.floors>1?`<p class="callout-x">You have set <b>${d.floors} floors</b>, so leaf-to-spine crosses a riser. This model assumes <b>the spine layer sits on one floor</b> and every other floor trunks up to it — the common design, but confirm it against your actual room allocation before ordering ${d.risers} trunks.</p>`:''}
    </div>`;
+
+  // ---- WIRING DIAGRAM ---------------------------------------------------------------
+  /* Row-level plan view. Racks laid out at the user's racks-per-row, the network hub
+   * drawn where placement puts it, and one bundle per link class drawn rack->hub with
+   * stroke width scaled to link count and stroke colour taken from the live colour map.
+   * Scales with racks-per-row so a 20-wide row draws 20 wide. Click a rack to expand. */
+  const wd=$a('advWiring');
+  if(wd){
+   const zoom=(parseInt((($a('wdZoom')||{}).value),10)||100)/100;
+   const alwaysLab=!!(($a('wdLabels')||{}).checked);
+   const perRowW=Math.max(1,gi('racksPerRow'));
+   const rows=[]; for(let i=0;i<d.racks.length;i+=perRowW) rows.push(d.racks.slice(i,i+perRowW));
+   const RW=Math.max(16,Math.round(30*zoom)), RH=Math.round(58*zoom), GAP=Math.round(7*zoom);
+   const HUBW=Math.round(38*zoom), PAD=Math.round(52*zoom), ROWH=Math.round(132*zoom);
+   const place=d.place;
+   const bundles=Object.entries(d.L.reduce((a,l)=>{a[l.cls]=(a[l.cls]||0)+l.n;return a;},{}))
+     .filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
+   const maxN=Math.max(...bundles.map(b=>b[1]),1);
+   const rowW=perRowW*(RW+GAP)+HUBW+GAP;
+   const W=Math.max(560,rowW+PAD*2), H=rows.length*ROWH+PAD*1.4;
+   const svg=[];
+   svg.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${Math.round(W)}px" role="img" aria-label="Rack row wiring diagram">`);
+   svg.push(`<defs><linearGradient id="hubg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs>`);
+   rows.forEach((row,ri)=>{
+    const y=PAD*0.55+ri*ROWH, rowLetter=String.fromCharCode(A.row.charCodeAt(0)+ri);
+    // hub x position by placement
+    // hub index within the row: 0 = left, middle = centre, row.length = right
+    const hubIdx = place==='left' ? 0 : place==='mor' ? Math.floor(row.length/2) : row.length;
+    const xOf=i=>PAD+(i*(RW+GAP))+((place!=='tor'&&i>=hubIdx)?HUBW+GAP:0);
+    const hubX = place==='tor' ? null : PAD+hubIdx*(RW+GAP);
+    svg.push(`<text x="${PAD-14}" y="${y+RH*0.6}" fill="#5b6b7e" font-size="${11*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="end">${rowLetter}</text>`);
+    // cable bundles first so racks draw on top
+    row.forEach((r,i)=>{
+     const x=xOf(i)+RW/2;
+     if(place==='tor'){
+      bundles.forEach(([cls,n],bi)=>{
+       const w=Math.max(1,Math.round((n/maxN)*5*zoom));
+       svg.push(`<line x1="${x-8+bi*3}" y1="${y}" x2="${x-8+bi*3}" y2="${y-10*zoom}" stroke="${colOf(cls)}" stroke-width="${w}" opacity=".85"/>`);
+      });
+      return;
+     }
+     const hx=hubX+HUBW/2;
+     bundles.forEach(([cls,n],bi)=>{
+      const w=Math.max(0.8,(n/maxN)*5.5*zoom);
+      const yy=y+RH+6*zoom+bi*(3.2*zoom);
+      svg.push(`<path d="M${x} ${y+RH} L${x} ${yy} L${hx} ${yy} L${hx} ${y+RH}" fill="none" stroke="${colOf(cls)}" stroke-width="${w}" opacity=".75" stroke-linejoin="round"/>`);
+     });
+    });
+    // racks
+    row.forEach((r,i)=>{
+     const x=xOf(i), sel=SEL===d.racks.indexOf(r);
+     const fill=r.kind==='compute'?'#0e3a44':r.kind==='storage'?'#3b1d4a':'#1e2a38';
+     const stroke=r.kind==='compute'?'#22d3ee':r.kind==='storage'?'#a855f7':'#64748b';
+     svg.push(`<g class="wd-rack${sel?' on':''}" data-wr="${d.racks.indexOf(r)}" style="cursor:pointer">
+       <rect x="${x}" y="${y}" width="${RW}" height="${RH}" rx="${3*zoom}" fill="${fill}" stroke="${sel?'#fff':stroke}" stroke-width="${sel?2:1}"/>
+       ${(alwaysLab||sel||zoom>=1.2)?`<text x="${x+RW/2}" y="${y+RH+13*zoom}" fill="#8a9bb0" font-size="${8.5*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle">${rackName(d.racks.indexOf(r)+1).slice(-5)}</text>`:''}
+     </g>`);
+    });
+    if(hubX!==null){
+     svg.push(`<g><rect x="${hubX}" y="${y-6*zoom}" width="${HUBW}" height="${RH+12*zoom}" rx="${4*zoom}" fill="url(#hubg)" stroke="#c4b5fd" stroke-width="1.4"/>
+       <text x="${hubX+HUBW/2}" y="${y+RH/2}" fill="#fff" font-size="${9*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle" transform="rotate(-90 ${hubX+HUBW/2} ${y+RH/2})">HUB</text></g>`);
+    }
+   });
+   svg.push('</svg>');
+   wd.innerHTML=svg.join('');
+   wd.querySelectorAll('[data-wr]').forEach(g=>g.addEventListener('click',()=>{
+    const i=+g.dataset.wr; SEL=(SEL===i?null:i); paint();
+    const el=$a('rkDetail'); if(SEL!==null&&el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+   }));
+   const hint=$a('wdHint');
+   if(hint) hint.innerHTML=`${d.racks.length} racks · ${rows.length} row${rows.length===1?'':'s'} of ${perRowW} · hub <b>${place==='tor'?'top of rack':place==='mor'?'middle of row':place==='left'?'left of row':'right of row'}</b> · ${bundles.length} cable classes · thickest bundle ${NUMF(maxN)} links`;
+  }
+
+  // ---- cable colour board — deliberately large and obviously interactive ------------
+  const cb=$a('advColours');
+  if(cb){
+   const counts={}; d.L.forEach(l=>counts[l.cls]=(counts[l.cls]||0)+l.n);
+   cb.innerHTML=Object.keys(CDEF).map(k=>{
+    const n=counts[k]||0, mand=/TIA-598/.test(CDEF[k].why);
+    return `<div class="cbrow${n?'':' unused'}">
+      <label class="cbswatch" style="background:${colOf(k)}">
+        <input type="color" data-col="${k}" value="${colOf(k)}"/>
+        <span class="cbpen">✎</span>
+      </label>
+      <div class="cbmeta">
+        <div class="cbcls">${k}${mand?' <em class="cbmand">standards-set</em>':''}</div>
+        <div class="cbwhy">${CDEF[k].why}</div>
+      </div>
+      <input type="text" class="cbname" data-cn="${k}" value="${colName(k)}" placeholder="colour name"/>
+      <div class="cbqty">${n?NUMF(n)+' links':'not used'}</div>
+      <div class="cbsku">${n?`&rarr; <b>${colName(k)}</b> ${k} — its own BOM line`:'—'}</div>
+    </div>`;}).join('');
+   cb.querySelectorAll('[data-col]').forEach(el=>el.addEventListener('input',e=>{
+    CCOLOR[e.target.dataset.col]={...(CCOLOR[e.target.dataset.col]||{}),c:e.target.value};saveColours();paint();}));
+   cb.querySelectorAll('[data-cn]').forEach(el=>{
+    const commit=e=>{CCOLOR[e.target.dataset.cn]={...(CCOLOR[e.target.dataset.cn]||{}),n:e.target.value};saveColours();paint();};
+    el.addEventListener('change',commit);
+    el.addEventListener('blur',commit);
+   });
+  }
 
   $a('advCable').querySelectorAll('[data-col]').forEach(el=>el.addEventListener('input',e=>{
    const k=e.target.dataset.col; CCOLOR[k]={...(CCOLOR[k]||{}),c:e.target.value}; saveColours(); paint();}));
@@ -2971,7 +3127,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Switch',FABRIC.sw.ethSpine.model+' — Eth spine',f.ethSpine,'RA Table 4'],
    ['Switch',FABRIC.sw.oob.model+' — OOB management',d.oobCount,'one per compute rack — derived'],
    ['Optic','800G OSFP DR8 transceiver (MMS4X00-NM)',optLinks*2,'2 per optical link — derived'],
-   ['Fibre','MPO-12/APC jumper '+stock(d.rowRun)+'m',d.ibDown+d.ethDown,`rack to leaf at ${d.place.toUpperCase()} — ${d.worstHops} hops x ${d.pitch}m + ${d.rise}m tray rise`],
+   ['Fibre','MPO-12/APC jumper '+stock(d.rowRun)+'m',d.ibDown+d.ethDown,`rack to hub at ${d.place==='tor'?'top of rack':d.place==='mor'?'middle of row':d.place==='left'?'left of row':'right of row'} — ${d.worstHops} hops x ${d.pitch}m + ${d.rise}m tray rise`],
    ['Fibre','MPO-12/APC jumper '+stock(d.rowRun+(d.floors>1?gi('interFloorM'):0))+'m',d.ibUp+d.ethUp,'leaf to spine — derived'],
    ['Fibre',gi('trunkFibers')+'F trunk assembly',d.risers,d.risers?`inter-floor riser, ${d.trunkLinks} links each — derived`:'single floor, none required'],
    ['Copper',`Cat6A patch 3m — ${colName('bmc')}`,d.bmc,`BMC / OOB. Colour ${colName('bmc')} is a SEPARATE part number — derived`],
@@ -3039,9 +3195,22 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   if(adv){renderCtl();renderNameCtl();paint();}
  });
  document.addEventListener('click',e=>{if(e.target&&e.target.dataset&&e.target.dataset.close){SEL=null;paint();}});
+ ['wdZoom','wdLabels'].forEach(id=>{const el=$a(id); if(el) el.addEventListener('input',()=>paint());});
+ $a('advImportBtn').onclick=()=>{
+  const sz=window.__sizer;
+  const n=$a('advImportNote');
+  if(!sz||!sz.rows||!sz.rows.length){ n.textContent='Open the Size It tab first so it has a build to hand over.'; n.className='adv-importnote bad'; return; }
+  // Prefer a rack-scale row (NVL72) since Advanced mode is built on the SuperPOD SU.
+  const pick=sz.rows.find(r=>r.unit==='rack')||sz.hero||sz.rows[0];
+  const g=Math.max(576,Math.min(9216,pick.gpus));
+  A.gpus=g; save(); renderCtl(); paint();
+  n.innerHTML=`Imported <b>${NUMF(pick.gpus)} GPUs</b> from ${pick.label}${g!==pick.gpus?` — clamped to ${NUMF(g)}, the published fabric tops out at 9,216`:''}.`;
+  n.className='adv-importnote ok';
+ };
+
  // published for the Build Sheet tab
  window.__ADV_MODEL=()=>{const d=derive();
-  return {...d,racksPerRow:gi('racksPerRow'),rowStart:A.row,name:rackName};};
+  return {...d,racksPerRow:gi('racksPerRow'),rowStart:A.row,name:rackName,bom:bom(d)};};
  // import target from Size It
  window.__advImport=(gpus)=>{A.gpus=Math.max(576,Math.min(9216,gpus));save();
   const b=document.querySelector('#rkMode button[data-m="advanced"]'); if(b)b.click();};
@@ -3142,6 +3311,12 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    return `<tr><td style="font-family:var(--mono);color:var(--cool)">${d.name(i+1)}</td><td>${letter}</td>
      <td>${r.su||'—'}</td><td>${r.kind}</td><td>${dev}</td><td>${ports?N(ports):'—'}</td>
      <td>${r.kind==='compute'?'142 kW':'~8 kW'}</td></tr>`;}).join('');
+  const bb=$s('bsBom');
+  if(bb) bb.innerHTML=(d.bom||[]).length
+   ? d.bom.map(b=>`<tr><td>${b.cat}</td><td><b>${b.item}</b></td><td>${N(b.qty)}</td>
+       <td style="color:var(--faint)">${b.sp?'+'+N(b.sp):'—'}</td><td class="ok">${N(b.qty+b.sp)}</td>
+       <td class="desc">${b.basis}</td></tr>`).join('')
+   : '<tr><td colspan="6" class="desc">Configure Advanced mode on the Rack Planner tab.</td></tr>';
   renderTags();
  }
  function renderTags(){
