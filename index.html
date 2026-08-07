@@ -432,6 +432,11 @@
   .wd-rack rect{transition:stroke .12s,filter .12s}
   .wd-rack:hover rect{stroke:#fff;filter:drop-shadow(0 0 4px rgba(34,211,238,.55))}
   .wd-rack.on rect{filter:drop-shadow(0 0 6px rgba(255,255,255,.5))}
+  .wd-legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:11px;padding-top:11px;border-top:1px solid var(--line);font-size:11.5px;color:var(--dim)}
+  .wd-legend span{display:flex;align-items:center;gap:7px}
+  .wd-legend i{width:16px;height:16px;border-radius:3px;border:1.5px solid;display:inline-block;flex:none}
+  .wd-legend b{color:var(--ink);font-family:var(--mono)}
+  .ph-tbl{margin-top:12px}
   /* build sheet */
   .bs-sum{margin-bottom:8px}
   .bs-tcat{border:1px solid var(--line);border-left:3px solid var(--e);border-radius:12px;padding:14px 15px;margin-bottom:13px;background:linear-gradient(180deg,var(--panel),var(--panel2))}
@@ -1115,6 +1120,12 @@
         <div class="mem-tbl-wrap" style="max-height:520px;overflow-y:auto"><table class="mem-tbl">
           <thead><tr><th>Rack</th><th>Row</th><th>SU</th><th>Type</th><th>Devices</th><th>Ports</th><th>Load</th></tr></thead>
           <tbody id="bsRacks"></tbody></table></div>
+
+        <h3 class="mem-h">Phased buildout</h3>
+        <p class="lede">Split the rollout to test wiring assumptions before the whole floor is committed. <b style="color:var(--ink)">Phase 1 carries the spine</b>, so its cable count is disproportionate — that is the point, and it is what a staged budget needs to show. Set the phase count on the Rack Planner.</p>
+        <div class="mem-tbl-wrap"><table class="mem-tbl">
+          <thead><tr><th>Phase</th><th>Racks</th><th>Penguin</th><th>VAST</th><th>NVIDIA</th><th>GPUs</th><th>Load</th><th class="desc">Notes</th></tr></thead>
+          <tbody id="bsPhases"></tbody></table></div>
 
         <h3 class="mem-h">Bill of materials</h3>
         <p class="lede">The same BOM the Rack Planner derives, carried onto the build sheet so the sheet is self-contained. <b style="color:var(--ink)">Cable colours are separate line items</b> — change a colour in the planner and the split follows here.</p>
@@ -2555,7 +2566,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:4608,floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',
-      netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,
+      netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,
       site:'DC1',room:'R01',row:'A',patRack:'{site}{room}{row}{rack}',
       patDev:'{rack}U{u}{dev}',patPort:'{dev}{port}'};
  let SEL=null;
@@ -2581,9 +2592,13 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   // 18 x 2 BlueField-3 ports = 36 storage/in-band links, 18 tray BMC + 9 switch-tray BMC.
   const perRack={compute:72,storage:36,bmc:27,mgmt:18};
   const ibDown=computeRacks*perRack.compute;
-  // IB leaf radix 144, 72 down => 72 up = non-blocking. DERIVED from the published
-  // radix, not quoted from the RA — labelled as such in the UI.
-  const ibUp=f.ibSpine>0?f.ibLeaf*72:0;
+  /* IB leaf radix is 144 with 72 downlinks, so 72 uplinks is non-blocking (1:1) and
+   * anything less is deliberate oversubscription. Exposed as a selector because that
+   * ratio is a real design decision with a real cost, not a constant. DERIVED from the
+   * published radix — the RA does not quote an IB uplink count. */
+  const upPerLeaf=Math.max(1,Math.min(72,gi('ibUplinksPerLeaf')||72));
+  const ibBlocking=(72/upPerLeaf);
+  const ibUp=f.ibSpine>0?f.ibLeaf*upPerLeaf:0;
   const ethDown=computeRacks*perRack.storage;
   const ethUp=f.ethSpine>0?f.ethComputeLeaf*FABRIC.uplink.ethComputeLeafLinks:0;
   const bmc=computeRacks*perRack.bmc;
@@ -2603,7 +2618,12 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const rowRun = place==='tor' ? 2 : +(worstHops*pitch + rise).toFixed(1);
   const floors=Math.max(1,gi('floors'));
   const perFloorRacks=Math.ceil((computeRacks+netRacks)/floors);
-  const interFloor=floors>1?ibUp+ethUp:0;            // spine layer assumed on one floor
+  /* Only the floors that DO NOT hold the spine need a riser. The spine floor's leaf
+   * traffic never leaves the floor. Charging every leaf-spine link to the riser — which
+   * this did until it was checked against a 2-vs-4 floor comparison and produced the
+   * identical number both times — overstates the trunk count by floors/(floors-1). */
+  const offSpineFrac=floors>1?(floors-1)/floors:0;
+  const interFloor=Math.round((ibUp+ethUp)*offSpineFrac);
   const trunkLinks=Math.max(1,Math.floor(gi('trunkFibers')/8)); // 8 fibres per 800G DR8
   const risers=interFloor?Math.ceil(interFloor/trunkLinks):0;
 
@@ -2654,14 +2674,21 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const spares=Math.ceil(totalLinks*gi('spares')/100);
 
   // rack inventory for the elevation grid
+  /* Vendor is carried on every rack so the drawings can say WHOSE gear sits where.
+   * Compute is Penguin-integrated NVIDIA silicon, storage is VAST, and the network racks
+   * hold NVIDIA switching — three different purchase orders, three different support
+   * contracts, and a floor plan is much less useful if it does not say which is which. */
+  const phases=Math.max(1,gi('phases')||1);
+  const suTotal=Math.ceil(suNeeded);
+  const suPerPhase=Math.ceil(suTotal/phases);
   const racks=[];
-  for(let s=0;s<Math.ceil(suNeeded);s++)
+  for(let s=0;s<suTotal;s++)
    for(let r=0;r<FABRIC.su.racks;r++)
-    racks.push({kind:'compute',su:s+1,idx:racks.length+1});
-  for(let n=0;n<netRacks;n++) racks.push({kind:'network',su:null,idx:racks.length+1});
-  for(let n=0;n<vRacks;n++) racks.push({kind:'storage',su:null,idx:racks.length+1});
+    racks.push({kind:'compute',vendor:'penguin',su:s+1,phase:Math.min(phases,Math.floor(s/suPerPhase)+1),idx:racks.length+1});
+  for(let n=0;n<netRacks;n++) racks.push({kind:'network',vendor:'nvidia',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(netRacks/phases)))+1),idx:racks.length+1});
+  for(let n=0;n<vRacks;n++) racks.push({kind:'storage',vendor:'vast',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(vRacks/phases)))+1),idx:racks.length+1});
 
-  return {rowRun,place,pitch,rise,worstHops,
+  return {rowRun,place,pitch,rise,worstHops,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,
    vc,vd,vCnodes,vAuto,manual,vModel,vU,vRacks,vKw,vBE,vFE,vBMC,vCON,
    gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
    ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
@@ -2728,6 +2755,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'trayRiseM',l:'Tray rise (m)',step:1,hint:'up+over+down'},
   {k:'interFloorM',l:'Inter-floor run (m)',step:5,hint:'riser length'},
   {k:'trunkFibers',l:'Trunk fibres',step:12,hint:'12/24/48/96/144'},
+  {k:'ibUplinksPerLeaf',l:'IB uplinks / leaf',step:6,hint:'72 = non-blocking'},
+  {k:'phases',l:'Build phases',step:1,hint:'staged rollout'},
   {k:'spares',l:'Spares %',step:1,hint:'on all links'},
   {k:'vastCbox',l:'VAST CBox',step:1,hint:'compute boxes'},
   {k:'vastDbox',l:'VAST DBox',step:1,hint:'storage enclosures'},
@@ -2940,6 +2969,15 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      <div class="kg">${Object.keys(CDEF).map(k=>`<span class="ki"><i style="background:${colOf(k)}"></i>${k} · ${colName(k)}</span>`).join('')}</div>
      <div class="kn">Per <b>TIA-598</b>: an OS2 single-mode jacket is <b style="color:#eab308">yellow</b> and an <b>APC</b> connector body is <b style="color:#22c55e">green</b> — never mixed with blue UPC. Those two are not yours to choose. Function colour is applied with boots, labels or velcro on top of a compliant jacket, and it is the layer you standardise per site.</div>
    </div>
+   <div class="adv-key" id="advFloorPanel" style="margin-bottom:12px">
+     <div class="kh">Per-floor asset split &amp; uplink oversubscription</div>
+     <div class="kg" style="gap:18px">
+       <span class="ki"><b>${d.floors}</b> floor${d.floors===1?'':'s'} · <b>${NUMF(d.perFloorRacks)}</b> racks each (even split)</span>
+       <span class="ki"><b>${d.upPerLeaf}</b> IB uplinks/leaf · blocking <b>${d.ibBlocking===1?'1:1 non-blocking':'1:'+d.ibBlocking.toFixed(1)}</b></span>
+       <span class="ki">spine on floor 1 · <b>${Math.round(d.offSpineFrac*100)}%</b> of leaf traffic crosses a riser</span>
+     </div>
+     <div class="kn">Riser count scales with the floors that <b>do not</b> hold the spine — a two-floor build sends half its leaf traffic up, a four-floor build sends three quarters. Lowering uplinks per leaf cuts riser cost and buys oversubscription; 72 is non-blocking against the 144-port radix.</div>
+   </div>
    <div class="adv-cable-sum">
      <div class="acs"><span class="k">Total links</span><span class="v">${NUMF(d.totalLinks)}</span></div>
      <div class="acs"><span class="k">Spares at ${gi('spares')}%</span><span class="v">${NUMF(d.spares)}</span></div>
@@ -2973,6 +3011,12 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    const alwaysLab=!!(($a('wdLabels')||{}).checked);
    const perRowW=Math.max(1,gi('racksPerRow'));
    const rows=[]; for(let i=0;i<d.racks.length;i+=perRowW) rows.push(d.racks.slice(i,i+perRowW));
+   /* Floors. The cable model already charges for inter-floor risers, so the diagram has
+    * to show them or the picture disagrees with the BOM. Rows are dealt across floors at
+    * the derived per-floor rack count, and the SPINE is assumed to live on floor 1 —
+    * every other floor trunks up to it, which is what `risers` is counting. */
+   const rowsPerFloor=Math.max(1,Math.ceil(rows.length/d.floors));
+   const floorsOf=[]; for(let i=0;i<rows.length;i+=rowsPerFloor) floorsOf.push(rows.slice(i,i+rowsPerFloor));
    const RW=Math.max(16,Math.round(30*zoom)), RH=Math.round(58*zoom), GAP=Math.round(7*zoom);
    const HUBW=Math.round(38*zoom), PAD=Math.round(52*zoom), ROWH=Math.round(132*zoom);
    const place=d.place;
@@ -2980,12 +3024,26 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      .filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
    const maxN=Math.max(...bundles.map(b=>b[1]),1);
    const rowW=perRowW*(RW+GAP)+HUBW+GAP;
-   const W=Math.max(560,rowW+PAD*2), H=rows.length*ROWH+PAD*1.4;
+   const FLOORPAD=d.floors>1?Math.round(46*zoom):0;
+   const W=Math.max(560,rowW+PAD*2), H=rows.length*ROWH+PAD*1.4+floorsOf.length*FLOORPAD;
    const svg=[];
    svg.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${Math.round(W)}px" role="img" aria-label="Rack row wiring diagram">`);
    svg.push(`<defs><linearGradient id="hubg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs>`);
-   rows.forEach((row,ri)=>{
-    const y=PAD*0.55+ri*ROWH, rowLetter=String.fromCharCode(A.row.charCodeAt(0)+ri);
+   let rowCounter=-1;
+   floorsOf.forEach((floorRows,fi)=>{
+    const fy=PAD*0.55+rowCounter*ROWH+ (rowCounter<0?0:0) + fi*FLOORPAD + (rowCounter+1)*0;
+    if(d.floors>1){
+     const top=PAD*0.35+(rowCounter+1)*ROWH+fi*FLOORPAD;
+     svg.push(`<line x1="${PAD*0.4}" y1="${top}" x2="${W-PAD*0.4}" y2="${top}" stroke="#1e2a38" stroke-width="1.5" stroke-dasharray="6 5"/>`);
+     svg.push(`<text x="${PAD*0.4}" y="${top-6*zoom}" fill="#a78bfa" font-size="${11*zoom}" font-family="ui-monospace,Menlo,monospace">FLOOR ${fi+1}${fi===0?'  · spine layer':''}</text>`);
+     if(fi>0&&d.risers){
+      svg.push(`<text x="${W-PAD*0.4}" y="${top-6*zoom}" fill="#fbbf24" font-size="${10*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="end">↑ ${d.risers} riser trunk${d.risers===1?'':'s'} to floor 1 · ${gi('interFloorM')} m</text>`);
+      svg.push(`<path d="M${W-PAD*0.55} ${top+10*zoom} L${W-PAD*0.55} ${top-2*zoom}" stroke="#fbbf24" stroke-width="${Math.max(2,3*zoom)}" opacity=".9"/>`);
+     }
+    }
+   floorRows.forEach((row)=>{
+    rowCounter++; const ri=rowCounter;
+    const y=PAD*0.55+ri*ROWH+fi*FLOORPAD, rowLetter=String.fromCharCode(A.row.charCodeAt(0)+ri);
     // hub x position by placement
     // hub index within the row: 0 = left, middle = centre, row.length = right
     const hubIdx = place==='left' ? 0 : place==='mor' ? Math.floor(row.length/2) : row.length;
@@ -3012,10 +3070,13 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     // racks
     row.forEach((r,i)=>{
      const x=xOf(i), sel=SEL===d.racks.indexOf(r);
-     const fill=r.kind==='compute'?'#0e3a44':r.kind==='storage'?'#3b1d4a':'#1e2a38';
-     const stroke=r.kind==='compute'?'#22d3ee':r.kind==='storage'?'#a855f7':'#64748b';
+     const fill=r.vendor==='penguin'?'#0e3a44':r.vendor==='vast'?'#3b1d4a':'#1e2a38';
+     const stroke=r.vendor==='penguin'?'#22d3ee':r.vendor==='vast'?'#a855f7':'#64748b';
+     const vtag=r.vendor==='penguin'?'P':r.vendor==='vast'?'V':'N';
      svg.push(`<g class="wd-rack${sel?' on':''}" data-wr="${d.racks.indexOf(r)}" style="cursor:pointer">
        <rect x="${x}" y="${y}" width="${RW}" height="${RH}" rx="${3*zoom}" fill="${fill}" stroke="${sel?'#fff':stroke}" stroke-width="${sel?2:1}"/>
+       <text x="${x+RW/2}" y="${y+RH/2+4*zoom}" fill="${stroke}" font-size="${Math.max(8,13*zoom)}" font-weight="700" font-family="ui-monospace,Menlo,monospace" text-anchor="middle" opacity=".9">${vtag}</text>
+       ${d.phases>1?`<text x="${x+RW/2}" y="${y+11*zoom}" fill="#fbbf24" font-size="${Math.max(6,8*zoom)}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle">P${r.phase}</text>`:''}
        ${(alwaysLab||sel||zoom>=1.2)?`<text x="${x+RW/2}" y="${y+RH+13*zoom}" fill="#8a9bb0" font-size="${8.5*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle">${rackName(d.racks.indexOf(r)+1).slice(-5)}</text>`:''}
      </g>`);
     });
@@ -3024,14 +3085,23 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
        <text x="${hubX+HUBW/2}" y="${y+RH/2}" fill="#fff" font-size="${9*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle" transform="rotate(-90 ${hubX+HUBW/2} ${y+RH/2})">HUB</text></g>`);
     }
    });
+   });
    svg.push('</svg>');
    wd.innerHTML=svg.join('');
    wd.querySelectorAll('[data-wr]').forEach(g=>g.addEventListener('click',()=>{
     const i=+g.dataset.wr; SEL=(SEL===i?null:i); paint();
     const el=$a('rkDetail'); if(SEL!==null&&el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
    }));
+   // vendor + phase legend
+   const vl=document.createElement('div'); vl.className='wd-legend';
+   vl.innerHTML=`<span><i style="background:#0e3a44;border-color:#22d3ee"></i><b>P</b> Penguin Solutions — compute (${d.computeRacks} racks)</span>
+     <span><i style="background:#3b1d4a;border-color:#a855f7"></i><b>V</b> VAST Data — storage (${d.vRacks} rack${d.vRacks===1?'':'s'})</span>
+     <span><i style="background:#1e2a38;border-color:#64748b"></i><b>N</b> NVIDIA switching — network (${d.netRacks} racks)</span>
+     <span><i style="background:url(#hubg);background:#7c3aed;border-color:#c4b5fd"></i>hub / leaf position</span>
+     ${d.phases>1?`<span style="color:#fbbf24"><b>P1..P${d.phases}</b> build phase badge on each rack</span>`:''}`;
+   wd.appendChild(vl);
    const hint=$a('wdHint');
-   if(hint) hint.innerHTML=`${d.racks.length} racks · ${rows.length} row${rows.length===1?'':'s'} of ${perRowW} · hub <b>${place==='tor'?'top of rack':place==='mor'?'middle of row':place==='left'?'left of row':'right of row'}</b> · ${bundles.length} cable classes · thickest bundle ${NUMF(maxN)} links`;
+   if(hint) hint.innerHTML=`${d.racks.length} racks · ${rows.length} row${rows.length===1?'':'s'} of ${perRowW} · ${d.floors>1?`<b>${d.floors} floors</b> · `:''}hub <b>${place==='tor'?'top of rack':place==='mor'?'middle of row':place==='left'?'left of row':'right of row'}</b> · ${bundles.length} cable classes · thickest bundle ${NUMF(maxN)} links`;
   }
 
   // ---- cable colour board — deliberately large and obviously interactive ------------
@@ -3221,7 +3291,9 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
 
  // published for the Build Sheet tab
  window.__ADV_MODEL=()=>{const d=derive();
-  return {...d,racksPerRow:gi('racksPerRow'),rowStart:A.row,name:rackName,bom:bom(d)};};
+  return {...d,racksPerRow:gi('racksPerRow'),rowStart:A.row,name:rackName,bom:bom(d),
+   trunkFibers:gi('trunkFibers'),
+   colourMap:Object.fromEntries(Object.keys(CDEF).map(k=>[k,{hex:colOf(k),name:colName(k)}]))};};
  // import target from Size It
  window.__advImport=(gpus,arch)=>{
   const g=Math.max(576,Math.min(9216,gpus));
@@ -3332,6 +3404,18 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    return `<tr><td style="font-family:var(--mono);color:var(--cool)">${d.name(i+1)}</td><td>${letter}</td>
      <td>${r.su||'—'}</td><td>${r.kind}</td><td>${dev}</td><td>${ports?N(ports):'—'}</td>
      <td>${r.kind==='compute'?'142 kW':'~8 kW'}</td></tr>`;}).join('');
+  // phased buildout
+  const pb=$s('bsPhases');
+  if(pb){
+   const ph={};
+   d.racks.forEach(r=>{const k=r.phase||1;(ph[k]=ph[k]||{n:0,penguin:0,vast:0,nvidia:0,gpus:0,kw:0});
+     ph[k].n++; ph[k][r.vendor]++;
+     if(r.kind==='compute'){ph[k].gpus+=72;ph[k].kw+=142;} else if(r.kind==='storage'){ph[k].kw+=Math.round((d.vKw||0)/Math.max(1,d.vRacks));} else ph[k].kw+=8;});
+   pb.innerHTML=Object.entries(ph).map(([k,v])=>`<tr><td><b>Phase ${k}</b></td><td>${N(v.n)}</td>
+     <td style="color:#22d3ee">${v.penguin||0}</td><td style="color:#a855f7">${v.vast||0}</td><td style="color:#94a3b8">${v.nvidia||0}</td>
+     <td>${N(v.gpus)}</td><td>${N(v.kw)} kW</td>
+     <td class="desc">${k==='1'?'carries the spine layer — highest cable count per rack':'leaf only, trunks up to phase 1'}</td></tr>`).join('');
+  }
   const bb=$s('bsBom');
   if(bb) bb.innerHTML=(d.bom||[]).length
    ? d.bom.map(b=>`<tr><td>${b.cat}</td><td><b>${b.item}</b></td><td>${N(b.qty)}</td>
@@ -3365,10 +3449,22 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
  $s('bsCsv').onclick=()=>{const c=csv();if(c)dl('build-sheet-'+new Date().toISOString().slice(0,10)+'.csv',c,'text/csv');};
  $s('bsJson').onclick=()=>{const d=model();if(!d)return;
+  const perRow=Math.max(1,d.racksPerRow);
   dl('build-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({
    tool:'penguin-build-sheet-v1',generated:new Date().toISOString(),
    gpus:d.realGpus,scalable_units:Math.ceil(d.suNeeded),fabric:d.f,
-   racks:d.racks.map((r,i)=>({id:d.name(i+1),kind:r.kind,su:r.su})),
+   site:{floors:d.floors,racks_per_floor:d.perFloorRacks,racks_per_row:perRow,
+     network_placement:d.place,worst_case_reach_m:d.rowRun,rack_pitch_m:d.pitch,tray_rise_m:d.rise},
+   fabric_tuning:{ib_uplinks_per_leaf:d.upPerLeaf,ib_blocking_ratio:`1:${(d.ibBlocking||1).toFixed(1)}`,
+     off_spine_fraction:d.offSpineFrac,inter_floor_links:d.interFloor,riser_trunks:d.risers,
+     trunk_fibres:d.trunkFibers||null},
+   storage:{cbox:d.vc,enclosures:d.vd,cnodes:d.vCnodes,model:d.vModel&&d.vModel.label,
+     basis:d.vAuto&&d.vAuto.basis,extrapolated:!(d.vAuto&&d.vAuto.exact)},
+   phases:{count:d.phases,su_per_phase:d.suPerPhase,
+     note:'Phase 1 carries the spine layer, so its per-rack cable count is disproportionate by design.'},
+   cable_colours:Object.fromEntries(Object.keys(d.colourMap||{}).map(k=>[k,d.colourMap[k]])),
+   bom:d.bom||[],
+   racks:d.racks.map((r,i)=>({id:d.name(i+1),kind:r.kind,vendor:r.vendor,phase:r.phase,su:r.su})),
    tag_schema:Object.fromEntries(TAGS.map(t=>[t.cat,Object.fromEntries(t.rows.map(r=>[r[0],r[1]]))])),
    note:'Tag keys are recommendations; values and enforcement are yours. Not a compliance attestation.'
   },null,2),'application/json');};
