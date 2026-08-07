@@ -352,6 +352,15 @@
   @media(max-width:1000px){.rk-cardb{grid-template-columns:1fr}}
   .rk-elevh{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--faint);margin-bottom:7px}
   .rk-rackbox{border:2px solid var(--line);border-radius:6px;overflow:hidden;background:#070d14}
+  .art-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px}
+  .art-c{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:var(--card);min-width:0}
+  .art-c h5{font-size:11px;margin:0 0 6px;color:var(--ink);font-weight:650}
+  .art-p{height:34px;border-radius:4px;background:#0a1017 center/100% 100% no-repeat;border:1px solid #16202c;margin-bottom:7px}
+  .art-c .row{display:flex;gap:6px;align-items:center}
+  .art-c input[type=file]{font-size:10px;color:var(--dim);width:100%;min-width:0}
+  .art-c .x{font-size:10px;padding:2px 7px;border:1px solid var(--line);border-radius:5px;background:none;color:var(--dim);cursor:pointer}
+  .art-c .st{font-size:9.5px;color:var(--faint);margin-top:5px;font-family:var(--mono)}
+  .art-c .st.on{color:var(--ok)}
   .rk-band{display:flex;align-items:center;gap:8px;padding:0 8px;border-bottom:1px solid #0d141d;font-size:10px;overflow:hidden}
   .rk-band .ru{font-family:var(--mono);font-size:9px;color:var(--faint);min-width:16px}
   .rk-band .rl{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -631,6 +640,9 @@
             <span class="wd-hint" id="wdHint">click a rack for detail · drag to move it</span>
           </div>
           <div class="wd-wrap"><div id="advWiring"></div></div>
+          <h3 class="mem-h">Device artwork — drawn here, or bring your own stencils</h3>
+          <p class="lede">Faceplates below are <b style="color:var(--ink)">drawn from the published port topology and U-heights</b> — port counts, cage types and bay counts are real, so a 48-port SN2201 draws 48 ports. They are deliberately <b style="color:var(--ink)">not</b> vendor stencil art: VisioCafe and vendor Visio collections are the vendors' copyrighted artwork and are not ours to redistribute. If you have already built or licensed stencils, drop them in here — they replace the drawn faceplate for that device type, they never leave this browser, and they are cleared with the button below.</p>
+          <div class="art-grid" id="advArt"></div>
           <h3 class="mem-h">Rack elevations — reference layout</h3>
           <p class="lede" id="advElevNote">Drawn from published U-heights and tray counts, not from vendor stencil art. Tray <i>order</i> varies by OEM integrator, so treat the sequence as a reference elevation and confirm against the as-built drawing before it becomes a floor plan.</p>
           <div class="adv-elev" id="advElev"></div>
@@ -2509,6 +2521,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   * convention: OOB red, console grey, and OS2 single-mode yellow because TIA-598 makes
   * that one mandatory rather than optional. */
  const CDEF={
+  memai:{d:'MemoryAI front-end',def:'#f472b6',why:'function colour — no TIA-598 mandate; pink chosen to separate the KV cache path from storage on sight'},
   compute:   {c:'#eab308',n:'yellow', why:'OS2 single-mode jacket — TIA-598 mandated'},
   'ib-uplink':{c:'#eab308',n:'yellow',why:'OS2 single-mode jacket — TIA-598 mandated'},
   storage:   {c:'#a855f7',n:'violet', why:'site convention — separates storage from compute fabric'},
@@ -2591,9 +2604,21 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   ceres: {label:'VAST Ceres DBox',u:1, unit:'Ceres', dnodes:2, ports:{be:4,bmc:2,console:2}, kw:1.2, verified:true,
           note:'1U NVMe JBOF, up to 675 TB raw — about 2 PB effective at 3:1 reduction.'},
  };
+ /* Penguin Solutions MemoryAI KV cache server. The 11 TB / 3 TB DDR5 + 8x 1 TB CXL AIC
+  * composition and the 4U form factor are VENDOR-PUBLISHED (GTC, March 2026) and are on
+  * the References tab. Everything else here is OURS and is labelled as such:
+  *  - kW is an ESTIMATE. Penguin has not published a power figure for this appliance.
+  *  - the port topology is an ASSUMPTION. A KV cache server has to reach the compute
+  *    fabric, so it is modelled with 2x 400G front-end plus the usual mgmt/BMC/console.
+  *  - the ratio of appliances to scalable units is a DEFAULT, not a vendor rule.
+  * Anything derived from these carries the same caveat, which is why the tool says so
+  * on the face of the BOM rather than only in a footnote. */
+ const MEMAI={label:'MemoryAI KV cache server', u:4, kw:2.5, kwEstimated:true,
+   mem:'11 TB — 3 TB DDR5 + 8x 1 TB CXL AIC', memPublished:true,
+   ports:{fe:2, mgmt:1, bmc:1, console:1}, portsAssumed:true, feSpeed:'400G'};
  const ECOL={compute:'#22d3ee',nvswitch:'#a78bfa',power:'#fbbf24',manifold:'#34d399',
              ibleaf:'#0ea5e9',ethleaf:'#059669',oob:'#94a3b8',patch:'#fb7185',
-             bus:'#fbbf24',cart:'#a78bfa',pdu:'#94a3b8'};
+             bus:'#fbbf24',cart:'#a78bfa',pdu:'#94a3b8',memai:'#f472b6'};
 
  const FABRIC={
   su:{racks:8,gpus:576,ibLeafPerSU:8,rails:4,leafPerRail:2},
@@ -2633,6 +2658,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
       vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',
       netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
       trunkRacks:4,trunkPorts:24,trunkSide:'right',rackOrder:null,aisles:1,
+      memAI:1,memPerSU:1,loadCap:80,
       site:'DC1',room:'R01',row:'A',patRack:'{site}{room}{row}{rack}',
       patDev:'{rack}U{u}{dev}',patPort:'{dev}{port}'};
  let SEL=null;
@@ -2712,16 +2738,34 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const vBE = vCnodes*VAST.cbox.ports.be + vd*vModel.ports.be;
   const vFE = vCnodes*VAST.cbox.ports.fe;
   const vBMC= vc*VAST.cbox.ports.bmc + vd*vModel.ports.bmc;
+  // ---- MemoryAI KV cache tier ----------------------------------------------------
+  /* On by default because it is the thing this tool exists to argue for — but it is a
+   * TOGGLE, because a build that will not be memory-bound should not be sold one. Count
+   * defaults to one appliance per scalable unit; that ratio is OUR default, not a
+   * Penguin-published rule, and the right number is a function of KV working-set size
+   * and concurrency, which this tool does not know. */
+  const memOn=A.memAI!==0&&A.memAI!=='0';
+  const memPerSU=Math.max(0,gi('memPerSU'));
+  const memUnits=memOn?Math.ceil(Math.ceil(suNeeded)*memPerSU):0;
+  const memU=memUnits*MEMAI.u;
+  const mRacks=memU?Math.ceil(memU/42):0;
+  const memKw=+(memUnits*MEMAI.kw).toFixed(1);
+  const memFE=memUnits*MEMAI.ports.fe;
+  const memBMC=memUnits*MEMAI.ports.bmc;
+  const memMGT=memUnits*MEMAI.ports.mgmt;
+  const memCON=memUnits*MEMAI.ports.console;
+  const memTB=memUnits*11;
+
   /* Rows per floor is the physical constraint people actually know — a room holds N
    * rows. When set it DRIVES the floor count rather than the other way round, because
    * "how many rows fit" is a survey fact and "how many floors" is the consequence. */
   const rowsPerFloorSet=Math.max(0,gi('rowsPerFloor'));
-  const totalRows=Math.ceil((computeRacks+netRacks+vRacks)/Math.max(1,gi('racksPerRow')));
+  const totalRows=Math.ceil((computeRacks+netRacks+vRacks+mRacks)/Math.max(1,gi('racksPerRow')));
   const floors=rowsPerFloorSet>0
     ? Math.max(1,Math.ceil(totalRows/rowsPerFloorSet))
     : Math.max(1,gi('floors'));
   const rowsPerFloor=rowsPerFloorSet>0?rowsPerFloorSet:Math.max(1,Math.ceil(totalRows/floors));
-  const perFloorRacks=Math.ceil((computeRacks+netRacks+vRacks)/floors);
+  const perFloorRacks=Math.ceil((computeRacks+netRacks+vRacks+mRacks)/floors);
   /* Only the floors that DO NOT hold the spine need a riser. The spine floor's leaf
    * traffic never leaves the floor. Charging every leaf-spine link to the riser — which
    * this did until it was checked against a 2-vs-4 floor comparison and produced the
@@ -2729,7 +2773,19 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const offSpineFrac=floors>1?(floors-1)/floors:0;
   const interFloor=Math.round((ibUp+ethUp)*offSpineFrac);
   const trunkLinks=Math.max(1,Math.floor(gi('trunkFibers')/8)); // 8 fibres per 800G DR8
-  const risers=interFloor?Math.ceil(interFloor/trunkLinks):0;
+  /* LINK LOAD CAP. Sizing a trunk to exactly the offered load means running it at 100%
+   * of capacity, where there is no headroom for a failed strand, no room for a rebalance
+   * after a leaf reboots, and no margin for the traffic growth every one of these builds
+   * has. 80% is the working figure: a trunk is provisioned to carry its load at no more
+   * than 80% of its link capacity. It applies to BOTH the horizontal row trunks and the
+   * inter-floor risers, because both are aggregation points where a hot-spot cannot be
+   * routed around without re-cabling.
+   *
+   * This DOES cost trunks — that is the point. The alternative is a plant that is
+   * technically sufficient and has no failure margin. */
+  const loadCap=Math.min(100,Math.max(10,gi('loadCap')||80))/100;
+  const risersRaw=interFloor?Math.ceil(interFloor/trunkLinks):0;
+  const risers=interFloor?Math.ceil(interFloor/(trunkLinks*loadCap)):0;
 
 
 
@@ -2752,11 +2808,13 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     desc:'VAST back-end fabric — CNode/DNode NVMe over RDMA, internal to the cluster',opt:'100G QSFP28'},
    {cls:'vast_fe',n:vFE,speed:'100G',media:'QSFP28 + MPO/SMF',reach:rowRun,
     desc:'VAST front-end — CNode to client/compute network',opt:'100G QSFP28'},
-   {cls:'console',n:vCON+computeRacks,speed:'serial',media:'Cat6 rollover',reach:3,
+   {cls:'memai',n:memFE,speed:MEMAI.feSpeed,media:'OSFP + MPO-12/APC SMF',reach:rowRun,
+    desc:'MemoryAI KV cache server to Ethernet leaf — front-end path to the compute tier (port topology assumed, not vendor-published)',opt:'400G DR4'},
+   {cls:'console',n:vCON+memCON+computeRacks,speed:'serial',media:'Cat6 rollover',reach:3,
     desc:'Serial console to terminal server — one per box plus one per compute rack',opt:'RJ45 rollover'},
   ].filter(x=>x.n>0);
   // VAST BMC folds into the existing bmc class rather than inventing a second one
-  const bmcRow=L.find(x=>x.cls==='bmc'); if(bmcRow) bmcRow.n+=vBMC;
+  const bmcRow=L.find(x=>x.cls==='bmc'); if(bmcRow) bmcRow.n+=vBMC+memBMC+memMGT;
 
   const totalLinks=L.reduce((a,x)=>a+x.n,0);
   const spares=Math.ceil(totalLinks*gi('spares')/100);
@@ -2775,6 +2833,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     racks.push({kind:'compute',vendor:'penguin',su:s+1,phase:Math.min(phases,Math.floor(s/suPerPhase)+1),idx:racks.length+1,key:'c'+(racks.length+1)});
   for(let n=0;n<netRacks;n++) racks.push({kind:'network',vendor:'nvidia',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(netRacks/phases)))+1),idx:racks.length+1,key:'n'+(n+1)});
   for(let n=0;n<vRacks;n++) racks.push({kind:'storage',vendor:'vast',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(vRacks/phases)))+1),idx:racks.length+1,key:'v'+(n+1)});
+  for(let n=0;n<mRacks;n++) racks.push({kind:'memory',vendor:'penguin',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(mRacks/phases)))+1),idx:racks.length+1,key:'m'+(n+1)});
 
   /* Custom floor layout. Keys are stable per rack CLASS and ordinal (c7, v2, n1), not
    * per position, so a saved layout survives a change in racks-per-row, floors or
@@ -2797,8 +2856,13 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * length on every horizontal link in the BOM. */
   const trunkRacks=Math.max(1,gi('trunkRacks')||4);
   const trunkPorts=Math.max(1,gi('trunkPorts')||24);
-  const trunkGroups=Math.ceil(perRow/trunkRacks);          // trunk runs per row
-  const rowTrunks=trunkGroups*totalRows;                    // horizontal trunk assemblies
+  const trunkGroups=Math.ceil(perRow/trunkRacks);          // rack pods per row
+  /* One assembly per pod was a guess, not a calculation — a pod of four NVL72 racks
+   * offers far more links than a single 24F trunk can carry. Assemblies follow the
+   * offered LOAD against trunk capacity, held to the load cap. */
+  const groupLinks=trunkRacks*(perRack.compute+perRack.storage);
+  const assembliesPerGroup=Math.max(1,Math.ceil(groupLinks/(trunkLinks*loadCap)));
+  const rowTrunks=assembliesPerGroup*trunkGroups*totalRows;
   /* Panels terminate MPO POSITIONS, not individual fibres. One 800G DR8 link occupies
    * one MPO-12 position (8 of its 12 strands lit), so the panel count follows the LINK
    * count. Sizing this on strand count — which the first cut did — inflated the panel
@@ -2807,7 +2871,12 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const portsPerRack=perRack.compute+perRack.storage;   // MPO positions per rack
   const fibrePerRack=portsPerRack*8;                    // lit strands — reported, not used for panels
   const panelsPerTrunk=Math.max(1,Math.ceil(trunkRacks*portsPerRack/trunkPorts));
-  const trunkPanels=panelsPerTrunk*rowTrunks;
+  /* Panels terminate the MPO positions a POD presents — 432 positions is 18 panels at 24
+   * positions each, no matter how many trunk assemblies carry them across. Multiplying by
+   * the assembly count (which the load cap had just inflated 1.25x) billed 64,800 panels
+   * where 360 are needed. Assemblies and terminations are different things. */
+  const trunkPods=trunkGroups*totalRows;
+  const trunkPanels=panelsPerTrunk*trunkPods;
 
   /* ---- HOT / COLD AISLE ORIENTATION -------------------------------------------
    * ASHRAE TC9.9 hot-aisle/cold-aisle: rows are laid FRONT-TO-FRONT and BACK-TO-BACK,
@@ -2819,13 +2888,147 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const aislesOn=A.aisles!==0&&A.aisles!=='0';
   const faceOf=r=>(r%2===0?1:-1);               // +1 = front faces down-screen
   const aisleAt=r=>(r%2===0?'cold':'hot');       // aisle BELOW row r
+  /* ---- MemoryAI HOP COUNT ------------------------------------------------------
+   * A KV cache is a LATENCY asset, so where its racks land is not a cosmetic choice —
+   * it is the whole argument. The appliance only beats an NVMe tier if the round trip
+   * stays short, and a memory rack parked at the far end of the hall, or worse on
+   * another floor, quietly spends the advantage it was bought for.
+   *
+   * So the distance from every memory rack to its NEAREST compute rack is measured off
+   * the actual laid-out positions — including any custom drag order — and turned into
+   * switch hops and propagation delay:
+   *   same row      1 hop  (leaf only)
+   *   different row 2 hops (leaf - spine - leaf)
+   *   different floor +1   (the riser leg)
+   * Propagation is 4.9 ns/m in single-mode glass; the switch-hop figure is a typical
+   * cut-through InfiniBand/Ethernet leaf latency and is OURS, not a vendor number.
+   * Row-to-row pitch assumes rack depth plus a working aisle. */
+  const ROWPITCH=2.4, NS_PER_M=4.9, NS_PER_HOP=450;
+  let memReachM=0, memHops=0, memCrossFloor=false, memNs=0;
+  if(mRacks){
+   const pos=i=>{const r=Math.floor(i/perRow); return {row:r,col:i%perRow,floor:Math.floor(r/rowsPerFloor)};};
+   const comp=[],mem=[];
+   racks.forEach((r,i)=>{ if(r.kind==='compute')comp.push(pos(i)); else if(r.kind==='memory')mem.push(pos(i)); });
+   let worst=null;
+   mem.forEach(m=>{
+    let best=null;
+    comp.forEach(c=>{
+     const df=Math.abs(c.floor-m.floor);
+     const d=Math.abs(c.col-m.col)*pitch + Math.abs(c.row-m.row)*ROWPITCH + df*(gi('interFloorM')||0);
+     const h=(c.row===m.row?1:2)+(df?1:0);
+     if(!best||d<best.d) best={d,h,df:df>0};
+    });
+    if(best&&(!worst||best.d>worst.d)) worst=best;   // worst-case memory rack, not the average
+   });
+   if(worst){ memReachM=+worst.d.toFixed(1); memHops=worst.h; memCrossFloor=worst.df;
+    memNs=Math.round(memReachM*2*NS_PER_M + memHops*2*NS_PER_HOP); }  // round trip
+  }
+  const memLink=L.find(x=>x.cls==='memai');
+  // The front-end run is the real measured distance, not the generic row run — a memory
+  // rack five rows away needs a longer optic than the compute racks beside the leaf do.
+  if(memLink&&memReachM) memLink.reach=+Math.max(memLink.reach,memReachM+rise).toFixed(1);
+
   return {trunkRacks,trunkPorts,trunkSide,trunkGroups,rowTrunks,panelsPerTrunk,trunkPanels,
+   loadCap,risersRaw,groupLinks,assembliesPerGroup,trunkPods,
+   memOn,memPerSU,memUnits,memU,mRacks,memKw,memFE,memBMC,memMGT,memCON,memTB,
+   memReachM,memHops,memCrossFloor,memNs,
    fibrePerRack,portsPerRack,sideDiv,effHops,aislesOn,faceOf,aisleAt,
    rowRun,place,pitch,rise,worstHops,hubF,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
    vc,vd,vCnodes,vAuto,manual,vModel,vU,vRacks,vKw,vBE,vFE,vBMC,vCON,
    gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
    ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
    interFloor,trunkLinks,risers,racks};
+ }
+
+ /* ---- DEVICE FACEPLATES -----------------------------------------------------------
+  * Drawn, not borrowed. VisioCafe and the vendor Visio collections are the vendors'
+  * copyrighted artwork — accurate, genuinely useful, and not ours to redistribute from
+  * a public page. So these are generated from the SAME published port topology the BOM
+  * uses: if the BOM says an SN2201 has 48 RJ45 and 4 SFP28, the faceplate draws 48 and 4.
+  * That keeps the picture and the parts list from drifting apart, which is the actual
+  * failure mode a borrowed stencil has — it looks right and stops matching.
+  *
+  * Operators who already own or have licensed real stencils can override any of these
+  * per device type; see ART below. */
+ const FACE={
+  compute :{u:1,badge:'NVIDIA GB300',bg:'#101c24',ink:'#22d3ee',ports:[[4,'sq','OSFP'],[2,'sq','QSFP'],[1,'rj','BMC'],[1,'rj','MGT']],vent:1},
+  nvswitch:{u:1,badge:'NVLink switch',bg:'#161327',ink:'#a78bfa',ports:[[1,'rj','BMC']],bus:1},
+  power   :{u:1,badge:'Power shelf 33 kW',bg:'#1d1608',ink:'#fbbf24',bays:6},
+  manifold:{u:1,badge:'Coolant manifold',bg:'#0b1c17',ink:'#34d399',qd:8},
+  ibleaf  :{u:2,badge:'Q3400-RD  144x800G',bg:'#0d1c22',ink:'#22d3ee',ports:[[36,'sq','OSFP']],dense:1},
+  ethleaf :{u:2,badge:'SN5600D  64x800G',bg:'#0b1c17',ink:'#34d399',ports:[[32,'sq','OSFP']],dense:1},
+  oob     :{u:1,badge:'SN2201  48x1G + 4 SFP28',bg:'#141a21',ink:'#94a3b8',ports:[[24,'rj','RJ45'],[4,'sq','SFP28']],dense:1},
+  patch   :{u:1,badge:'MPO-12/APC patch field',bg:'#1d1116',ink:'#fb7185',ports:[[12,'sq','MPO']]},
+  cart    :{u:2,badge:'NVLink cable cartridge',bg:'#161327',ink:'#a78bfa',bus:1},
+  pdu     :{u:1,badge:'Rack PDU',bg:'#141a21',ink:'#94a3b8',bays:12},
+  memai   :{u:4,badge:'MemoryAI KV cache  11 TB',bg:'#24101a',ink:'#f472b6',ports:[[2,'sq','400G FE'],[1,'rj','MGT'],[1,'rj','BMC']],bays:8},
+  cbox    :{u:2,badge:'VAST CBox  4x CNode',bg:'#1b1026',ink:'#a855f7',bays:4},
+  dbox    :{u:2,badge:'VAST DBox',bg:'#1b1026',ink:'#a855f7',bays:22},
+ };
+ function faceSvg(kind){
+  const f=FACE[kind]; if(!f) return '';
+  const W=760, H=54;
+  const g=[`<rect width="${W}" height="${H}" rx="4" fill="${f.bg}"/>`,
+           `<rect x="1" y="1" width="${W-2}" height="${H-2}" rx="4" fill="none" stroke="${f.ink}" stroke-opacity=".38"/>`];
+  // ear + badge
+  g.push(`<rect x="0" y="0" width="16" height="${H}" fill="${f.ink}" fill-opacity=".14"/>`);
+  g.push(`<circle cx="8" cy="12" r="2.4" fill="${f.ink}" fill-opacity=".5"/><circle cx="8" cy="${H-12}" r="2.4" fill="${f.ink}" fill-opacity=".5"/>`);
+  g.push(`<text x="24" y="17" fill="${f.ink}" font-size="10" font-family="ui-monospace,Menlo,monospace" opacity=".95">${f.badge}</text>`);
+  // status LEDs
+  g.push(`<circle cx="26" cy="${H-14}" r="3" fill="#22c55e"/><circle cx="38" cy="${H-14}" r="3" fill="${f.ink}" fill-opacity=".55"/>`);
+  let x=52;
+  if(f.vent){ for(let i=0;i<26;i++) g.push(`<rect x="${52+i*7}" y="${H-22}" width="3" height="14" rx="1.5" fill="${f.ink}" fill-opacity=".13"/>`); }
+  if(f.bays){ const bw=(W-70)/f.bays;
+   for(let i=0;i<f.bays;i++) g.push(`<rect x="${56+i*bw}" y="10" width="${bw-4}" height="${H-20}" rx="2" fill="${f.ink}" fill-opacity=".12" stroke="${f.ink}" stroke-opacity=".3"/>`); }
+  if(f.qd){ for(let i=0;i<f.qd;i++){ const cx=70+i*((W-110)/(f.qd-1));
+   g.push(`<circle cx="${cx}" cy="${H/2}" r="9" fill="none" stroke="${f.ink}" stroke-opacity=".45" stroke-width="2"/><circle cx="${cx}" cy="${H/2}" r="3.5" fill="${f.ink}" fill-opacity=".35"/>`);} }
+  if(f.bus){ g.push(`<rect x="56" y="12" width="${W-110}" height="${H-24}" rx="3" fill="${f.ink}" fill-opacity=".1" stroke="${f.ink}" stroke-opacity=".35" stroke-dasharray="5 4"/>`);
+   g.push(`<text x="${W/2}" y="${H/2+4}" fill="${f.ink}" font-size="9" font-family="ui-monospace,Menlo,monospace" text-anchor="middle" opacity=".7">backplane / cartridge — not a cable-BOM item</text>`); }
+  (f.ports||[]).forEach(([n,shape])=>{
+   const two=f.dense&&n>16, per=two?Math.ceil(n/2):n;
+   const pw=shape==='rj'?11:13, ph=two?11:(shape==='rj'?15:13), gapx=pw+3;
+   for(let i=0;i<n;i++){
+    const r0=two&&i>=per?1:0, c=two&&i>=per?i-per:i;
+    const px=x+c*gapx, py=two?(10+r0*(ph+5)):(H/2-ph/2);
+    g.push(shape==='rj'
+     ? `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="1.5" fill="#0a0f14" stroke="${f.ink}" stroke-opacity=".5"/><rect x="${px+3.5}" y="${py+ph-4}" width="4" height="3" fill="${f.ink}" fill-opacity=".45"/>`
+     : `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="1.5" fill="#0a0f14" stroke="${f.ink}" stroke-opacity=".55"/><rect x="${px+2}" y="${py+2.5}" width="${pw-4}" height="${ph-5}" rx="1" fill="${f.ink}" fill-opacity=".22"/>`);
+   }
+   x += (two?per:n)*gapx + 12;
+  });
+  return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g.join('')}</svg>`);
+ }
+ /* Operator-supplied stencils. Stored as data URIs in localStorage — this browser, this
+  * machine, never uploaded anywhere, which is also the only defensible place to put
+  * artwork somebody else holds the copyright to. localStorage is ~5 MB total and shared
+  * with the whole planner state, so an oversized image is REFUSED with the reason rather
+  * than silently blowing away the saved design. */
+ const ARTLS='penguin-devart-v1';
+ let ART=(()=>{try{return JSON.parse(localStorage.getItem(ARTLS))||{};}catch(e){return {};}})();
+ const ART_MAX=260*1024;
+ const saveArt=()=>{try{localStorage.setItem(ARTLS,JSON.stringify(ART));return null;}
+   catch(e){return 'Browser storage is full — clear an image and try a smaller one.';}};
+ const faceOfKind=k=>ART[k]||faceSvg(k);
+ function renderArt(){
+  const el=$a('advArt'); if(!el) return;
+  el.innerHTML=Object.keys(FACE).map(k=>`<div class="art-c">
+    <h5>${FACE[k].badge}</h5>
+    <div class="art-p" style="background-image:url('${faceOfKind(k)}')"></div>
+    <div class="row"><input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" data-art="${k}"/>
+      ${ART[k]?`<button class="x" data-artx="${k}">clear</button>`:''}</div>
+    <div class="st ${ART[k]?'on':''}" data-artst="${k}">${ART[k]?'your stencil — stored locally':'drawn from published port topology'}</div>
+  </div>`).join('');
+  el.querySelectorAll('[data-art]').forEach(inp=>inp.addEventListener('change',e=>{
+   const k=inp.dataset.art, file=e.target.files&&e.target.files[0]; if(!file) return;
+   const st=el.querySelector(`[data-artst="${k}"]`);
+   if(file.size>ART_MAX){ if(st){st.className='st';st.textContent=`too large — ${Math.round(file.size/1024)} KB, limit ${Math.round(ART_MAX/1024)} KB`;} return; }
+   const fr=new FileReader();
+   fr.onload=()=>{ ART[k]=fr.result; const err=saveArt();
+     if(err){ delete ART[k]; if(st){st.className='st';st.textContent=err;} return; }
+     renderArt(); paint(); };
+   fr.readAsDataURL(file);
+  }));
+  el.querySelectorAll('[data-artx]').forEach(b=>b.onclick=()=>{delete ART[b.dataset.artx];saveArt();renderArt();paint();});
  }
 
  // ---- naming ----------------------------------------------------------------------
@@ -2857,6 +3060,11 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  /* Reference elevation for a GB300 NVL72 rack. Tray ORDER varies by OEM integrator;
   * counts do not. Rendered as data so the caveat is honest and the drawing is checkable. */
  function elevation(kind){
+  if(kind==='memory') return [
+   {u:1,n:1,t:'oob',label:'SN2201 OOB — rack management',dev:'OOB'},
+   {u:1,n:1,t:'patch',label:'MPO-12/APC patch panel',dev:'PP'},
+   {u:4,n:10,t:'memai',label:MEMAI.label+' — '+MEMAI.mem,dev:'MEM'},
+  ];
   if(kind==='network') return [
    {u:2,n:1,t:'manifold',label:'Blanking / plumbing'},
    {u:4,n:4,t:'ibleaf',label:'Q3400-RD IB leaf',dev:'IBL'},
@@ -2878,7 +3086,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
               NVS:[['BMC','switch-tray BMC'],['COM1..COM2','2x COMe RJ45 for NVOS']],
               PS:[['AC','busway tap-off']],MAN:[],
               IBL:[['P01..P144','144x 800G OSFP']],ETL:[['P01..P64','64x 400G']],
-              OOB:[['P01..P48','48x 1GbE']],PP:[['F01..F12','MPO-12/APC']]};
+              OOB:[['P01..P48','48x 1GbE']],PP:[['F01..F12','MPO-12/APC']],
+              MEM:[['FE1..FE2','2x 400G front-end to Ethernet leaf — assumed topology'],['MGT','1GbE management'],['BMC','out-of-band BMC'],['CON','serial console']]};
  // ---- controls --------------------------------------------------------------------
  const F=[
   {k:'gpus',l:'Target GPUs',step:576,hint:'576 per SU'},
@@ -2888,6 +3097,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'trayRiseM',l:'Tray rise (m)',step:1,hint:'up+over+down'},
   {k:'interFloorM',l:'Inter-floor run (m)',step:5,hint:'riser length'},
   {k:'trunkFibers',l:'Trunk fibres',step:12,hint:'12/24/48/96/144'},
+  {k:'memPerSU',l:'MemoryAI per SU',step:1,hint:'0 = none · our default, not a vendor rule'},
+  {k:'loadCap',l:'Link load cap %',step:5,hint:'80 = never fill a trunk'},
   {k:'trunkRacks',l:'Racks per trunk',step:1,hint:'racks sharing one uplink'},
   {k:'trunkPorts',l:'Panel ports / trunk',step:12,hint:'patch-panel positions'},
   {k:'ibUplinksPerLeaf',l:'IB uplinks / leaf',step:6,hint:'72 = non-blocking'},
@@ -2900,6 +3111,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const NF=[{k:'site',l:'Site'},{k:'room',l:'Room'},{k:'row',l:'First row'},
   {k:'patRack',l:'Rack pattern',wide:1},{k:'patDev',l:'Device pattern',wide:1},{k:'patPort',l:'Port pattern',wide:1}];
 
+ function renderArtOnce(){try{renderArt();}catch(e){}}
  function renderCtl(){
   const dsel=$a('advVastDesign'), msel=$a('advVastModel');
   if(dsel){dsel.innerHTML=Object.entries(VAST_RA).map(([k,v])=>`<option value="${k}"${(A.vastDesign||'285')===k?' selected':''}>${v.label}</option>`).join('');
@@ -3081,6 +3293,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      <span class="tt">${r.kind==='compute'?`SU${r.su} · NVL72`:'network'}</span>
      <span class="tb">${r.kind==='compute'?'72 GPU · 142 kW':`${FABRIC.sw.ibLeaf.model.split(' ')[0]} + SN5600D`}</span>
    </button>`;}).join('');
+  renderArtOnce();
   $a('advElev').innerHTML=`<div class="adv-key" style="margin-bottom:12px">
      <div class="kh">Rack key — click any rack to expand its elevation and every labelled port</div>
      <div class="kg">${[['compute','Compute tray'],['nvswitch','NVLink switch tray'],['power','Power shelf'],['manifold','Coolant manifold'],['ibleaf','IB leaf'],['ethleaf','Ethernet leaf'],['oob','OOB switch'],['patch','Patch panel'],['cart','NVLink cartridge'],['pdu','PDU']]
@@ -3105,6 +3318,21 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      <div class="kg">${Object.keys(CDEF).map(k=>`<span class="ki"><i style="background:${colOf(k)}"></i>${k} · ${colName(k)}</span>`).join('')}</div>
      <div class="kn">Per <b>TIA-598</b>: an OS2 single-mode jacket is <b style="color:#eab308">yellow</b> and an <b>APC</b> connector body is <b style="color:#22c55e">green</b> — never mixed with blue UPC. Those two are not yours to choose. Function colour is applied with boots, labels or velcro on top of a compliant jacket, and it is the layer you standardise per site.</div>
    </div>
+   ${d.memOn&&d.memUnits?`<div class="adv-key" id="advMemPanel" style="margin-bottom:12px;border-color:#f472b6">
+     <div class="kh" style="color:#f472b6">MemoryAI KV cache tier — and why its position is not cosmetic</div>
+     <div class="kg" style="gap:18px">
+       <span class="ki"><b>${d.memUnits}</b> appliances · <b>${d.memU}U</b> in <b>${d.mRacks}</b> rack${d.mRacks===1?'':'s'} · <b>${NUMF(d.memTB)} TB</b></span>
+       <span class="ki"><b>${d.memKw} kW</b> <em style="color:var(--faint)">(estimated — Penguin has not published a figure)</em></span>
+       <span class="ki">worst memory rack is <b style="color:${d.memHops>1?'#fbbf24':'#34d399'}">${d.memReachM} m</b> and <b style="color:${d.memHops>1?'#fbbf24':'#34d399'}">${d.memHops} switch hop${d.memHops===1?'':'s'}</b> from compute${d.memCrossFloor?' <b style="color:var(--hot)">— across a floor</b>':''}</span>
+       <span class="ki">round trip <b style="color:${d.memNs>1500?'#fbbf24':'#34d399'}">${NUMF(d.memNs)} ns</b></span>
+     </div>
+     <div class="kn">A KV cache is bought for latency, so where you put it is the whole argument. ${d.memHops>1?`Right now the worst memory rack is <b>${d.memHops} hops</b> away — leaf, spine, leaf — and every hop is paid on every cache read. <b>Drag a memory rack into a compute row</b> in the wiring diagram above and watch this number fall.`:`The worst memory rack is a <b>single leaf hop</b> from compute, which is where you want it.`}${d.memCrossFloor?' <b style="color:var(--hot)">It is currently on a different floor from the compute it serves, which adds the riser leg to every read — for a cache that is usually the wrong trade.</b>':''}</div>
+     <div class="kn" style="color:var(--faint)">Round trip is <b>derived here</b>, not measured: 4.9 ns/m in single-mode glass plus a typical 450 ns cut-through switch hop, both directions. Local CXL access on the appliance itself is a few hundred nanoseconds, so the fabric leg is what you are trading away by placing it badly. The 11 TB composition and 4U form factor are Penguin-published; the power figure, the port topology and the one-per-SU ratio are ours. 95% cap.</div>
+     <label class="wd-t" style="margin-top:8px;display:inline-flex"><input type="checkbox" id="memToggle" checked/> include the MemoryAI tier in racks, cables and BOM</label>
+   </div>`:`<div class="adv-key" style="margin-bottom:12px">
+     <div class="kh">MemoryAI KV cache tier — currently excluded</div>
+     <div class="kn">No MemoryAI appliances are in this build, so none appear in the rack count, the cable plant or the BOM. If your workload is long-context or high-concurrency inference, this is the tier that keeps GPUs from idling on memory. <label class="wd-t" style="margin-left:6px;display:inline-flex"><input type="checkbox" id="memToggle"/> include it</label></div>
+   </div>`}
    <div class="adv-key" id="advFloorPanel" style="margin-bottom:12px">
      <div class="kh">Per-floor asset split &amp; uplink oversubscription</div>
      <div class="kg" style="gap:18px">
@@ -3119,8 +3347,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      <div class="acs"><span class="k">Spares at ${gi('spares')}%</span><span class="v">${NUMF(d.spares)}</span></div>
      <div class="acs"><span class="k">Transceivers (2 per optical link)</span><span class="v">${NUMF(d.L.filter(l=>l.media.includes('SMF')).reduce((a,l)=>a+l.n,0)*2)}</span></div>
      <div class="acs"><span class="k">Inter-floor links</span><span class="v ${d.interFloor?'warn':''}">${d.interFloor?NUMF(d.interFloor):'none — single floor'}</span></div>
-     <div class="acs"><span class="k">${gi('trunkFibers')}F trunks needed</span><span class="v ${d.risers?'warn':''}">${d.risers||'—'}</span></div>
+     <div class="acs"><span class="k">${gi('trunkFibers')}F risers needed</span><span class="v ${d.risers?'warn':''}">${d.risers||'—'}${d.risers&&d.risers>d.risersRaw?` <em style="color:var(--faint);font-size:10px">(${d.risersRaw} at 100%)</em>`:''}</span></div>
      <div class="acs"><span class="k">Fibres per trunk in use</span><span class="v">${d.trunkLinks} links x 8 = ${d.trunkLinks*8} of ${gi('trunkFibers')}</span></div>
+     <div class="acs"><span class="k">Link load cap</span><span class="v">${Math.round(d.loadCap*100)}%</span></div>
+     <div class="acs"><span class="k">Row trunk assemblies</span><span class="v">${NUMF(d.rowTrunks)} <em style="color:var(--faint);font-size:10px">(${d.assembliesPerGroup}/pod)</em></span></div>
    </div>
    <h3 class="mem-h" style="margin-top:22px">Complete bill of materials — every asset class</h3>
    <div class="mem-tbl-wrap" style="margin-bottom:12px"><table class="mem-tbl">
@@ -3131,6 +3361,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     </tbody></table></div>
    <div class="callout" style="margin-top:12px">
      <div class="callout-h">How the trunk maths works</div>
+     <p><b>Nothing here is sized to 100%.</b> Trunks and risers are provisioned so their offered load sits at no more than <b>${Math.round(d.loadCap*100)}%</b> of link capacity. A trunk sized exactly to its traffic has no headroom for a failed strand, no room to rebalance after a leaf reboots, and no margin for growth — and an aggregation point is precisely where you cannot route around a hot spot without re-cabling. At ${Math.round(d.loadCap*100)}% a pod of ${d.trunkRacks} racks offering ${NUMF(d.groupLinks)} links needs <b>${d.assembliesPerGroup} assembl${d.assembliesPerGroup===1?'y':'ies'}</b> rather than one${d.risers&&d.risers>d.risersRaw?`, and the riser count rises from ${d.risersRaw} to <b>${d.risers}</b>`:''}. That difference is the margin.</p>
      <p>An 800G DR8 link over MPO-12/APC uses <b>8 of the 12 fibres</b> — four transmit, four receive. So a trunk carries <b>floor(fibres ÷ 8)</b> links, and the spare fibres in each MPO-12 are strand overhead you pay for and do not light. At ${gi('trunkFibers')}F that is <b>${d.trunkLinks} link${d.trunkLinks===1?'':'s'} per trunk</b>.</p>
      <p>Reach is your input, not a survey. NVIDIA's DR8 optics are rated to <b>500 m over single-mode</b>, and MPO-12/APC type-B crossover jumpers are manufactured 1–500 m, so anything inside 500 m is a single hop with no mid-span. Beyond that you are into a different optic, not a longer cable.</p>
      ${d.floors>1?`<p class="callout-x">You have set <b>${d.floors} floors</b>, so leaf-to-spine crosses a riser. This model assumes <b>the spine layer sits on one floor</b> and every other floor trunks up to it — the common design, but confirm it against your actual room allocation before ordering ${d.risers} trunks.</p>`:''}
@@ -3244,9 +3475,13 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     row.forEach((r,i)=>{
      const gi_=d.racks.indexOf(r), x=xOf(i), sel=SEL===gi_;
      RPOS.push({i:gi_,cx:x+RW/2,cy:y+RH/2});
-     const fill=r.vendor==='penguin'?'#0e3a44':r.vendor==='vast'?'#3b1d4a':'#1e2a38';
-     const stroke=r.vendor==='penguin'?'#22d3ee':r.vendor==='vast'?'#a855f7':'#64748b';
-     const vtag=r.vendor==='penguin'?'P':r.vendor==='vast'?'V':'N';
+     /* Memory racks are Penguin gear too, so vendor alone cannot distinguish them from
+      * compute — and where the KV cache sits is the one placement decision that changes
+      * a latency number. It gets its own mark. */
+     const mem=r.kind==='memory';
+     const fill=mem?'#2b1220':r.vendor==='penguin'?'#0e3a44':r.vendor==='vast'?'#3b1d4a':'#1e2a38';
+     const stroke=mem?'#f472b6':r.vendor==='penguin'?'#22d3ee':r.vendor==='vast'?'#a855f7':'#64748b';
+     const vtag=mem?'M':r.vendor==='penguin'?'P':r.vendor==='vast'?'V':'N';
      // the front (intake) face gets a pale strip — it is the edge that must see the cold aisle
      const fy = face>0 ? y+RH-Math.max(2,3*zoom) : y;
      svg.push(`<g class="wd-rack${sel?' on':''}" data-wr="${gi_}" data-key="${r.key}" style="cursor:grab;touch-action:none">
@@ -3341,6 +3576,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    const vl=document.createElement('div'); vl.className='wd-legend';
    vl.innerHTML=`<span><i style="background:#0e3a44;border-color:#22d3ee"></i><b>P</b> Penguin Solutions — compute (${d.computeRacks} racks)</span>
      <span><i style="background:#3b1d4a;border-color:#a855f7"></i><b>V</b> VAST Data — storage (${d.vRacks} rack${d.vRacks===1?'':'s'})</span>
+     ${d.mRacks?`<span><i style="background:#2b1220;border-color:#f472b6"></i><b>M</b> Penguin MemoryAI — KV cache (${d.mRacks} rack${d.mRacks===1?'':'s'}, ${d.memUnits} appliances)</span>`:''}
      <span><i style="background:#1e2a38;border-color:#64748b"></i><b>N</b> NVIDIA switching — network (${d.netRacks} racks)</span>
      <span><i style="background:url(#hubg);background:#7c3aed;border-color:#c4b5fd"></i>hub / leaf position</span>
      ${d.aislesOn&&d.place!=='tor'?`<span><i style="background:#93c5fd;border-color:#93c5fd"></i>front / intake face — must see the cold aisle</span>
@@ -3460,6 +3696,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Optic','800G OSFP DR8 transceiver (MMS4X00-NM)',optLinks*2,'2 per optical link — derived'],
    ['Fibre','MPO-12/APC jumper '+stock(d.rowRun)+'m',d.ibDown+d.ethDown,`rack to hub at ${d.place==='tor'?'top of rack':d.place==='mor'?'middle of row':d.place==='left'?'left of row':'right of row'} — ${d.worstHops} hops x ${d.pitch}m + ${d.rise}m tray rise`],
    ['Fibre','MPO-12/APC jumper '+stock(d.rowRun+(d.floors>1?gi('interFloorM'):0))+'m',d.ibUp+d.ethUp,'leaf to spine — derived'],
+   ...(d.memUnits?[
+    ['Memory',MEMAI.label+' — '+MEMAI.mem,d.memUnits,`${d.memPerSU} per scalable unit x ${Math.ceil(d.suNeeded)} SU — OUR default ratio, not a Penguin-published rule`],
+    ['Rack','MemoryAI rack (42U usable)',d.mRacks,`${d.memU}U at ${MEMAI.u}U per appliance, packed at 42U/rack — derived`],
+   ]:[]),
    ['Fibre',gi('trunkFibers')+'F trunk assembly — inter-floor riser',d.risers,d.risers?`riser, ${d.trunkLinks} links each — derived`:'single floor, none required'],
    /* Horizontal trunking is a user input now, so it has to appear as orderable parts:
     * the trunk assemblies themselves and the patch panels that terminate them. A trunk
@@ -3467,7 +3707,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Fibre',gi('trunkFibers')+'F trunk assembly — horizontal, row to '+(d.trunkSide==='both'?'both ends':d.trunkSide),d.rowTrunks,
      `${d.trunkGroups} per row x ${d.totalRows} rows — one per ${d.trunkRacks}-rack group`],
    ['Fibre',d.trunkPorts+'-port MPO patch panel',d.trunkPanels,
-     `${d.panelsPerTrunk} per trunk group — ${d.portsPerRack} MPO positions/rack x ${d.trunkRacks} racks, ${d.trunkPorts} per panel`],
+     `${d.panelsPerTrunk} per pod x ${d.trunkPods} pods — ${d.portsPerRack} MPO positions/rack x ${d.trunkRacks} racks, ${d.trunkPorts} per panel`],
    ['Copper',`Cat6A patch 3m — ${colName('bmc')}`,d.bmc,`BMC / OOB. Colour ${colName('bmc')} is a SEPARATE part number — derived`],
    ['Copper',`Cat6 rollover console — ${colName('console')}`,(d.L.find(x=>x.cls==='console')||{n:0}).n,`Serial console. Colour ${colName('console')} is a separate SKU — derived`],
    ['Copper','SFP28 DAC/AOC',d.oobUp,'SN2201 uplinks — derived'],
@@ -3492,7 +3732,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     <div class="rk-cardb">
       <div class="rk-elev">
         <div class="rk-elevh">FRONT</div>
-        <div class="rk-rackbox">${bands.map(b=>`<div class="rk-band ${b.t}" style="height:${b.u*13}px" title="${b.label}">
+        <div class="rk-rackbox">${bands.map(b=>`<div class="rk-band ${b.t}" style="height:${b.u*13}px;${FACE[b.t]?`background-image:url('${faceOfKind(b.t)}');background-size:100% 100%;background-repeat:no-repeat`:''}" title="${b.label}">
           <span class="ru">${pad(b.uPos,2)}</span><span class="rl">${b.dev?b.dev+' — ':''}${b.label}</span></div>`).join('')}</div>
       </div>
       <div class="rk-elev">
@@ -3500,8 +3740,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
         <div class="rk-rackbox">
           <div class="rk-band manifold" style="height:52px"><span class="ru">48</span><span class="rl">Coolant return manifold · quick-disconnects</span></div>
           <div class="rk-band bus" style="height:${r.kind==='compute'?'160':'80'}px"><span class="ru">—</span><span class="rl">${r.kind==='compute'?'DC busbar · power shelf output':'A/B PDU feeds'}</span></div>
-          <div class="rk-band cart" style="height:${r.kind==='compute'?'190':'150'}px"><span class="ru">—</span><span class="rl">${r.kind==='compute'?'NVLink copper cable cartridge — spine backplane, NOT a cable-BOM item':'MPO-12/APC patch field · trunk terminations'}</span></div>
-          <div class="rk-band pdu" style="height:60px"><span class="ru">—</span><span class="rl">Rack PDU A / B · ${r.kind==='compute'?'busway tap-off':'IEC 60309'}</span></div>
+          <div class="rk-band cart" style="height:${r.kind==='compute'?'190':'150'}px;background-image:url('${faceOfKind('cart')}');background-size:100% 100%;background-repeat:no-repeat"><span class="ru">—</span><span class="rl">${r.kind==='compute'?'NVLink copper cable cartridge — spine backplane, NOT a cable-BOM item':'MPO-12/APC patch field · trunk terminations'}</span></div>
+          <div class="rk-band pdu" style="height:60px;background-image:url('${faceOfKind('pdu')}');background-size:100% 100%;background-repeat:no-repeat"><span class="ru">—</span><span class="rl">Rack PDU A / B · ${r.kind==='compute'?'busway tap-off':'IEC 60309'}</span></div>
         </div>
       </div>
       <div class="rk-ports">
@@ -3542,6 +3782,11 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  {const el=$a('wdSide'); if(el){el.value=A.trunkSide||'right';
    el.addEventListener('change',()=>{A.trunkSide=el.value;save();paint();});}}
  {const el=$a('wdReset'); if(el) el.addEventListener('click',()=>{A.rackOrder=null;SEL=null;save();paint();});}
+ /* Re-bound on every paint because the panel it lives in is re-rendered each time. */
+ document.addEventListener('change',e=>{ if(e.target&&e.target.id==='memToggle'){
+   A.memAI=e.target.checked?1:0;
+   if(e.target.checked&&!gi('memPerSU')) A.memPerSU=1;
+   save(); renderCtl(); paint(); }});
  $a('advImportBtn').onclick=()=>{
   const sz=window.__sizer;
   const n=$a('advImportNote');
@@ -3732,7 +3977,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     d.aislesOn?d.aisleAt(rowIdx):'n/a',
     tg, rowL+'-T'+tg, d.trunkSide,
     r.su||'',r.phase||1,r.kind,
-    comp?72:0, comp?142:8, 42,
+    comp?72:0, r.kind==='memory'?Math.round(d.memKw/Math.max(1,d.mRacks)):(comp?142:8), 42,
     comp?d.portsPerRack:0,
     comp?d.perRack.bmc:1,
     comp?1:1].join(',');
@@ -3847,6 +4092,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Compute racks',d.computeRacks,'racks','8 per SU — NVIDIA RA'],
    ['Network racks',d.netRacks,'racks','derived from switch U at 42U/rack'],
    ['VAST storage racks',d.vRacks,'racks','VAST/NVIDIA RA, extrapolated past 256 GPUs'],
+   ['MemoryAI racks',d.mRacks,'racks',d.memOn?d.memUnits+' appliances at 4U':'tier excluded'],
+   ['MemoryAI round trip to compute',d.memNs,'ns',d.memUnits?d.memHops+' switch hop(s), '+d.memReachM+' m — derived':'n/a'],
    ['Total racks',d.racks.length,'racks','sum'],
    ['Rows',d.totalRows,'rows','racks / racks-per-row'],
    ['Racks per row',perRow,'racks','user input'],
@@ -3856,6 +4103,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Hub position',Math.round(d.hubF*100),'% along row','draggable'],
    ['Worst-case horizontal reach',d.rowRun,'m','hops x pitch + tray rise'],
    ['Total cable links',d.totalLinks,'links','sum of all classes'],
+   ['Link load cap',Math.round(d.loadCap*100),'%','trunks and risers sized with headroom, never to capacity'],
    ['Spares',d.spares,'links',d.sparesPct+'% of total'],
    ['Hot/cold aisle modelled',d.aislesOn?'yes':'no','','ASHRAE TC9.9 front-to-front / back-to-back'],
    ['Custom rack layout',d.customLayout?'yes':'no','','drag-to-reposition'],
@@ -3869,15 +4117,37 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Racks per trunk',d.trunkRacks,'user input — the pod size'],
    ['Panel ports per trunk',d.trunkPorts,'MPO positions per patch panel'],
    ['Trunk landing',d.trunkSide,d.sideDiv===2?'both ends — halves the worst horizontal walk':'single end'],
+   ['Link load cap',Math.round(d.loadCap*100),'% — trunks and risers are never filled to capacity'],
+   ['Links offered per pod',d.groupLinks,'racks per trunk x links per rack'],
+   ['Assemblies per pod',d.assembliesPerGroup,'ceil(offered / (links per trunk x load cap))'],
+   ['Risers at load cap',d.risers,'what to order'],
+   ['Risers if filled to 100%',d.risersRaw,'for comparison only — do not order this'],
    ['Trunk groups per row',d.trunkGroups,'ceil(racks per row / racks per trunk)'],
    ['Horizontal trunk assemblies',d.rowTrunks,'groups per row x rows'],
    ['Panels per trunk group',d.panelsPerTrunk,'MPO positions per rack x racks per trunk / panel ports'],
-   ['Patch panels total',d.trunkPanels,'orderable part'],
+   ['Rack pods',d.trunkPods,'trunk groups per row x rows'],
+   ['Patch panels total',d.trunkPanels,'panels per pod x pods — terminations, not assemblies'],
    ['MPO positions per rack',d.portsPerRack,'one position per 800G DR8 link'],
    ['Lit fibres per rack',d.fibrePerRack,'8 strands of each MPO-12 lit'],
    ['Trunk fibres',d.trunkFibers,'strand count of the trunk assembly'],
    ['Links per trunk',d.trunkLinks,'floor(fibres / 8)'],
    ['Inter-floor riser trunks',d.risers,d.floors>1?'spine assumed on floor 1':'single floor — none required']]});
+  sh.push({name:'Memory tier',rows:[['Metric','Value','Unit','Provenance'],
+   ['MemoryAI enabled',d.memOn?'yes':'no','','user toggle — on by default'],
+   ['Appliances',d.memUnits,'units','ratio x scalable units'],
+   ['Per scalable unit',d.memPerSU,'units/SU','OUR default — not a Penguin-published rule'],
+   ['Rack units',d.memU,'U','4U per appliance — vendor-published'],
+   ['Racks',d.mRacks,'racks','packed at 42U/rack — derived'],
+   ['Capacity',d.memTB,'TB','11 TB per appliance — vendor-published'],
+   ['Composition','3 TB DDR5 + 8x 1 TB CXL AIC','','vendor-published'],
+   ['Power',d.memKw,'kW','ESTIMATED — Penguin has not published a power figure'],
+   ['Front-end links',d.memFE,'links','port topology ASSUMED, not vendor-published'],
+   ['Worst distance to compute',d.memReachM,'m','measured on the final laid-out positions'],
+   ['Switch hops',d.memHops,'hops','1 = same row, 2 = leaf-spine-leaf, +1 crossing a floor'],
+   ['Crosses a floor',d.memCrossFloor?'yes':'no','','usually the wrong trade for a cache'],
+   ['Round trip',d.memNs,'ns','DERIVED: 4.9 ns/m glass + 450 ns per hop, both directions'],
+   ['','','',''],
+   ['NOTE','A KV cache is a latency asset. Drag a memory rack into a compute row in the wiring diagram to cut the hop count — the round-trip figure above moves with it.','','']]});
   sh.push({name:'Rows and aisles',rows:[['Row','Row letter','Floor','Front faces','Aisle below','Racks in row'],
    ...Array.from({length:d.totalRows},(_,r)=>{
      const n=Math.min(perRow,d.racks.length-r*perRow);
@@ -3916,11 +4186,26 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
        groups_per_row:d.trunkGroups,row_trunk_assemblies:d.rowTrunks,
        panels_per_trunk:d.panelsPerTrunk,patch_panels_total:d.trunkPanels,
        mpo_positions_per_rack:d.portsPerRack,lit_fibres_per_rack:d.fibrePerRack,
-       worst_case_hops:d.effHops,both_ends_halves_horizontal_reach:d.sideDiv===2},
+       worst_case_hops:d.effHops,both_ends_halves_horizontal_reach:d.sideDiv===2,
+       /* Aggregation points are sized with headroom, never to 100% of capacity. */
+       link_load_cap_pct:Math.round(d.loadCap*100),links_offered_per_pod:d.groupLinks,
+       assemblies_per_pod:d.assembliesPerGroup,
+       risers_at_load_cap:d.risers,risers_if_filled_to_100pct:d.risersRaw},
      thermal:{hot_cold_aisle:!!d.aislesOn,standard:'ASHRAE TC9.9 front-to-front / back-to-back',
        row_orientation:Array.from({length:d.totalRows},(_,r)=>({row:r+1,
          front_faces:d.faceOf(r)>0?'down-plan':'up-plan',aisle_below:d.aisleAt(r)}))},
-     layout:{custom:d.customLayout,order:d.rackOrder}},
+     layout:{custom:d.customLayout,order:d.rackOrder},
+     /* The KV cache tier is a latency asset, so its placement travels with the export.
+      * Round-trip ns is DERIVED by this tool from 4.9 ns/m in glass and a 450 ns typical
+      * cut-through switch hop — not a vendor measurement. */
+     memory_tier:{enabled:d.memOn,appliances:d.memUnits,per_scalable_unit:d.memPerSU,
+       ratio_is_our_default_not_vendor_published:true,
+       rack_units:d.memU,racks:d.mRacks,capacity_tb:d.memTB,
+       power_kw:d.memKw,power_is_estimated:true,
+       port_topology_assumed:true,front_end_links:d.memFE,
+       worst_case_distance_to_compute_m:d.memReachM,switch_hops:d.memHops,
+       crosses_floor:d.memCrossFloor,round_trip_ns:d.memNs,
+       ns_basis:'4.9 ns/m single-mode + 450 ns per switch hop, both directions — derived, not measured'}},
    storage:{cbox:d.vc,enclosures:d.vd,cnodes:d.vCnodes,model:d.vModel&&d.vModel.label,
      basis:d.vAuto&&d.vAuto.basis,extrapolated:!(d.vAuto&&d.vAuto.exact)},
    phases:{count:d.phases,su_per_phase:d.suPerPhase,
