@@ -66,6 +66,9 @@
   .metric .v{font-family:var(--mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
   .metric .v small{color:var(--faint);font-size:11px}
   .big{font-size:15px !important;color:var(--cool)}
+  .card-build{width:100%;margin-top:11px;background:rgba(34,211,238,.1);border:1px solid var(--cool-dim);color:var(--cool);
+    font-family:var(--sans);font-size:12px;font-weight:620;padding:8px 10px;border-radius:8px;cursor:pointer;transition:all .13s}
+  .card-build:hover{background:var(--cool);color:#04222a;border-color:var(--cool)}
   .chip{display:inline-block;font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:999px;margin-left:6px;vertical-align:middle}
   .chip.ok{background:rgba(52,211,153,.13);color:var(--ok)} .chip.warn{background:rgba(251,191,36,.14);color:var(--warn)} .chip.hot{background:rgba(251,113,133,.14);color:var(--hot)}
   .compare{margin-top:18px;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px}
@@ -1219,7 +1222,15 @@ function renderSize(rows){
     <div class="metric"><span class="k">$/GPU-hr · $/EF</span><span class="v">$${r.ownedHr.toFixed(2)} · ${usd(r.perEF)}</span></div>
     <div class="metric"><span class="k">Fits infer/train</span><span class="v">≤${commas(r.maxInfer)}B / ≤${commas(r.maxTrain)}B</span></div>
     ${r.trainDays!=null?`<div class="metric"><span class="k">Train ${val("model")}B·${val("tokens")}T</span><span class="v" style="color:var(--cool)">${r.trainDays} days <small>· ckpt ${r.ckpt}TB</small></span></div>`:""}
+    <button class="card-build" data-build="${r.gpus}" data-arch="${r.a.key}" title="Open the Advanced rack planner against this build">⚙ Build this in Advanced →</button>
   </div>`).join("");
+ document.querySelectorAll("#cards [data-build]").forEach(b=>b.onclick=()=>{
+  const g=+b.dataset.build;
+  if(!window.__advImport){alert("Rack planner not ready — open the Rack Planner tab once, then retry.");return;}
+  window.__advImport(g, b.dataset.arch);
+  document.querySelector('#tabs button[data-v="rack"]').click();
+  window.scrollTo({top:0,behavior:"smooth"});
+ });
  const labels={tco:val("years")+"-yr TCO",capex:"CapEx",racks:"Racks",power:"Power kW",ownedHr:"$/GPU-hr owned",perEF:"$/EF"};
  $("cmpname").textContent=labels[CMP];
  const pick=r=>r[CMP], max=Math.max(...rows.map(pick))||1, min=Math.min(...rows.map(pick));
@@ -3212,8 +3223,18 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  window.__ADV_MODEL=()=>{const d=derive();
   return {...d,racksPerRow:gi('racksPerRow'),rowStart:A.row,name:rackName,bom:bom(d)};};
  // import target from Size It
- window.__advImport=(gpus)=>{A.gpus=Math.max(576,Math.min(9216,gpus));save();
-  const b=document.querySelector('#rkMode button[data-m="advanced"]'); if(b)b.click();};
+ window.__advImport=(gpus,arch)=>{
+  const g=Math.max(576,Math.min(9216,gpus));
+  A.gpus=g; save();
+  const b=document.querySelector('#rkMode button[data-m="advanced"]'); if(b)b.click();
+  const n=$a('advImportNote');
+  if(n){
+   n.innerHTML=`Imported <b>${NUMF(gpus)} GPUs</b>${arch?` from ${arch}`:''}`
+    + (g!==gpus?` — clamped to <b>${NUMF(g)}</b>, the published two-layer fabric tops out at 9,216.`:'.')
+    + (arch&&arch!=='gb300-nvl72'?' <b>Note:</b> Advanced mode builds on the GB300 NVL72 scalable unit, so the rack layout below is NVL72 regardless of the architecture you sized with. Only the GPU target carries across.':'');
+   n.className='adv-importnote '+(g!==gpus?'bad':'ok');
+  }
+ };
 })();
 </script>
 
