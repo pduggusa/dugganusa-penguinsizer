@@ -2566,7 +2566,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:4608,floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',
-      netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,
+      netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,
       site:'DC1',room:'R01',row:'A',patRack:'{site}{room}{row}{rack}',
       patDev:'{rack}U{u}{dev}',patPort:'{dev}{port}'};
  let SEL=null;
@@ -2616,16 +2616,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   // middle halves it because the farthest rack is only half a row from the hub.
   const worstHops = place==='tor' ? 0 : place==='mor' ? Math.ceil(perRow/2) : (perRow-1);
   const rowRun = place==='tor' ? 2 : +(worstHops*pitch + rise).toFixed(1);
-  const floors=Math.max(1,gi('floors'));
-  const perFloorRacks=Math.ceil((computeRacks+netRacks)/floors);
-  /* Only the floors that DO NOT hold the spine need a riser. The spine floor's leaf
-   * traffic never leaves the floor. Charging every leaf-spine link to the riser — which
-   * this did until it was checked against a 2-vs-4 floor comparison and produced the
-   * identical number both times — overstates the trunk count by floors/(floors-1). */
-  const offSpineFrac=floors>1?(floors-1)/floors:0;
-  const interFloor=Math.round((ibUp+ethUp)*offSpineFrac);
-  const trunkLinks=Math.max(1,Math.floor(gi('trunkFibers')/8)); // 8 fibres per 800G DR8
-  const risers=interFloor?Math.ceil(interFloor/trunkLinks):0;
 
   // ---- VAST storage tier ----------------------------------------------------------
   // Auto-derives from the GPU target using the VAST/NVIDIA Enterprise RA tables, so
@@ -2645,6 +2635,27 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const vBE = vCnodes*VAST.cbox.ports.be + vd*vModel.ports.be;
   const vFE = vCnodes*VAST.cbox.ports.fe;
   const vBMC= vc*VAST.cbox.ports.bmc + vd*vModel.ports.bmc;
+  /* Rows per floor is the physical constraint people actually know — a room holds N
+   * rows. When set it DRIVES the floor count rather than the other way round, because
+   * "how many rows fit" is a survey fact and "how many floors" is the consequence. */
+  const rowsPerFloorSet=Math.max(0,gi('rowsPerFloor'));
+  const totalRows=Math.ceil((computeRacks+netRacks+vRacks)/Math.max(1,gi('racksPerRow')));
+  const floors=rowsPerFloorSet>0
+    ? Math.max(1,Math.ceil(totalRows/rowsPerFloorSet))
+    : Math.max(1,gi('floors'));
+  const rowsPerFloor=rowsPerFloorSet>0?rowsPerFloorSet:Math.max(1,Math.ceil(totalRows/floors));
+  const perFloorRacks=Math.ceil((computeRacks+netRacks+vRacks)/floors);
+  /* Only the floors that DO NOT hold the spine need a riser. The spine floor's leaf
+   * traffic never leaves the floor. Charging every leaf-spine link to the riser — which
+   * this did until it was checked against a 2-vs-4 floor comparison and produced the
+   * identical number both times — overstates the trunk count by floors/(floors-1). */
+  const offSpineFrac=floors>1?(floors-1)/floors:0;
+  const interFloor=Math.round((ibUp+ethUp)*offSpineFrac);
+  const trunkLinks=Math.max(1,Math.floor(gi('trunkFibers')/8)); // 8 fibres per 800G DR8
+  const risers=interFloor?Math.ceil(interFloor/trunkLinks):0;
+
+
+
   const vCON= vc*VAST.cbox.ports.console + vd*vModel.ports.console;
 
   const L=[
@@ -2688,7 +2699,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   for(let n=0;n<netRacks;n++) racks.push({kind:'network',vendor:'nvidia',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(netRacks/phases)))+1),idx:racks.length+1});
   for(let n=0;n<vRacks;n++) racks.push({kind:'storage',vendor:'vast',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(vRacks/phases)))+1),idx:racks.length+1});
 
-  return {rowRun,place,pitch,rise,worstHops,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,
+  return {rowRun,place,pitch,rise,worstHops,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
    vc,vd,vCnodes,vAuto,manual,vModel,vU,vRacks,vKw,vBE,vFE,vBMC,vCON,
    gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
    ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
@@ -2756,6 +2767,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'interFloorM',l:'Inter-floor run (m)',step:5,hint:'riser length'},
   {k:'trunkFibers',l:'Trunk fibres',step:12,hint:'12/24/48/96/144'},
   {k:'ibUplinksPerLeaf',l:'IB uplinks / leaf',step:6,hint:'72 = non-blocking'},
+  {k:'rowsPerFloor',l:'Rows per floor',step:1,hint:'0 = auto/even'},
   {k:'phases',l:'Build phases',step:1,hint:'staged rollout'},
   {k:'spares',l:'Spares %',step:1,hint:'on all links'},
   {k:'vastCbox',l:'VAST CBox',step:1,hint:'compute boxes'},
@@ -2972,7 +2984,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    <div class="adv-key" id="advFloorPanel" style="margin-bottom:12px">
      <div class="kh">Per-floor asset split &amp; uplink oversubscription</div>
      <div class="kg" style="gap:18px">
-       <span class="ki"><b>${d.floors}</b> floor${d.floors===1?'':'s'} · <b>${NUMF(d.perFloorRacks)}</b> racks each (even split)</span>
+       <span class="ki"><b>${d.floors}</b> floor${d.floors===1?'':'s'} · <b>${d.rowsPerFloor}</b> rows each · <b>${NUMF(d.perFloorRacks)}</b> racks ${d.rowsPerFloorSet>0?'<em style="color:var(--cool)">(rows/floor drives floor count)</em>':'(even split)'}</span>
        <span class="ki"><b>${d.upPerLeaf}</b> IB uplinks/leaf · blocking <b>${d.ibBlocking===1?'1:1 non-blocking':'1:'+d.ibBlocking.toFixed(1)}</b></span>
        <span class="ki">spine on floor 1 · <b>${Math.round(d.offSpineFrac*100)}%</b> of leaf traffic crosses a riser</span>
      </div>
@@ -3015,8 +3027,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     * to show them or the picture disagrees with the BOM. Rows are dealt across floors at
     * the derived per-floor rack count, and the SPINE is assumed to live on floor 1 —
     * every other floor trunks up to it, which is what `risers` is counting. */
-   const rowsPerFloor=Math.max(1,Math.ceil(rows.length/d.floors));
-   const floorsOf=[]; for(let i=0;i<rows.length;i+=rowsPerFloor) floorsOf.push(rows.slice(i,i+rowsPerFloor));
+   const rpf=Math.max(1,d.rowsPerFloor);
+   const floorsOf=[]; for(let i=0;i<rows.length;i+=rpf) floorsOf.push(rows.slice(i,i+rpf));
    const RW=Math.max(16,Math.round(30*zoom)), RH=Math.round(58*zoom), GAP=Math.round(7*zoom);
    const HUBW=Math.round(38*zoom), PAD=Math.round(52*zoom), ROWH=Math.round(132*zoom);
    const place=d.place;
@@ -3453,7 +3465,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   dl('build-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({
    tool:'penguin-build-sheet-v1',generated:new Date().toISOString(),
    gpus:d.realGpus,scalable_units:Math.ceil(d.suNeeded),fabric:d.f,
-   site:{floors:d.floors,racks_per_floor:d.perFloorRacks,racks_per_row:perRow,
+   site:{floors:d.floors,rows_per_floor:d.rowsPerFloor,total_rows:d.totalRows,
+     rows_per_floor_is_constraint:d.rowsPerFloorSet>0,racks_per_floor:d.perFloorRacks,racks_per_row:perRow,
      network_placement:d.place,worst_case_reach_m:d.rowRun,rack_pitch_m:d.pitch,tray_rise_m:d.rise},
    fabric_tuning:{ib_uplinks_per_leaf:d.upPerLeaf,ib_blocking_ratio:`1:${(d.ibBlocking||1).toFixed(1)}`,
      off_spine_fraction:d.offSpineFrac,inter_floor_links:d.interFloor,riser_trunks:d.risers,
