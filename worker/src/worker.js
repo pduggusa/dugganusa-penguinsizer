@@ -109,11 +109,18 @@ async function fetchVendor(rawUrl) {
   } catch { return `Fetch error reaching ${u.hostname}.`; }
 }
 
-async function callMistral(env, messages) {
+/* noTools forces a prose answer. On the LAST round the model must not be offered the
+ * grounding tool: a message carrying tool_calls has no prose content, so a model that
+ * asks for a third fetch produces an assistant turn with empty content — which the
+ * caller then served to the user as the literal string "(no reply)". Removing the tool
+ * on the final round makes an answer the only legal move. */
+async function callMistral(env, messages, noTools) {
+  const payload = { model: env.MODEL || 'mistral-small-latest', max_tokens: 700, temperature: 0.3, messages };
+  if (!noTools) { payload.tools = TOOLS; payload.tool_choice = 'auto'; }
   const r = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + env.MISTRAL_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: env.MODEL || 'mistral-small-latest', max_tokens: 700, temperature: 0.3, tools: TOOLS, tool_choice: 'auto', messages }),
+    body: JSON.stringify(payload),
   });
   if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error('model ' + r.status + ' ' + t.slice(0, 140)); }
   return r.json();
@@ -165,11 +172,12 @@ export default {
     try {
       // tool loop: at most 2 grounding fetches, then force a final answer
       for (let round = 0; round < 3; round++) {
-        const data = await callMistral(env, messages);
+        const finalRound = round === 2;
+        const data = await callMistral(env, messages, finalRound);
         const m = data.choices && data.choices[0] && data.choices[0].message;
         if (!m) return json({ error: 'empty model reply' }, 502, origin);
         messages.push(m);
-        if (round < 2 && m.tool_calls && m.tool_calls.length) {
+        if (!finalRound && m.tool_calls && m.tool_calls.length) {
           for (const tc of m.tool_calls) {
             let out = 'error';
             try { out = await fetchVendor(JSON.parse(tc.function.arguments || '{}').url || ''); } catch { out = 'tool error'; }
@@ -177,7 +185,11 @@ export default {
           }
           continue;
         }
-        return json({ reply: m.content || '(no reply)', model: env.MODEL || 'mistral-small-latest' }, 200, origin);
+        // An empty answer is a FAILURE, not a reply. Serving "(no reply)" as if it were
+        // an answer is the false-green form of this bug — the user sees a response bubble
+        // and no error, and nobody investigates.
+        if (!m.content) return json({ error: 'The assistant could not complete that — please rephrase.' }, 502, origin);
+        return json({ reply: m.content, model: env.MODEL || 'mistral-small-latest' }, 200, origin);
       }
       // exhausted rounds — return whatever last assistant text we have
       const last = [...messages].reverse().find(m => m.role === 'assistant' && m.content);
