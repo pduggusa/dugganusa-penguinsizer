@@ -2387,9 +2387,10 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const CCOL=new Proxy({},{get:(_,k)=>colOf(String(k))});
 
  /* VAST Data storage. CBox/DBox/Ceres figures are from VAST's published material.
-  * RT8B is NOT in VAST's public documentation — it is exposed here as a configurable
-  * enclosure with its fields marked unverified so a quote can pin them, rather than
-  * shipping invented numbers that would flow straight into a BOM. */
+  * Only models VAST actually documents are listed. An enclosure we cannot source specs
+  * for does not belong here at all — a placeholder port map is indistinguishable from a
+  * real one once it reaches a BOM, and the `verified` flag stays so any future addition
+  * has to declare itself. */
  /* VAST + NVIDIA Enterprise Reference Architecture, transcribed from the July 2025
   * "VAST Data Storage Reference Architecture" tables 1-3. These are ENTERPRISE RAs built
   * on FOUR-NODE scalable units and they top out at 32 nodes / 256 GPUs — a different and
@@ -2448,8 +2449,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
           note:'NVMe-oF enclosure, two DNodes. Up to 1,350 TB raw with 30 TB SSDs.'},
   ceres: {label:'VAST Ceres DBox',u:1, unit:'Ceres', dnodes:2, ports:{be:4,bmc:2,console:2}, kw:1.2, verified:true,
           note:'1U NVMe JBOF, up to 675 TB raw — about 2 PB effective at 3:1 reduction.'},
-  rt8b:  {label:'VAST RT8B',      u:2, unit:'RT8B',  dnodes:2, ports:{be:4,bmc:2,console:2}, kw:1.5, verified:false,
-          note:'SPECS UNVERIFIED — RT8B is not in VAST\'s public documentation. U-height, node count, port map and power below are placeholders modelled on the DBox shape. Replace from your quote before this reaches a BOM.'},
  };
  const ECOL={compute:'#22d3ee',nvswitch:'#a78bfa',power:'#fbbf24',manifold:'#34d399',
              ibleaf:'#0ea5e9',ethleaf:'#059669',oob:'#94a3b8',patch:'#fb7185',
@@ -2664,7 +2663,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'trunkFibers',l:'Trunk fibres',step:12,hint:'12/24/48/96/144'},
   {k:'spares',l:'Spares %',step:1,hint:'on all links'},
   {k:'vastCbox',l:'VAST CBox',step:1,hint:'compute boxes'},
-  {k:'vastDbox',l:'VAST DBox/RT8B',step:1,hint:'storage enclosures'},
+  {k:'vastDbox',l:'VAST DBox',step:1,hint:'storage enclosures'},
  ];
  const NF=[{k:'site',l:'Site'},{k:'room',l:'Room'},{k:'row',l:'First row'},
   {k:'patRack',l:'Rack pattern',wide:1},{k:'patDev',l:'Device pattern',wide:1},{k:'patPort',l:'Port pattern',wide:1}];
