@@ -560,6 +560,10 @@
           <div class="seg" id="rkMode" style="max-width:330px">
             <button data-m="simple" class="on">Simple — up to 5 racks</button><button data-m="advanced">Advanced — SuperPOD scale</button>
           </div>
+          <span class="dt-lbl">Network placement</span>
+          <div class="seg" id="rkPlace" style="max-width:330px">
+            <button data-p="eor" class="on">End of row</button><button data-p="mor">Middle of row</button><button data-p="tor">Top of rack</button>
+          </div>
           <span class="rk-modenote" id="rkModeNote">Hand-configure individual racks: power, thermal, per-rack cabling and a SKU-rational BOM.</span>
         </div>
 
@@ -570,6 +574,9 @@
           <h3 class="mem-h">Rack elevations — reference layout</h3>
           <p class="lede" id="advElevNote">Drawn from published U-heights and tray counts, not from vendor stencil art. Tray <i>order</i> varies by OEM integrator, so treat the sequence as a reference elevation and confirm against the as-built drawing before it becomes a floor plan.</p>
           <div class="adv-elev" id="advElev"></div>
+          <h3 class="mem-h">Storage — VAST Data</h3>
+          <p class="lede">Derived from the <b style="color:var(--ink)">VAST + NVIDIA Enterprise reference architecture</b> tables so storage follows the GPU target automatically. Set either box count above to override. Design profile: <select id="advVastDesign" class="rk-btn" style="padding:5px 9px"></select> <select id="advVastModel" class="rk-btn" style="padding:5px 9px"></select></p>
+          <div class="adv-storage" id="advStorage"></div>
           <h3 class="mem-h">Fibre plant — trunking and inter-floor runs</h3>
           <div class="adv-cable" id="advCable"></div>
           <h3 class="mem-h">Naming convention</h3>
@@ -2355,8 +2362,95 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const NUMF=n=>Math.round(n).toLocaleString();
  /* Function colour for cable identification. Applied with boots/labels over a
   * TIA-598-compliant jacket — it never replaces the standards-mandated jacket colour. */
- const CCOL={compute:'#22d3ee','ib-uplink':'#0ea5e9',storage:'#34d399','eth-uplink':'#059669',
-             bmc:'#94a3b8','oob-uplink':'#fbbf24'};
+ /* Cable colour is a SKU attribute, not decoration. A red Cat6A and a grey Cat6A are
+  * different part numbers, ordered separately, stocked separately. So colour is
+  * user-settable per link class AND the BOM splits on it. Defaults follow common DC
+  * convention: OOB red, console grey, and OS2 single-mode yellow because TIA-598 makes
+  * that one mandatory rather than optional. */
+ const CDEF={
+  compute:   {c:'#eab308',n:'yellow', why:'OS2 single-mode jacket — TIA-598 mandated'},
+  'ib-uplink':{c:'#eab308',n:'yellow',why:'OS2 single-mode jacket — TIA-598 mandated'},
+  storage:   {c:'#a855f7',n:'violet', why:'site convention — separates storage from compute fabric'},
+  'eth-uplink':{c:'#a855f7',n:'violet',why:'site convention'},
+  vast_be:   {c:'#06b6d4',n:'aqua',   why:'site convention — VAST back-end fabric'},
+  vast_fe:   {c:'#3b82f6',n:'blue',   why:'site convention — VAST front-end / client'},
+  bmc:       {c:'#ef4444',n:'red',    why:'OOB / BMC — red so nobody patches it into production'},
+  'oob-uplink':{c:'#ef4444',n:'red',  why:'OOB aggregation'},
+  console:   {c:'#9ca3af',n:'grey',   why:'serial console — grey by convention'},
+  mgmt:      {c:'#22c55e',n:'green',  why:'in-band management'},
+ };
+ let CCOLOR=(()=>{try{const j=JSON.parse(localStorage.getItem('penguin-cable-colours'));if(j)return j;}catch(e){}
+   return Object.fromEntries(Object.entries(CDEF).map(([k,v])=>[k,{c:v.c,n:v.n}]));})();
+ const saveColours=()=>{try{localStorage.setItem('penguin-cable-colours',JSON.stringify(CCOLOR));}catch(e){}};
+ const colOf=k=>(CCOLOR[k]||{}).c||'#888';
+ const colName=k=>(CCOLOR[k]||{}).n||'unspecified';
+ const CCOL=new Proxy({},{get:(_,k)=>colOf(String(k))});
+
+ /* VAST Data storage. CBox/DBox/Ceres figures are from VAST's published material.
+  * RT8B is NOT in VAST's public documentation — it is exposed here as a configurable
+  * enclosure with its fields marked unverified so a quote can pin them, rather than
+  * shipping invented numbers that would flow straight into a BOM. */
+ /* VAST + NVIDIA Enterprise Reference Architecture, transcribed from the July 2025
+  * "VAST Data Storage Reference Architecture" tables 1-3. These are ENTERPRISE RAs built
+  * on FOUR-NODE scalable units and they top out at 32 nodes / 256 GPUs — a different and
+  * much smaller design point than the DGX SuperPOD GB300 RA (8-rack SU, 576 GPUs) used
+  * elsewhere in this tool. Do not confuse the two SU definitions.
+  *
+  * Above 256 GPUs the tables stop. We extrapolate on the published top-row ratio and
+  * LABEL IT as extrapolated, because a storage BOM invented past the end of a vendor
+  * table is exactly the kind of number that gets quoted back at you. */
+ const VAST_RA={
+  '243':{label:'2-4-3-200 · 4 GPU/node',gpuPerNode:4,
+    rows:[{su:1,nodes:4,gpus:16,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
+          {su:2,nodes:8,gpus:32,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
+          {su:3,nodes:12,gpus:48,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
+          {su:4,nodes:16,gpus:64,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:4,sup:4},
+          {su:6,nodes:24,gpus:96,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:4,sup:4},
+          {su:8,nodes:32,gpus:128,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:8,sup:4}],
+    net:'4 servers x 4 B3140H SuperNICs = 16 x 400Gb/s E-W; 4 x B3220 DPU = 8 x 200Gb/s N-S'},
+  '285':{label:'2-8-5 · 8 GPU/node',gpuPerNode:8,
+    rows:[{su:1,nodes:4,gpus:32,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
+          {su:2,nodes:8,gpus:64,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
+          {su:3,nodes:12,gpus:96,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
+          {su:4,nodes:16,gpus:128,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:8,sup:4},
+          {su:6,nodes:24,gpus:192,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:8,sup:4},
+          {su:8,nodes:32,gpus:256,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:8,sup:4}],
+    net:'4 servers x 4 B3140H SuperNICs = 16 x 400Gb/s E-W; 4 x B3220 DPU = 8 x 200Gb/s N-S'},
+  '289':{label:'2-8-9 · 8 GPU/node, 8 NIC',gpuPerNode:8,
+    rows:[{su:1,nodes:4,gpus:32,cnodes:3,dbox:1,port800:4,storage:1,mgmtUp:4,cust:4,sup:4},
+          {su:2,nodes:8,gpus:64,cnodes:3,dbox:1,port800:4,storage:1,mgmtUp:4,cust:4,sup:4},
+          {su:3,nodes:12,gpus:96,cnodes:3,dbox:1,port800:4,storage:1,mgmtUp:8,cust:4,sup:4},
+          {su:4,nodes:16,gpus:128,cnodes:5,dbox:2,port800:4,storage:1,mgmtUp:4,cust:8,sup:4},
+          {su:6,nodes:24,gpus:192,cnodes:5,dbox:2,port800:8,storage:1,mgmtUp:4,cust:12,sup:4}],
+    net:'4 servers x 8 B3140H SuperNICs = 32 x 400Gb/s E-W; 4 x B3220 DPU = 8 x 200Gb/s N-S'},
+ };
+ /* Resolve a GPU count to a VAST storage configuration. Returns {exact, extrapolated}. */
+ function vastFor(gpus,design){
+  const D=VAST_RA[design]||VAST_RA['285'];
+  const rows=D.rows;
+  const hit=rows.find(r=>r.gpus>=gpus);
+  if(hit) return {...hit,design:D,exact:true,
+    basis:`VAST/NVIDIA Enterprise RA table, ${hit.su}-SU row (${hit.gpus} GPUs)`};
+  // past the end of the table — scale on the published top row and say so
+  const top=rows[rows.length-1];
+  const k=gpus/top.gpus;
+  return {su:Math.ceil(top.su*k),nodes:Math.ceil(top.nodes*k),gpus,
+    cnodes:Math.ceil(top.cnodes*k),dbox:Math.ceil(top.dbox*k),
+    port800:Math.ceil(top.port800*k),storage:top.storage,mgmtUp:top.mgmtUp,
+    cust:top.cust,sup:top.sup,design:D,exact:false,
+    basis:`EXTRAPOLATED — the published table ends at ${top.gpus} GPUs. Scaled ${k.toFixed(1)}x on the top row. Confirm against a VAST quote.`};
+ }
+
+ const VAST={
+  cbox:  {label:'VAST CBox',      u:2, unit:'CBox',  cnodes:4, ports:{be:2,fe:2,bmc:1,console:1}, kw:1.6, verified:true,
+          note:'2U chassis, four dual-Xeon servers = 4 CNodes. Each CNode ships with one or two 2-port NICs.'},
+  dbox:  {label:'VAST DBox',      u:2, unit:'DBox',  dnodes:2, ports:{be:4,bmc:2,console:2}, kw:1.4, verified:true,
+          note:'NVMe-oF enclosure, two DNodes. Up to 1,350 TB raw with 30 TB SSDs.'},
+  ceres: {label:'VAST Ceres DBox',u:1, unit:'Ceres', dnodes:2, ports:{be:4,bmc:2,console:2}, kw:1.2, verified:true,
+          note:'1U NVMe JBOF, up to 675 TB raw — about 2 PB effective at 3:1 reduction.'},
+  rt8b:  {label:'VAST RT8B',      u:2, unit:'RT8B',  dnodes:2, ports:{be:4,bmc:2,console:2}, kw:1.5, verified:false,
+          note:'SPECS UNVERIFIED — RT8B is not in VAST\'s public documentation. U-height, node count, port map and power below are placeholders modelled on the DBox shape. Replace from your quote before this reaches a BOM.'},
+ };
  const ECOL={compute:'#22d3ee',nvswitch:'#a78bfa',power:'#fbbf24',manifold:'#34d399',
              ibleaf:'#0ea5e9',ethleaf:'#059669',oob:'#94a3b8',patch:'#fb7185',
              bus:'#fbbf24',cart:'#a78bfa',pdu:'#94a3b8'};
@@ -2396,6 +2490,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const LS='penguin-adv-planner-v1';
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:4608,floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
+      vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',
+      netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,
       site:'DC1',room:'R01',row:'A',patRack:'{site}{room}{row}{rack}',
       patDev:'{rack}U{u}{dev}',patPort:'{dev}{port}'};
  let SEL=null;
@@ -2429,26 +2525,64 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const bmc=computeRacks*perRack.bmc;
   const oobUp=oobCount*2;
 
+  /* Network placement drives reach, and reach drives optics and trunk sizing.
+   * End-of-row worst case is the FULL row; middle-of-row halves it because the far rack
+   * is only half a row away. Top-of-rack collapses it to an in-rack jumper. Each run is
+   * horizontal along the row PLUS the vertical tray rise (up, over, down), which is the
+   * part people forget and then discover their 3m DACs do not reach. */
+  const pitch=gi('rackPitchM')||0.6, rise=gi('trayRiseM')||6;
+  const perRow=Math.max(1,gi('racksPerRow'));
+  const place=A.netPlacement||'eor';
+  const worstHops = place==='tor' ? 0 : place==='mor' ? Math.ceil(perRow/2) : (perRow-1);
+  const rowRun = place==='tor' ? 2 : +(worstHops*pitch + rise).toFixed(1);
   const floors=Math.max(1,gi('floors'));
   const perFloorRacks=Math.ceil((computeRacks+netRacks)/floors);
   const interFloor=floors>1?ibUp+ethUp:0;            // spine layer assumed on one floor
   const trunkLinks=Math.max(1,Math.floor(gi('trunkFibers')/8)); // 8 fibres per 800G DR8
   const risers=interFloor?Math.ceil(interFloor/trunkLinks):0;
 
+  // ---- VAST storage tier ----------------------------------------------------------
+  // Auto-derives from the GPU target using the VAST/NVIDIA Enterprise RA tables, so
+  // storage follows the SuperPOD target instead of being hand-guessed. Manual override
+  // wins if either box count is set non-zero.
+  const vAuto=vastFor(realGpus, A.vastDesign||'285');
+  const manual=(gi('vastCbox')>0||gi('vastDbox')>0);
+  // RA counts CNODES; a CBox houses 4 of them.
+  const vc=manual?Math.max(0,gi('vastCbox')):Math.ceil(vAuto.cnodes/VAST.cbox.cnodes);
+  const vd=manual?Math.max(0,gi('vastDbox')):vAuto.dbox;
+  const vCnodes=manual?vc*VAST.cbox.cnodes:vAuto.cnodes;
+  const vModel=VAST[A.vastModel||'dbox']||VAST.dbox;
+  const vU=vc*VAST.cbox.u + vd*vModel.u;
+  const vRacks=vU?Math.ceil(vU/42):0;
+  const vKw=+(vc*VAST.cbox.kw + vd*vModel.kw).toFixed(1);
+  // CNode back-end + front-end, DNode back-end, plus BMC and serial console per box.
+  const vBE = vCnodes*VAST.cbox.ports.be + vd*vModel.ports.be;
+  const vFE = vCnodes*VAST.cbox.ports.fe;
+  const vBMC= vc*VAST.cbox.ports.bmc + vd*vModel.ports.bmc;
+  const vCON= vc*VAST.cbox.ports.console + vd*vModel.ports.console;
+
   const L=[
-   {cls:'compute',n:ibDown,speed:'800G',media:'OSFP + MPO-12/APC SMF',reach:gi('rowRunM'),
+   {cls:'compute',n:ibDown,speed:'800G',media:'OSFP + MPO-12/APC SMF',reach:rowRun,
     desc:'Compute tray ConnectX-8 to IB leaf (1 rail per GPU)',opt:'MMS4X00-NM twin-port DR8 500m'},
-   {cls:'ib-uplink',n:ibUp,speed:'800G',media:'OSFP + MPO-12/APC SMF',reach:gi('rowRunM')+(floors>1?gi('interFloorM'):0),
+   {cls:'ib-uplink',n:ibUp,speed:'800G',media:'OSFP + MPO-12/APC SMF',reach:rowRun+(floors>1?gi('interFloorM'):0),
     desc:'IB leaf to spine — 72 up per leaf (derived from 144 radix, non-blocking)',opt:'MMS4X00-NM twin-port DR8 500m'},
-   {cls:'storage',n:ethDown,speed:'400G',media:'OSFP + MPO-12/APC SMF',reach:gi('rowRunM'),
+   {cls:'storage',n:ethDown,speed:'400G',media:'OSFP + MPO-12/APC SMF',reach:rowRun,
     desc:'BlueField-3 B3240 to Ethernet leaf (storage + in-band)',opt:'400G DR4'},
-   {cls:'eth-uplink',n:ethUp,speed:'400G',media:'OSFP + MPO-12/APC SMF',reach:gi('rowRunM')+(floors>1?gi('interFloorM'):0),
+   {cls:'eth-uplink',n:ethUp,speed:'400G',media:'OSFP + MPO-12/APC SMF',reach:rowRun+(floors>1?gi('interFloorM'):0),
     desc:'Ethernet compute leaf to spine — 24 links, 1:3 blocking (RA-quoted)',opt:'400G DR4'},
    {cls:'bmc',n:bmc,speed:'1G',media:'Cat6A copper',reach:3,
     desc:'Compute-tray and switch-tray BMC to in-rack SN2201',opt:'RJ45'},
-   {cls:'oob-uplink',n:oobUp,speed:'25G',media:'DAC / AOC',reach:gi('rowRunM'),
+   {cls:'oob-uplink',n:oobUp,speed:'25G',media:'DAC / AOC',reach:rowRun,
     desc:'In-rack SN2201 OOB uplink to aggregation',opt:'SFP28'},
+   {cls:'vast_be',n:vBE,speed:'100G',media:'QSFP28 + MPO/SMF',reach:rowRun,
+    desc:'VAST back-end fabric — CNode/DNode NVMe over RDMA, internal to the cluster',opt:'100G QSFP28'},
+   {cls:'vast_fe',n:vFE,speed:'100G',media:'QSFP28 + MPO/SMF',reach:rowRun,
+    desc:'VAST front-end — CNode to client/compute network',opt:'100G QSFP28'},
+   {cls:'console',n:vCON+computeRacks,speed:'serial',media:'Cat6 rollover',reach:3,
+    desc:'Serial console to terminal server — one per box plus one per compute rack',opt:'RJ45 rollover'},
   ].filter(x=>x.n>0);
+  // VAST BMC folds into the existing bmc class rather than inventing a second one
+  const bmcRow=L.find(x=>x.cls==='bmc'); if(bmcRow) bmcRow.n+=vBMC;
 
   const totalLinks=L.reduce((a,x)=>a+x.n,0);
   const spares=Math.ceil(totalLinks*gi('spares')/100);
@@ -2459,8 +2593,11 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    for(let r=0;r<FABRIC.su.racks;r++)
     racks.push({kind:'compute',su:s+1,idx:racks.length+1});
   for(let n=0;n<netRacks;n++) racks.push({kind:'network',su:null,idx:racks.length+1});
+  for(let n=0;n<vRacks;n++) racks.push({kind:'storage',su:null,idx:racks.length+1});
 
-  return {gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
+  return {rowRun,place,pitch,rise,worstHops,
+   vc,vd,vCnodes,vAuto,manual,vModel,vU,vRacks,vKw,vBE,vFE,vBMC,vCON,
+   gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
    ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
    interFloor,trunkLinks,risers,racks};
  }
@@ -2521,15 +2658,23 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'gpus',l:'Target GPUs',step:576,hint:'576 per SU'},
   {k:'floors',l:'Floors',step:1,hint:'vertical spread'},
   {k:'racksPerRow',l:'Racks per row',step:1,hint:'naming + runs'},
-  {k:'rowRunM',l:'Row run (m)',step:5,hint:'rack to leaf'},
+  {k:'rackPitchM',l:'Rack pitch (m)',step:0.1,hint:'0.6 = 600mm'},
+  {k:'trayRiseM',l:'Tray rise (m)',step:1,hint:'up+over+down'},
   {k:'interFloorM',l:'Inter-floor run (m)',step:5,hint:'riser length'},
   {k:'trunkFibers',l:'Trunk fibres',step:12,hint:'12/24/48/96/144'},
   {k:'spares',l:'Spares %',step:1,hint:'on all links'},
+  {k:'vastCbox',l:'VAST CBox',step:1,hint:'compute boxes'},
+  {k:'vastDbox',l:'VAST DBox/RT8B',step:1,hint:'storage enclosures'},
  ];
  const NF=[{k:'site',l:'Site'},{k:'room',l:'Room'},{k:'row',l:'First row'},
   {k:'patRack',l:'Rack pattern',wide:1},{k:'patDev',l:'Device pattern',wide:1},{k:'patPort',l:'Port pattern',wide:1}];
 
  function renderCtl(){
+  const dsel=$a('advVastDesign'), msel=$a('advVastModel');
+  if(dsel){dsel.innerHTML=Object.entries(VAST_RA).map(([k,v])=>`<option value="${k}"${(A.vastDesign||'285')===k?' selected':''}>${v.label}</option>`).join('');
+    dsel.onchange=e=>{A.vastDesign=e.target.value;save();paint();};}
+  if(msel){msel.innerHTML=Object.entries(VAST).map(([k,v])=>`<option value="${k}"${(A.vastModel||'dbox')===k?' selected':''}>${v.label}${v.verified?'':' (unverified)'}</option>`).join('');
+    msel.onchange=e=>{A.vastModel=e.target.value;save();paint();};}
   $a('advCtl').innerHTML=F.map(f=>`<div class="mem-f"><label>${f.l}</label>
     <input type="number" data-ak="${f.k}" value="${A[f.k]}" step="${f.step}"/><div class="hint">${f.hint}</div></div>`).join('');
   $a('advCtl').querySelectorAll('[data-ak]').forEach(el=>el.addEventListener('input',e=>{
@@ -2725,8 +2870,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       <td>${l.reach} m</td><td class="ok">${stock(l.reach)} m</td><td class="desc">${l.desc}<br/><span style="color:var(--faint)">${l.opt}</span></td></tr>`).join('')}
     </tbody></table></div>
    <div class="adv-key">
-     <div class="kh">Cable key — function colour is <b>site convention</b>; jacket and connector colour is <b>standards-mandated</b></div>
-     <div class="kg">${Object.entries(CCOL).map(([k,v])=>`<span class="ki"><i style="background:${v}"></i>${k}</span>`).join('')}</div>
+     <div class="kh">Cable key — colour is a <b>SKU attribute</b>, not decoration. Change any of these; the BOM splits on it.</div>
+     <div class="kg colpick">${Object.keys(CDEF).map(k=>`<span class="ki"><input type="color" data-col="${k}" value="${colOf(k)}"/><input type="text" class="cn" data-cn="${k}" value="${colName(k)}"/><b>${k}</b><em>${CDEF[k].why}</em></span>`).join('')}</div>
      <div class="kn">Per <b>TIA-598</b>: an OS2 single-mode jacket is <b style="color:#eab308">yellow</b> and an <b>APC</b> connector body is <b style="color:#22c55e">green</b> — never mixed with blue UPC. Those two are not yours to choose. Function colour is applied with boots, labels or velcro on top of a compliant jacket, and it is the layer you standardise per site.</div>
    </div>
    <div class="adv-cable-sum">
@@ -2750,6 +2895,29 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      <p>Reach is your input, not a survey. NVIDIA's DR8 optics are rated to <b>500 m over single-mode</b>, and MPO-12/APC type-B crossover jumpers are manufactured 1–500 m, so anything inside 500 m is a single hop with no mid-span. Beyond that you are into a different optic, not a longer cable.</p>
      ${d.floors>1?`<p class="callout-x">You have set <b>${d.floors} floors</b>, so leaf-to-spine crosses a riser. This model assumes <b>the spine layer sits on one floor</b> and every other floor trunks up to it — the common design, but confirm it against your actual room allocation before ordering ${d.risers} trunks.</p>`:''}
    </div>`;
+
+  $a('advCable').querySelectorAll('[data-col]').forEach(el=>el.addEventListener('input',e=>{
+   const k=e.target.dataset.col; CCOLOR[k]={...(CCOLOR[k]||{}),c:e.target.value}; saveColours(); paint();}));
+  $a('advCable').querySelectorAll('[data-cn]').forEach(el=>el.addEventListener('change',e=>{
+   const k=e.target.dataset.cn; CCOLOR[k]={...(CCOLOR[k]||{}),n:e.target.value}; saveColours(); paint();}));
+
+  // ---- storage panel ----------------------------------------------------------------
+  const sp=$a('advStorage');
+  if(sp) sp.innerHTML=`
+   <div class="callout" style="border-left-color:${d.vAuto.exact?'var(--ok)':'var(--warn)'}">
+     <div class="callout-h" style="color:${d.vAuto.exact?'var(--ok)':'var(--warn)'}">${d.manual?'Manual override in effect':'Basis: '+d.vAuto.basis}</div>
+     <p>VAST and NVIDIA's Enterprise reference architecture is built on <b>four-node scalable units</b> and its published tables stop at <b>32 nodes / 256 GPUs</b>. That is a different and much smaller SU than the DGX SuperPOD GB300 SU used above, which is 8 racks and 576 GPUs. <b>The two SU definitions are not interchangeable</b> and this tool keeps them apart deliberately.</p>
+     ${d.vModel.verified?'':`<p style="color:var(--hot)"><b>${d.vModel.label} specs are unverified.</b> ${d.vModel.note}</p>`}
+   </div>
+   <div class="mem-tbl-wrap"><table class="mem-tbl">
+     <thead><tr><th>Item</th><th>Qty</th><th>U</th><th>Ports</th><th class="desc">Basis</th></tr></thead><tbody>
+     <tr><td><b>${VAST.cbox.label}</b></td><td>${d.vc}</td><td>${d.vc*VAST.cbox.u}U</td><td>${d.vCnodes} CNodes</td><td class="desc">${VAST.cbox.note}</td></tr>
+     <tr><td><b>${d.vModel.label}</b></td><td>${d.vd}</td><td>${d.vd*d.vModel.u}U</td><td>${d.vd*d.vModel.ports.be} back-end</td><td class="desc">${d.vModel.note}</td></tr>
+     <tr><td>Back-end fabric links</td><td>${NUMF(d.vBE)}</td><td>—</td><td>100G</td><td class="desc">CNode/DNode NVMe over RDMA, internal to the cluster</td></tr>
+     <tr><td>Front-end links</td><td>${NUMF(d.vFE)}</td><td>—</td><td>100G</td><td class="desc">CNode to client / compute network</td></tr>
+     <tr><td>Storage rack load</td><td>${d.vKw} kW</td><td>${d.vU}U in ${d.vRacks} rack${d.vRacks===1?'':'s'}</td><td>—</td><td class="desc">derived from per-box figures</td></tr>
+     </tbody></table></div>
+   <div class="kn" style="margin-top:9px">Connectivity per the RA: ${d.vAuto.design.net}. The document's own OOB figures are internally inconsistent for the 2-4-3 design (states six 1Gb/s per server across four servers yet totals 48), so OOB is taken from the per-rack topology above rather than from that line.</div>`;
 
   // ---- naming preview -------------------------------------------------------------
   const r0=rackName(1), ct=devName(r0,8,'CT01'), nvs=devName(r0,20,'NVS01');
@@ -2804,11 +2972,14 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Switch',FABRIC.sw.ethSpine.model+' — Eth spine',f.ethSpine,'RA Table 4'],
    ['Switch',FABRIC.sw.oob.model+' — OOB management',d.oobCount,'one per compute rack — derived'],
    ['Optic','800G OSFP DR8 transceiver (MMS4X00-NM)',optLinks*2,'2 per optical link — derived'],
-   ['Fibre','MPO-12/APC jumper '+stock(gi('rowRunM'))+'m',d.ibDown+d.ethDown,'rack to leaf, stock length — derived'],
-   ['Fibre','MPO-12/APC jumper '+stock(gi('rowRunM')+(d.floors>1?gi('interFloorM'):0))+'m',d.ibUp+d.ethUp,'leaf to spine — derived'],
+   ['Fibre','MPO-12/APC jumper '+stock(d.rowRun)+'m',d.ibDown+d.ethDown,`rack to leaf at ${d.place.toUpperCase()} — ${d.worstHops} hops x ${d.pitch}m + ${d.rise}m tray rise`],
+   ['Fibre','MPO-12/APC jumper '+stock(d.rowRun+(d.floors>1?gi('interFloorM'):0))+'m',d.ibUp+d.ethUp,'leaf to spine — derived'],
    ['Fibre',gi('trunkFibers')+'F trunk assembly',d.risers,d.risers?`inter-floor riser, ${d.trunkLinks} links each — derived`:'single floor, none required'],
-   ['Copper','Cat6A patch (3m)',d.bmc,'BMC and switch-tray OOB — derived'],
+   ['Copper',`Cat6A patch 3m — ${colName('bmc')}`,d.bmc,`BMC / OOB. Colour ${colName('bmc')} is a SEPARATE part number — derived`],
+   ['Copper',`Cat6 rollover console — ${colName('console')}`,(d.L.find(x=>x.cls==='console')||{n:0}).n,`Serial console. Colour ${colName('console')} is a separate SKU — derived`],
    ['Copper','SFP28 DAC/AOC',d.oobUp,'SN2201 uplinks — derived'],
+   ['Storage',VAST.cbox.label,d.vc,`${d.manual?'manual override':'auto from '+(d.vAuto.exact?'RA table':'EXTRAPOLATED RA')} — ${d.vCnodes} CNodes`],
+   ['Storage',d.vModel.label,d.vd,(d.vModel.verified?'':'SPECS UNVERIFIED — ')+(d.manual?'manual override':d.vAuto.basis)],
    ['Passive','MPO-12/APC patch panel (12-port)',Math.ceil((d.ibDown+d.ibUp+d.ethDown+d.ethUp)/12),'structured field, 12 links per panel — derived'],
    ['Passive','Cable manager (1U)',(d.computeRacks+d.netRacks)*2,'2 per rack — convention'],
   ];
@@ -2852,6 +3023,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  }
 
  // ---- mode switching ---------------------------------------------------------------
+ document.querySelectorAll('#rkPlace button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#rkPlace button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); A.netPlacement=b.dataset.p; save();
+  if($a('rkAdv').style.display!=='none') paint();});
  document.querySelectorAll('#rkMode button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#rkMode button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on');

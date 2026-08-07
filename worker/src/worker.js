@@ -24,7 +24,7 @@ SCOPE — only help with:
 2. Penguin Solutions products & services: Relion (Intel Xeon) and Altus (AMD EPYC) GPU servers, ClusterWareAI / MemoryAI / ComputeAI, and their design-build-deploy-manage AI-factory model.
 3. The concepts in this sizing tool: CapEx/OpEx/TCO, buy-vs-rent economics, sovereignty, and compliance (HIPAA, FedRAMP, EU AI Act, GDPR residency).
 
-GROUNDING: You have a tool, fetch_vendor_page, that fetches a page from Penguin Solutions' site (www.penguinsolutions.com) or NVIDIA's (www.nvidia.com, docs.nvidia.com, developer.nvidia.com, resources.nvidia.com). Use it when the user asks about specific products, specs, reference architectures, or DCGM detail and you want current, accurate information rather than memory. Prefer docs.nvidia.com for NVIDIA reference architectures (GB300 NVL72, DGX SuperPOD) and DCGM field documentation. Only those exact hosts are reachable; do not attempt other URLs. When you cite a spec from NVIDIA, say it came from NVIDIA's documentation — do not present NVIDIA's published figures as Penguin Solutions' or DugganUSA's own measurements.
+GROUNDING: You have a tool, fetch_vendor_page, that fetches a page from Penguin Solutions' site (www.penguinsolutions.com) NVIDIA's (www.nvidia.com, docs.nvidia.com, developer.nvidia.com, resources.nvidia.com) or VAST Data's (vastdata.com, support.vastdata.com, kb.vastdata.com). Use it when the user asks about specific products, specs, reference architectures, or DCGM detail and you want current, accurate information rather than memory. Prefer docs.nvidia.com for NVIDIA reference architectures (GB300 NVL72, DGX SuperPOD) and DCGM field documentation. Only those exact hosts are reachable; do not attempt other URLs. When you cite a spec from NVIDIA, say it came from NVIDIA's documentation — do not present NVIDIA's published figures as Penguin Solutions' or DugganUSA's own measurements.
 
 RULES:
 - Be concise (a few tight paragraphs or a short list). Lead with the answer.
@@ -53,6 +53,11 @@ const FETCH_HOSTS = new Set([
   'docs.nvidia.com',        // enterprise reference architectures, DCGM docs
   'developer.nvidia.com',
   'resources.nvidia.com',
+  // Storage architecture for the rack planner's VAST integration.
+  'www.vastdata.com',
+  'vastdata.com',
+  'support.vastdata.com',
+  'kb.vastdata.com',
 ]);
 const HOST_LIST = [...FETCH_HOSTS].join(', ');
 
@@ -60,7 +65,7 @@ const TOOLS = [{
   type: 'function',
   function: {
     name: 'fetch_vendor_page',
-    description: `Fetch a page from Penguin Solutions' or NVIDIA's website to ground an answer in current product/spec info. Only these exact hosts are reachable: ${HOST_LIST}. Use NVIDIA's docs.nvidia.com for reference architectures and DCGM documentation, and www.penguinsolutions.com for Relion/Altus/ClusterWareAI/MemoryAI detail.`,
+    description: `Fetch a page from Penguin Solutions' or NVIDIA's website to ground an answer in current product/spec info. Only these exact hosts are reachable: ${HOST_LIST}. Use NVIDIA's docs.nvidia.com for reference architectures and DCGM documentation, www.penguinsolutions.com for Relion/Altus/ClusterWareAI/MemoryAI detail, and vastdata.com for VAST storage architecture (DASE, CBox/DBox/CNode/DNode).`,
     parameters: {
       type: 'object',
       properties: { url: { type: 'string', description: `A full https:// URL on one of: ${HOST_LIST}` } },
