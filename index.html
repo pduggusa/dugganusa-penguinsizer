@@ -620,11 +620,15 @@
           <div class="adv-ctl" id="advCtl"></div>
           <div class="adv-out" id="advOut"></div>
           <h3 class="mem-h">Wiring diagram — rows, hub placement and cable runs</h3>
-          <p class="lede">Every rack in the build, laid out in rows at your <b style="color:var(--ink)">racks-per-row</b> setting, with the network hub drawn where your <b style="color:var(--ink)">placement</b> setting puts it. Cable bundles are drawn to scale — <b style="color:var(--ink)">thickness is link count, colour is the cable colour you set</b>. Click any rack to expand its labels and per-class link breakdown. It redraws when you change racks per row, placement or colours.</p>
+          <p class="lede">Every rack in the build, laid out in rows at your <b style="color:var(--ink)">racks-per-row</b> setting, with the network hub drawn where your <b style="color:var(--ink)">placement</b> setting puts it. Cable bundles are drawn to scale — <b style="color:var(--ink)">thickness is link count, colour is the cable colour you set</b>. <b style="color:var(--ink)">Drag any rack</b> — including the VAST storage racks — to a different position and the layout, the naming sequence and every export follow it. Aisles are drawn <b style="color:var(--ink)">front-to-front and back-to-back</b> per ASHRAE TC9.9, so the cold aisle is where the intakes face each other. Click a rack to expand its labels and per-class link breakdown.</p>
           <div class="wd-tools">
             <label class="wd-t">Scale <input type="range" id="wdZoom" min="40" max="160" step="10" value="100"/></label>
             <label class="wd-t"><input type="checkbox" id="wdLabels"/> always show labels</label>
-            <span class="wd-hint" id="wdHint">click a rack for detail</span>
+            <label class="wd-t"><input type="checkbox" id="wdAisles" checked/> hot / cold aisles</label>
+            <label class="wd-t">Trunks land
+              <select id="wdSide"><option value="left">left of row</option><option value="right" selected>right of row</option><option value="both">both ends</option></select></label>
+            <button class="rk-btn" id="wdReset" style="display:none">↺ reset layout</button>
+            <span class="wd-hint" id="wdHint">click a rack for detail · drag to move it</span>
           </div>
           <div class="wd-wrap"><div id="advWiring"></div></div>
           <h3 class="mem-h">Rack elevations — reference layout</h3>
@@ -670,7 +674,7 @@
           <div class="tblwrap"><table class="rk-bom"><thead><tr><th>Qty</th><th>Link class</th><th>Speed</th><th>Media type</th><th>Length</th><th class="desc">Description</th></tr></thead><tbody id="rkBom"></tbody></table></div>
         </div>
         <footer style="margin-top:0;border:0;padding:0">
-          <span class="note">⚠ Port topology is per-architecture, not assumed. HGX node (Relion / Altus / DGX B300): 8× compute (1 rail/GPU) · 2× storage · 2× mgmt · 1× BMC · 1× SMC. GB300 NVL72 <b>per compute tray</b>: 4× ConnectX-8 compute · 2× BlueField-3 B3240 storage/N-S · 1× mgmt · 1× BMC — ×18 trays, plus rack-fixed 9× switch-tray BMC and 2× SN2201 OOB uplinks. NVLink5 GPU↔GPU is the in-rack copper cartridge backplane and is deliberately absent from the BOM. SKU roll-up rounds each computed reach <b>up</b> to a stock length, splits optical links into 2× transceiver + 1× trunk, and merges by physical part rather than by function. DTC capture 75–80% to liquid, 20–25% residual to air. Per-phase A = kW·1000 ÷ (V·√3·PF); breaker at 80% continuous; CFM = air-BTU/hr ÷ (1.08·ΔT); loop L/min = liquid-kW·60 ÷ (4.186·ΔT_water). Sizing-grade, not an electrical/mechanical stamp or a quote.</span>
+          <span class="note">⚠ Port topology is per-architecture, not assumed. HGX node (Relion / Altus / DGX B300): 8× compute (1 rail/GPU) · 2× storage · 2× mgmt · 1× BMC · 1× SMC. GB300 NVL72 <b>per compute tray</b>: 4× ConnectX-8 compute · 2× BlueField-3 B3240 storage/N-S · 1× mgmt · 1× BMC — ×18 trays, plus rack-fixed 9× switch-tray BMC and 2× SN2201 OOB uplinks. NVLink5 GPU↔GPU is the in-rack copper cartridge backplane and is deliberately absent from the BOM. SKU roll-up rounds each computed reach <b>up</b> to a stock length, splits optical links into 2× transceiver + 1× trunk, and merges by physical part rather than by function. DTC capture 75–80% to liquid, 20–25% residual to air — <b>a band from NVIDIA's DGX SuperPOD documentation, not a constant</b>; it moves with coolant supply temperature and flow. Per-phase A = kW·1000 ÷ (V·√3·PF); breaker at 80% continuous; CFM = air-BTU/hr ÷ (1.08·ΔT) — <b>the 1.08 assumes standard air density, so it understates airflow at altitude</b>; loop L/min = liquid-kW·60 ÷ (4.186·ΔT_water), and 4.186 is water — glycol changes it. Inlet-temperature envelope per <b>ASHRAE TC9.9</b> Class A1 (recommended 18–27 °C). Sources and their limits are itemised on the <b>References</b> tab. Sizing-grade, not an electrical/mechanical stamp or a quote.</span>
         </footer>
       </section>
 
@@ -1108,6 +1112,63 @@
         <footer style="margin-top:18px">
           <span class="note">⚠ <b>Three kinds of claim, kept separate on purpose.</b> <b>Vendor-published</b> figures (Penguin's 10× and 3.8×, NVIDIA's specifications) belong to those vendors — quote them with attribution and they carry that vendor's weight. <b>Peer-reviewed and independent measurement</b> (Pond, the CXL latency work, the side-channel literature) is the strongest material available and is what to lead with in a technical audience. <b>Derived</b> figures are this tool's own arithmetic on your inputs — useful for showing a customer their own situation, never for claiming a product benchmark. Presenting a derived number as a measured one is the failure mode this page is structured to prevent. Certainty capped at 95%.</span>
         </footer>
+        <h3 class="mem-h">Cooling &amp; thermal — where the aisle, airflow and liquid numbers come from</h3>
+        <p class="lede">The rack planner draws hot and cold aisles, and the per-rack calculator sizes airflow and loop flow. Both lean on published standards rather than rules of thumb, so here is what each one is and what it does <b style="color:var(--ink)">not</b> settle. None of this replaces a mechanical engineer stamping your design.</p>
+        <div class="ref-g">
+          <div class="ref-c" style="--e:var(--cool)">
+            <h4>ASHRAE TC9.9 — thermal guidelines for data processing environments</h4>
+            <div class="src">ASHRAE Technical Committee 9.9 · industry standard · paywalled publication</div>
+            <div class="ref-n"><span class="k">What this tool uses it for</span><span class="v">aisle orientation</span></div>
+            <div class="ref-n"><span class="k">Layout rule</span><span class="v">front-to-front / back-to-back</span></div>
+            <div class="ref-n"><span class="k">Class A1 recommended inlet</span><span class="v">18–27 °C</span></div>
+            <div class="ref-n"><span class="k">Class A1 allowable inlet</span><span class="v">15–32 °C</span></div>
+            <a href="https://www.ashrae.org/technical-resources/bookstore/datacom-series" target="_blank" rel="noopener">ASHRAE Datacom series →</a>
+            <div class="ref-warn">The alternating cold/hot aisle in the wiring diagram is this rule and nothing more. It does <b>not</b> model containment, CRAC/CRAH placement, plenum depth, recirculation or a CFD result — all of which change real inlet temperatures. Inlet ranges are the widely-cited A1 envelope; confirm the current edition against the published document, which is paywalled and revised.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--cool)">
+            <h4>ASHRAE 90.4 — energy standard for data centers</h4>
+            <div class="src">ASHRAE · ANSI-approved standard · paywalled publication</div>
+            <div class="ref-n"><span class="k">Governs</span><span class="v">mechanical &amp; electrical loss budgets</span></div>
+            <div class="ref-n"><span class="k">Relevance here</span><span class="v">PUE assumptions in TCO</span></div>
+            <a href="https://www.ashrae.org/technical-resources/bookstore/standards-90-1-90-4" target="_blank" rel="noopener">Standard 90.4 →</a>
+            <div class="ref-warn">This tool does not calculate compliance with 90.4. It is listed because any PUE figure you carry into a TCO argument is governed by it, and a PUE assumed rather than measured is the single most common way an on-prem TCO case is wrong.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--warn)">
+            <h4>Direct-to-chip liquid cooling — the GB300 NVL72 assumption</h4>
+            <div class="src">NVIDIA · DGX SuperPOD / GB300 NVL72 documentation · vendor-published</div>
+            <div class="ref-n"><span class="k">Heat captured to liquid</span><span class="v">75–80%</span></div>
+            <div class="ref-n"><span class="k">Residual to air</span><span class="v">20–25%</span></div>
+            <div class="ref-n"><span class="k">Rack thermal load modelled</span><span class="v">~142 kW</span></div>
+            <a href="https://docs.nvidia.com/dgx-superpod/" target="_blank" rel="noopener">NVIDIA DGX SuperPOD docs →</a>
+            <div class="ref-warn">The 75–80% capture figure is a <b>band</b>, not a constant — it moves with coolant supply temperature, flow rate and how much of the rack is actually cold-plated. The residual air load is what your CRAH still has to remove, and it is the number people forget when they hear "liquid cooled."</div>
+          </div>
+          <div class="ref-c" style="--e:var(--cool)">
+            <h4>Penguin Solutions — liquid-cooled AI factory delivery</h4>
+            <div class="src">Penguin Solutions · vendor-published</div>
+            <div class="ref-n"><span class="k">Scope</span><span class="v">design · build · deploy · manage</span></div>
+            <div class="ref-n"><span class="k">Why it matters at 142 kW/rack</span><span class="v">facility integration, not just the rack</span></div>
+            <a href="https://www.penguinsolutions.com/en-us/solutions/ai-factory" target="_blank" rel="noopener">AI factory →</a>
+            <div class="ref-warn">At NVL72 density the cooling decision stops being a rack decision and becomes a building decision — CDU placement, secondary loop capacity, water quality and leak detection. That is a conversation to have early, and it is one Penguin is set up to have; this tool only sizes the load.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--warn)">
+            <h4>Open Compute Project — cooling environments</h4>
+            <div class="src">OCP · open specifications · community-published</div>
+            <div class="ref-n"><span class="k">Covers</span><span class="v">cold plate, CDU, immersion specs</span></div>
+            <div class="ref-n"><span class="k">Status</span><span class="v">open, freely readable</span></div>
+            <a href="https://www.opencompute.org/projects/cooling-environments" target="_blank" rel="noopener">OCP cooling →</a>
+            <div class="ref-warn">Useful because it is the only major body of liquid-cooling specification you can read without a paywall. It is a specification family, not a design for your room, and OCP rack geometry is not identical to a standard 19-inch EIA cabinet.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--ok)">
+            <h4>What this tool derives itself — and its formulas</h4>
+            <div class="src">DugganUSA · derived · not a vendor figure</div>
+            <div class="ref-n"><span class="k">Airflow</span><span class="v">CFM = air-BTU/hr ÷ (1.08 · ΔT°F)</span></div>
+            <div class="ref-n"><span class="k">Loop flow</span><span class="v">L/min = kW · 60 ÷ (4.186 · ΔT°C)</span></div>
+            <div class="ref-n"><span class="k">Per-phase current</span><span class="v">A = kW · 1000 ÷ (V · √3 · PF)</span></div>
+            <div class="ref-n"><span class="k">Breaker sizing</span><span class="v">80% continuous derate</span></div>
+            <div class="ref-warn">Standard sensible-heat and specific-heat relations at sea level with water as the working fluid. The 1.08 constant assumes standard air density — at altitude it is wrong and airflow is understated. Glycol changes 4.186. These are sizing-grade, not a mechanical stamp. 95% cap.</div>
+          </div>
+        </div>
+
       </section>
 
       <!-- BUILD SHEET -->
@@ -1140,12 +1201,13 @@
         <p class="lede">Microsoft's Cloud Adoption Framework and AWS's tagging guidance both assume a <b style="color:var(--ink)">hyperscaler owns the substrate</b>. The provider asserts jurisdiction, vets the staff, controls physical custody and attests to it. A sovereign on-prem AI factory inverts that: <b style="color:var(--ink)">you are the substrate</b>, so the guarantees a cloud provider would have made on your behalf have to become properties you carry yourself. That is the whole adaptation — the four commercial categories below are lifted straight from CAF and AWS, and the fifth is the one their frameworks have no reason to include.</p>
         <div class="bs-tags" id="bsTags"></div>
         <div class="bs-tools">
-          <button class="rk-btn primary" id="bsCsv">⬇ Build sheet (CSV)</button>
+          <button class="rk-btn primary" id="bsXlsx">⬇ Workbook (XLSX — 8 sheets)</button>
+          <button class="rk-btn" id="bsCsv">⬇ Build sheet (CSV)</button>
           <button class="rk-btn" id="bsJson">⬇ Full build (JSON)</button>
           <span class="mem-local">🔒 generated in your browser · nothing uploaded</span>
         </div>
         <footer style="margin-top:18px">
-          <span class="note">⚠ Row assignment is a naive fill at your stated racks-per-row and takes no account of your actual floor plan, hot/cold aisle orientation, structural loading or CRAC placement. A GB300 NVL72 rack is roughly 1,500 kg populated, which is a structural question in many buildings before it is a networking one. Tag <b>keys</b> are recommendations; tag <b>values</b> and any enforcement policy are yours. Nothing here is a compliance attestation — a tag records an intent, it does not prove one. 95% cap.</span>
+          <span class="note">⚠ Row assignment is a fill at your stated racks-per-row, re-orderable by dragging any rack in the wiring diagram. Aisle orientation follows <b>ASHRAE TC9.9</b> front-to-front / back-to-back and nothing more — it does <b>not</b> model containment, CRAC/CRAH placement, plenum depth or recirculation, and it is not a CFD result. It also takes no account of your actual floor plan or structural loading. A GB300 NVL72 rack is roughly 1,500 kg populated, which is a structural question in many buildings before it is a networking one. Tag <b>keys</b> are recommendations; tag <b>values</b> and any enforcement policy are yours. Nothing here is a compliance attestation — a tag records an intent, it does not prove one. 95% cap.</span>
         </footer>
       </section>
 
@@ -2570,6 +2632,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    ||{gpus:4608,floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',
       netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
+      trunkRacks:4,trunkPorts:24,trunkSide:'right',rackOrder:null,aisles:1,
       site:'DC1',room:'R01',row:'A',patRack:'{site}{room}{row}{rack}',
       patDev:'{rack}U{u}{dev}',patPort:'{dev}{port}'};
  let SEL=null;
@@ -2622,7 +2685,14 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * the hub moves the BOM. */
   const hubF = place==='tor' ? 0 : Math.max(0,Math.min(1, A.hubPos==null?1:+A.hubPos));
   const worstHops = place==='tor' ? 0 : Math.ceil(Math.max(hubF,1-hubF)*(perRow-1));
-  const rowRun = place==='tor' ? 2 : +(worstHops*pitch + rise).toFixed(1);
+  /* Trunks landing at BOTH ends of the row let every rack run to its nearer end, which
+   * halves the worst-case horizontal walk. Applied to the horizontal term only — the
+   * tray rise is paid whichever end you go to. This is why the side selector moves the
+   * stock lengths in the BOM and is not a drawing preference. */
+  const trunkSide=A.trunkSide||'right';
+  const sideDiv=(trunkSide==='both'&&place!=='tor')?2:1;
+  const effHops=Math.ceil(worstHops/sideDiv);
+  const rowRun = place==='tor' ? 2 : +(effHops*pitch + rise).toFixed(1);
 
   // ---- VAST storage tier ----------------------------------------------------------
   // Auto-derives from the GPU target using the VAST/NVIDIA Enterprise RA tables, so
@@ -2702,11 +2772,56 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const racks=[];
   for(let s=0;s<suTotal;s++)
    for(let r=0;r<FABRIC.su.racks;r++)
-    racks.push({kind:'compute',vendor:'penguin',su:s+1,phase:Math.min(phases,Math.floor(s/suPerPhase)+1),idx:racks.length+1});
-  for(let n=0;n<netRacks;n++) racks.push({kind:'network',vendor:'nvidia',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(netRacks/phases)))+1),idx:racks.length+1});
-  for(let n=0;n<vRacks;n++) racks.push({kind:'storage',vendor:'vast',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(vRacks/phases)))+1),idx:racks.length+1});
+    racks.push({kind:'compute',vendor:'penguin',su:s+1,phase:Math.min(phases,Math.floor(s/suPerPhase)+1),idx:racks.length+1,key:'c'+(racks.length+1)});
+  for(let n=0;n<netRacks;n++) racks.push({kind:'network',vendor:'nvidia',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(netRacks/phases)))+1),idx:racks.length+1,key:'n'+(n+1)});
+  for(let n=0;n<vRacks;n++) racks.push({kind:'storage',vendor:'vast',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(vRacks/phases)))+1),idx:racks.length+1,key:'v'+(n+1)});
 
-  return {rowRun,place,pitch,rise,worstHops,hubF,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
+  /* Custom floor layout. Keys are stable per rack CLASS and ordinal (c7, v2, n1), not
+   * per position, so a saved layout survives a change in racks-per-row, floors or
+   * phases. Racks that exist but are not in the saved order append at the end rather
+   * than vanishing — resizing the cluster upward must never silently drop a rack. */
+  if(Array.isArray(A.rackOrder)&&A.rackOrder.length){
+   const byKey=new Map(racks.map(r=>[r.key,r])); const out=[];
+   A.rackOrder.forEach(k=>{ if(byKey.has(k)){ out.push(byKey.get(k)); byKey.delete(k); } });
+   byKey.forEach(r=>out.push(r));
+   racks.length=0; out.forEach((r,i)=>{ r.idx=i+1; racks.push(r); });
+  }
+
+  /* ---- USER-DEFINED TRUNKING -------------------------------------------------
+   * Three things a real fibre plant designer sets and this tool previously assumed:
+   *   trunkRacks  how many racks aggregate into ONE trunk run (the pod size)
+   *   trunkPorts  patch-panel positions per trunk — the panel is what you order
+   *   trunkSide   which end of the row the trunks land: left, right, or BOTH
+   * Side is not cosmetic. Landing at both ends means every rack runs to its NEARER
+   * end, which halves the worst-case horizontal reach and therefore changes the stock
+   * length on every horizontal link in the BOM. */
+  const trunkRacks=Math.max(1,gi('trunkRacks')||4);
+  const trunkPorts=Math.max(1,gi('trunkPorts')||24);
+  const trunkGroups=Math.ceil(perRow/trunkRacks);          // trunk runs per row
+  const rowTrunks=trunkGroups*totalRows;                    // horizontal trunk assemblies
+  /* Panels terminate MPO POSITIONS, not individual fibres. One 800G DR8 link occupies
+   * one MPO-12 position (8 of its 12 strands lit), so the panel count follows the LINK
+   * count. Sizing this on strand count — which the first cut did — inflated the panel
+   * BOM by 12x and produced 4,032 panels for a 79-rack build. A 24-port panel holds 24
+   * MPO positions; it does not hold 24 fibres. */
+  const portsPerRack=perRack.compute+perRack.storage;   // MPO positions per rack
+  const fibrePerRack=portsPerRack*8;                    // lit strands — reported, not used for panels
+  const panelsPerTrunk=Math.max(1,Math.ceil(trunkRacks*portsPerRack/trunkPorts));
+  const trunkPanels=panelsPerTrunk*rowTrunks;
+
+  /* ---- HOT / COLD AISLE ORIENTATION -------------------------------------------
+   * ASHRAE TC9.9 hot-aisle/cold-aisle: rows are laid FRONT-TO-FRONT and BACK-TO-BACK,
+   * so aisles alternate cold, hot, cold. Row 0 faces DOWN toward row 1, row 1 faces UP
+   * toward row 0 — that shared front-to-front gap is the COLD aisle. Rows 1 and 2 then
+   * present backs to each other: HOT aisle. The orientation is per-row and it is what
+   * decides which EDGE of a rack the cables leave from, so it is a real model value,
+   * not a decoration. Even row index faces down (+1), odd faces up (-1). */
+  const aislesOn=A.aisles!==0&&A.aisles!=='0';
+  const faceOf=r=>(r%2===0?1:-1);               // +1 = front faces down-screen
+  const aisleAt=r=>(r%2===0?'cold':'hot');       // aisle BELOW row r
+  return {trunkRacks,trunkPorts,trunkSide,trunkGroups,rowTrunks,panelsPerTrunk,trunkPanels,
+   fibrePerRack,portsPerRack,sideDiv,effHops,aislesOn,faceOf,aisleAt,
+   rowRun,place,pitch,rise,worstHops,hubF,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
    vc,vd,vCnodes,vAuto,manual,vModel,vU,vRacks,vKw,vBE,vFE,vBMC,vCON,
    gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
    ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
@@ -2773,6 +2888,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'trayRiseM',l:'Tray rise (m)',step:1,hint:'up+over+down'},
   {k:'interFloorM',l:'Inter-floor run (m)',step:5,hint:'riser length'},
   {k:'trunkFibers',l:'Trunk fibres',step:12,hint:'12/24/48/96/144'},
+  {k:'trunkRacks',l:'Racks per trunk',step:1,hint:'racks sharing one uplink'},
+  {k:'trunkPorts',l:'Panel ports / trunk',step:12,hint:'patch-panel positions'},
   {k:'ibUplinksPerLeaf',l:'IB uplinks / leaf',step:6,hint:'72 = non-blocking'},
   {k:'rowsPerFloor',l:'Rows per floor',step:1,hint:'0 = auto/even'},
   {k:'phases',l:'Build phases',step:1,hint:'staged rollout'},
@@ -3039,12 +3156,18 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    const RW=Math.max(16,Math.round(30*zoom)), RH=Math.round(58*zoom), GAP=Math.round(7*zoom);
    const HUBW=Math.round(38*zoom), PAD=Math.round(52*zoom), ROWH=Math.round(132*zoom);
    const place=d.place;
+   const aisles=d.aislesOn&&place!=='tor';
+   /* Rows are laid front-to-front / back-to-back, so half of them exit cables UPWARD
+    * into the hot aisle above. That needs headroom that the old all-downward layout
+    * never reserved. */
+   const TOPB=aisles?Math.round(40*zoom):0;
+   const RPOS=[];
    const bundles=Object.entries(d.L.reduce((a,l)=>{a[l.cls]=(a[l.cls]||0)+l.n;return a;},{}))
      .filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
    const maxN=Math.max(...bundles.map(b=>b[1]),1);
    const rowW=perRowW*(RW+GAP)+GAP;
    const FLOORPAD=d.floors>1?Math.round(46*zoom):0;
-   const W=Math.max(560,rowW+PAD*2), H=rows.length*ROWH+PAD*1.4+floorsOf.length*FLOORPAD;
+   const W=Math.max(560,rowW+PAD*2), H=rows.length*ROWH+PAD*1.4+TOPB+floorsOf.length*FLOORPAD;
    const svg=[];
    svg.push(`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${Math.round(W)}px" role="img" aria-label="Rack row wiring diagram">`);
    svg.push(`<defs><linearGradient id="hubg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs>`);
@@ -3062,17 +3185,28 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     }
    floorRows.forEach((row)=>{
     rowCounter++; const ri=rowCounter;
-    const y=PAD*0.55+ri*ROWH+fi*FLOORPAD, rowLetter=String.fromCharCode(A.row.charCodeAt(0)+ri);
-    // hub x position by placement
-    /* The hub is a MARKER for where the leaf aggregation sits, not an extra rack. The
-     * network racks are already in the rack list and drawn as racks — shifting the row to
-     * make space for a hub box double-counted them and made 5 racks per row render as 6.
-     * So it is drawn as a slim bar at the fractional position and consumes no slot. */
+    const y=PAD*0.55+TOPB+ri*ROWH+fi*FLOORPAD, rowLetter=String.fromCharCode(A.row.charCodeAt(0)+ri);
+    /* ASHRAE TC9.9 orientation. Even rows face down-screen, odd rows face up, which
+     * puts intakes together (COLD) and exhausts together (HOT) in alternating aisles.
+     * rear = -face, and the rear is where the cable exits — so the bundles for the two
+     * rows either side of a hot aisle share that aisle's overhead tray, which is how
+     * it is actually built. */
+    const face=aisles?d.faceOf(ri):1, rear=-face;
     const xOf=i=>PAD+(i*(RW+GAP));
     const rowSpan=row.length*(RW+GAP)-GAP;
     const hubX = place==='tor' ? null : PAD+d.hubF*rowSpan;
+
+    // ---- aisle band below this row (shared with the next row) ----
+    if(aisles&&ri<rows.length-1){
+     const kind=d.aisleAt(ri), cold=kind==='cold';
+     const ay=y+RH+4*zoom, ah=ROWH-RH-8*zoom;
+     svg.push(`<rect x="${PAD*0.34}" y="${ay}" width="${W-PAD*0.68}" height="${ah}" rx="${3*zoom}" fill="${cold?'#3b82f6':'#ef4444'}" opacity=".08"/>`);
+     svg.push(`<text x="${PAD*0.4}" y="${ay+ah/2+3*zoom}" fill="${cold?'#60a5fa':'#f87171'}" font-size="${Math.max(6,8*zoom)}" font-family="ui-monospace,Menlo,monospace" opacity=".85">${cold?'COLD':'HOT'}</text>`);
+     svg.push(`<text x="${W-PAD*0.4}" y="${ay+ah/2+3*zoom}" fill="${cold?'#60a5fa':'#f87171'}" font-size="${Math.max(6,8*zoom)}" font-family="ui-monospace,Menlo,monospace" text-anchor="end" opacity=".85">${cold?'intake ↔ intake':'exhaust ↔ exhaust'}</text>`);
+    }
     svg.push(`<text x="${PAD-14}" y="${y+RH*0.6}" fill="#5b6b7e" font-size="${11*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="end">${rowLetter}</text>`);
-    // cable bundles first so racks draw on top
+
+    // ---- cable bundles first so racks draw on top ----
     row.forEach((r,i)=>{
      const x=xOf(i)+RW/2;
      if(place==='tor'){
@@ -3082,24 +3216,45 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       });
       return;
      }
-     const hx=hubX;
+     const hx=hubX, edge = rear<0 ? y : y+RH;
      bundles.forEach(([cls,n],bi)=>{
       const w=Math.max(0.8,(n/maxN)*5.5*zoom);
-      const yy=y+RH+6*zoom+bi*(3.2*zoom);
-      svg.push(`<path d="M${x} ${y+RH} L${x} ${yy} L${hx} ${yy} L${hx} ${y+RH}" fill="none" stroke="${colOf(cls)}" stroke-width="${w}" opacity=".75" stroke-linejoin="round"/>`);
+      const yy = rear<0 ? edge-6*zoom-bi*(3.2*zoom) : edge+6*zoom+bi*(3.2*zoom);
+      svg.push(`<path d="M${x} ${edge} L${x} ${yy} L${hx} ${yy} L${hx} ${edge}" fill="none" stroke="${colOf(cls)}" stroke-width="${w}" opacity=".75" stroke-linejoin="round"/>`);
      });
     });
-    // racks
+
+    // ---- trunk group separators + landing points ----
+    if(place!=='tor'&&d.trunkRacks<row.length){
+     for(let g=d.trunkRacks; g<row.length; g+=d.trunkRacks){
+      const gx=xOf(g)-GAP/2;
+      svg.push(`<line x1="${gx}" y1="${y-3*zoom}" x2="${gx}" y2="${y+RH+3*zoom}" stroke="#fbbf24" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>`);
+     }
+    }
+    if(place!=='tor'){
+     const sides=d.trunkSide==='both'?['l','r']:d.trunkSide==='left'?['l']:['r'];
+     sides.forEach(sd=>{
+      const tx = sd==='l' ? PAD-GAP-Math.round(9*zoom) : PAD+rowSpan+GAP;
+      svg.push(`<g><rect x="${tx}" y="${y+RH*0.18}" width="${Math.round(9*zoom)}" height="${RH*0.64}" rx="2" fill="#78350f" stroke="#fbbf24" stroke-width="1"/>`+
+        `<text x="${tx+Math.round(4.5*zoom)}" y="${y+RH*0.5}" fill="#fbbf24" font-size="${Math.max(5,7*zoom)}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle" transform="rotate(-90 ${tx+Math.round(4.5*zoom)} ${y+RH*0.5})">TRUNK</text></g>`);
+     });
+    }
+
+    // ---- racks ----
     row.forEach((r,i)=>{
-     const x=xOf(i), sel=SEL===d.racks.indexOf(r);
+     const gi_=d.racks.indexOf(r), x=xOf(i), sel=SEL===gi_;
+     RPOS.push({i:gi_,cx:x+RW/2,cy:y+RH/2});
      const fill=r.vendor==='penguin'?'#0e3a44':r.vendor==='vast'?'#3b1d4a':'#1e2a38';
      const stroke=r.vendor==='penguin'?'#22d3ee':r.vendor==='vast'?'#a855f7':'#64748b';
      const vtag=r.vendor==='penguin'?'P':r.vendor==='vast'?'V':'N';
-     svg.push(`<g class="wd-rack${sel?' on':''}" data-wr="${d.racks.indexOf(r)}" style="cursor:pointer">
+     // the front (intake) face gets a pale strip — it is the edge that must see the cold aisle
+     const fy = face>0 ? y+RH-Math.max(2,3*zoom) : y;
+     svg.push(`<g class="wd-rack${sel?' on':''}" data-wr="${gi_}" data-key="${r.key}" style="cursor:grab;touch-action:none">
        <rect x="${x}" y="${y}" width="${RW}" height="${RH}" rx="${3*zoom}" fill="${fill}" stroke="${sel?'#fff':stroke}" stroke-width="${sel?2:1}"/>
+       ${aisles?`<rect x="${x}" y="${fy}" width="${RW}" height="${Math.max(2,3*zoom)}" fill="#93c5fd" opacity=".85"/>`:''}
        <text x="${x+RW/2}" y="${y+RH/2+4*zoom}" fill="${stroke}" font-size="${Math.max(8,13*zoom)}" font-weight="700" font-family="ui-monospace,Menlo,monospace" text-anchor="middle" opacity=".9">${vtag}</text>
        ${d.phases>1?`<text x="${x+RW/2}" y="${y+11*zoom}" fill="#fbbf24" font-size="${Math.max(6,8*zoom)}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle">P${r.phase}</text>`:''}
-       ${(alwaysLab||sel||zoom>=1.2)?`<text x="${x+RW/2}" y="${y+RH+13*zoom}" fill="#8a9bb0" font-size="${8.5*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle">${rackName(d.racks.indexOf(r)+1).slice(-5)}</text>`:''}
+       ${(alwaysLab||sel||zoom>=1.2)?`<text x="${x+RW/2}" y="${y+RH+13*zoom}" fill="#8a9bb0" font-size="${8.5*zoom}" font-family="ui-monospace,Menlo,monospace" text-anchor="middle">${rackName(gi_+1).slice(-5)}</text>`:''}
      </g>`);
     });
     if(hubX!==null){
@@ -3141,20 +3296,62 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
     });
    });
-   wd.querySelectorAll('[data-wr]').forEach(g=>g.addEventListener('click',()=>{
-    const i=+g.dataset.wr; SEL=(SEL===i?null:i); paint();
-    const el=$a('rkDetail'); if(SEL!==null&&el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
-   }));
+   /* Rack drag-to-reposition. Any rack moves — the VAST storage racks included, which is
+    * the case that matters, because storage placement relative to the compute rows is a
+    * real floor-plan decision and not something a naive fill should be deciding.
+    * A click and a drag start identically, so a 6px movement threshold separates them:
+    * under the threshold it is a selection, over it the rack is being moved. */
+   const DRAGT=6;
+   wd.querySelectorAll('[data-wr]').forEach(g=>{
+    g.addEventListener('pointerdown',ev=>{
+     ev.preventDefault();
+     const from=+g.dataset.wr;
+     const box=svgEl.getBoundingClientRect(), vb=svgEl.viewBox.baseVal;
+     const sx=vb.width/box.width, sy=vb.height/box.height;
+     const ox=ev.clientX, oy=ev.clientY; let moved=false, target=from;
+     const live=$a('wdHint');
+     const move=e2=>{
+      if(!moved&&Math.hypot(e2.clientX-ox,e2.clientY-oy)<DRAGT) return;
+      moved=true; g.style.cursor='grabbing'; g.setAttribute('opacity','.45');
+      g.setAttribute('transform',`translate(${(e2.clientX-ox)*sx} ${(e2.clientY-oy)*sy})`);
+      const vx=(e2.clientX-box.left)*sx, vy=(e2.clientY-box.top)*sy;
+      let best=null,bd=Infinity;
+      RPOS.forEach(pt=>{const dd=Math.hypot(pt.cx-vx,pt.cy-vy); if(dd<bd){bd=dd;best=pt.i;}});
+      target=best==null?from:best;
+      if(live) live.innerHTML=`moving <b>${rackName(from+1)}</b> &rarr; position <b>${target+1}</b> (<b>${rackName(target+1)}</b>) — release to drop`;
+     };
+     const up=()=>{
+      window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up);
+      if(!moved){ SEL=(SEL===from?null:from); paint();
+       const el=$a('rkDetail'); if(SEL!==null&&el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+       return; }
+      if(target!==from){
+       /* Persist the WHOLE order by stable key, not a delta. A delta against a rack list
+        * whose length changes with the GPU target is a layout that silently rots. */
+       const keys=d.racks.map(r=>r.key);
+       keys.splice(target,0,keys.splice(from,1)[0]);
+       A.rackOrder=keys; SEL=target; save();
+      }
+      paint();
+     };
+     window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
+    });
+   });
    // vendor + phase legend
    const vl=document.createElement('div'); vl.className='wd-legend';
    vl.innerHTML=`<span><i style="background:#0e3a44;border-color:#22d3ee"></i><b>P</b> Penguin Solutions — compute (${d.computeRacks} racks)</span>
      <span><i style="background:#3b1d4a;border-color:#a855f7"></i><b>V</b> VAST Data — storage (${d.vRacks} rack${d.vRacks===1?'':'s'})</span>
      <span><i style="background:#1e2a38;border-color:#64748b"></i><b>N</b> NVIDIA switching — network (${d.netRacks} racks)</span>
      <span><i style="background:url(#hubg);background:#7c3aed;border-color:#c4b5fd"></i>hub / leaf position</span>
+     ${d.aislesOn&&d.place!=='tor'?`<span><i style="background:#93c5fd;border-color:#93c5fd"></i>front / intake face — must see the cold aisle</span>
+     <span><i style="background:rgba(59,130,246,.35);border-color:#60a5fa"></i>cold aisle (intake ↔ intake)</span>
+     <span><i style="background:rgba(239,68,68,.35);border-color:#f87171"></i>hot aisle (exhaust ↔ exhaust) — carries the overhead tray for both rows</span>`:''}
+     ${d.place!=='tor'?`<span><i style="background:#78350f;border-color:#fbbf24"></i>trunk landing · dashed = trunk group boundary every ${d.trunkRacks} racks</span>`:''}
      ${d.phases>1?`<span style="color:#fbbf24"><b>P1..P${d.phases}</b> build phase badge on each rack</span>`:''}`;
    wd.appendChild(vl);
+   const rb=$a('wdReset'); if(rb) rb.style.display=Array.isArray(A.rackOrder)&&A.rackOrder.length?'':'none';
    const hint=$a('wdHint');
-   if(hint) hint.innerHTML=`${d.racks.length} racks · ${rows.length} row${rows.length===1?'':'s'} of ${perRowW} · ${d.floors>1?`<b>${d.floors} floors</b> · `:''}hub <b>${place==='tor'?'top of rack':Math.round(d.hubF*100)+'% along the row'}</b><span style="color:#c4b5fd"> · drag it</span> · ${bundles.length} cable classes · thickest bundle ${NUMF(maxN)} links`;
+   if(hint) hint.innerHTML=`${d.racks.length} racks · ${rows.length} row${rows.length===1?'':'s'} of ${perRowW} · ${d.floors>1?`<b>${d.floors} floors</b> · `:''}hub <b>${place==='tor'?'top of rack':Math.round(d.hubF*100)+'% along the row'}</b><span style="color:#c4b5fd"> · drag it</span> · trunks <b>${d.trunkSide==='both'?'both ends':d.trunkSide+' of row'}</b>, ${d.trunkRacks} racks each · ${bundles.length} cable classes${Array.isArray(A.rackOrder)&&A.rackOrder.length?' · <span style="color:#fbbf24">custom layout</span>':''}`;
   }
 
   // ---- cable colour board — deliberately large and obviously interactive ------------
@@ -3263,7 +3460,14 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Optic','800G OSFP DR8 transceiver (MMS4X00-NM)',optLinks*2,'2 per optical link — derived'],
    ['Fibre','MPO-12/APC jumper '+stock(d.rowRun)+'m',d.ibDown+d.ethDown,`rack to hub at ${d.place==='tor'?'top of rack':d.place==='mor'?'middle of row':d.place==='left'?'left of row':'right of row'} — ${d.worstHops} hops x ${d.pitch}m + ${d.rise}m tray rise`],
    ['Fibre','MPO-12/APC jumper '+stock(d.rowRun+(d.floors>1?gi('interFloorM'):0))+'m',d.ibUp+d.ethUp,'leaf to spine — derived'],
-   ['Fibre',gi('trunkFibers')+'F trunk assembly',d.risers,d.risers?`inter-floor riser, ${d.trunkLinks} links each — derived`:'single floor, none required'],
+   ['Fibre',gi('trunkFibers')+'F trunk assembly — inter-floor riser',d.risers,d.risers?`riser, ${d.trunkLinks} links each — derived`:'single floor, none required'],
+   /* Horizontal trunking is a user input now, so it has to appear as orderable parts:
+    * the trunk assemblies themselves and the patch panels that terminate them. A trunk
+    * with no panel is a coil of fibre on a floor. */
+   ['Fibre',gi('trunkFibers')+'F trunk assembly — horizontal, row to '+(d.trunkSide==='both'?'both ends':d.trunkSide),d.rowTrunks,
+     `${d.trunkGroups} per row x ${d.totalRows} rows — one per ${d.trunkRacks}-rack group`],
+   ['Fibre',d.trunkPorts+'-port MPO patch panel',d.trunkPanels,
+     `${d.panelsPerTrunk} per trunk group — ${d.portsPerRack} MPO positions/rack x ${d.trunkRacks} racks, ${d.trunkPorts} per panel`],
    ['Copper',`Cat6A patch 3m — ${colName('bmc')}`,d.bmc,`BMC / OOB. Colour ${colName('bmc')} is a SEPARATE part number — derived`],
    ['Copper',`Cat6 rollover console — ${colName('console')}`,(d.L.find(x=>x.cls==='console')||{n:0}).n,`Serial console. Colour ${colName('console')} is a separate SKU — derived`],
    ['Copper','SFP28 DAC/AOC',d.oobUp,'SN2201 uplinks — derived'],
@@ -3333,6 +3537,11 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  });
  document.addEventListener('click',e=>{if(e.target&&e.target.dataset&&e.target.dataset.close){SEL=null;paint();}});
  ['wdZoom','wdLabels'].forEach(id=>{const el=$a(id); if(el) el.addEventListener('input',()=>paint());});
+ {const el=$a('wdAisles'); if(el){el.checked=A.aisles!==0&&A.aisles!=='0';
+   el.addEventListener('change',()=>{A.aisles=el.checked?1:0;save();paint();});}}
+ {const el=$a('wdSide'); if(el){el.value=A.trunkSide||'right';
+   el.addEventListener('change',()=>{A.trunkSide=el.value;save();paint();});}}
+ {const el=$a('wdReset'); if(el) el.addEventListener('click',()=>{A.rackOrder=null;SEL=null;save();paint();});}
  $a('advImportBtn').onclick=()=>{
   const sz=window.__sizer;
   const n=$a('advImportNote');
@@ -3348,7 +3557,11 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  // published for the Build Sheet tab
  window.__ADV_MODEL=()=>{const d=derive();
   return {...d,racksPerRow:gi('racksPerRow'),rowStart:A.row,name:rackName,bom:bom(d),
-   trunkFibers:gi('trunkFibers'),
+   trunkFibers:gi('trunkFibers'),sparesPct:gi('spares'),
+   site:A.site,room:A.room,rowFirst:A.row,patRack:A.patRack,patDev:A.patDev,patPort:A.patPort,
+   customLayout:Array.isArray(A.rackOrder)&&A.rackOrder.length>0,
+   rackOrder:Array.isArray(A.rackOrder)?A.rackOrder.slice():null,
+   devName,portName,
    colourMap:Object.fromEntries(Object.keys(CDEF).map(k=>[k,{hex:colOf(k),name:colName(k)}]))};};
  // import target from Size It
  window.__advImport=(gpus,arch)=>{
@@ -3496,14 +3709,196 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  function csv(){
   const d=model(); if(!d)return '';
   const perRow=Math.max(1,d.racksPerRow);
-  const head=['rack_id','row','scalable_unit','type','gpus','load_kw'];
-  const body=d.racks.map((r,i)=>[d.name(i+1),String.fromCharCode(d.rowStart.charCodeAt(0)+Math.floor(i/perRow)),
-    r.su||'',r.kind,r.kind==='compute'?72:0,r.kind==='compute'?142:8].join(','));
-  return [head.join(','),...body].join('\\n');
+  /* Every field the planner lets you change has to be reconstructible from this file.
+   * Position, floor, aisle orientation and trunk group are all decisions now, so a CSV
+   * without them describes a different datacentre than the one on screen. */
+  const rpf=Math.max(1,d.rowsPerFloor);
+  /* Deliberately DENORMALISED, one row per rack: every dimension you would group by
+   * (vendor, row, floor, aisle, trunk, phase, SU) is its own column, and every measure
+   * (gpus, kW, U, ports) is summable. That is what makes it drop straight into a pivot
+   * without a join. trunk_id is the composite you actually want on the row axis —
+   * group number alone collides across rows. */
+  const head=['position','rack_id','vendor','row','floor','front_faces','aisle_below',
+    'trunk_group','trunk_id','trunk_landing','scalable_unit','build_phase','type',
+    'gpus','load_kw','rack_u','mpo_positions','bmc_ports','console_ports'];
+  const body=d.racks.map((r,i)=>{
+   const rowIdx=Math.floor(i/perRow), col=i%perRow;
+   const rowL=String.fromCharCode(d.rowStart.charCodeAt(0)+rowIdx);
+   const tg=Math.floor(col/Math.max(1,d.trunkRacks))+1;
+   const comp=r.kind==='compute';
+   return [i+1,d.name(i+1),r.vendor,rowL,
+    Math.floor(rowIdx/rpf)+1,
+    d.aislesOn?(d.faceOf(rowIdx)>0?'down-plan':'up-plan'):'n/a',
+    d.aislesOn?d.aisleAt(rowIdx):'n/a',
+    tg, rowL+'-T'+tg, d.trunkSide,
+    r.su||'',r.phase||1,r.kind,
+    comp?72:0, comp?142:8, 42,
+    comp?d.portsPerRack:0,
+    comp?d.perRack.bmc:1,
+    comp?1:1].join(',');
+  });
+  return [head.join(','),...body].join('\n');
  }
- const dl=(n,c,t)=>{const b=new Blob([c],{type:t});const a=document.createElement('a');
+ /* ---- XLSX ----------------------------------------------------------------------
+  * A real multi-sheet workbook, written by hand. This page is a single static file on
+  * GitHub Pages under a strict CSP with no CDN reachable, so SheetJS is not an option —
+  * and a "workbook" that is really a renamed CSV is the kind of thing that gets found
+  * out in front of a customer. So: an actual OOXML package in an actual ZIP.
+  *
+  * The ZIP is STORE-only (method 0, no deflate). Hand-rolling DEFLATE to save a few
+  * hundred KB on a file that opens once is not a trade worth making; Excel, LibreOffice
+  * and Numbers all read stored entries without complaint.
+  *
+  * Cells use inlineStr rather than a shared-string table — larger on disk, but it
+  * removes an entire class of index-drift bug, and everything here is write-once. */
+ const CRCT=(()=>{const t=new Uint32Array(256);
+   for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+ const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRCT[(c^b[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;};
+ const ENC=new TextEncoder(), U8=s=>ENC.encode(s);
+ const XE=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+   .replace(/"/g,'&quot;').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
+ function zipStore(files){
+  const now=new Date();
+  const dosT=((now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1))&0xFFFF;
+  const dosD=(((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate())&0xFFFF;
+  const parts=[], cen=[]; let off=0;
+  const w=(n)=>{const a=new Uint8Array(n);return {a,v:new DataView(a.buffer)};};
+  files.forEach(f=>{
+   const name=U8(f.name), data=f.data, crc=crc32(data);
+   const lh=w(30); lh.v.setUint32(0,0x04034b50,true); lh.v.setUint16(4,20,true);
+   lh.v.setUint16(6,0,true); lh.v.setUint16(8,0,true);
+   lh.v.setUint16(10,dosT,true); lh.v.setUint16(12,dosD,true);
+   lh.v.setUint32(14,crc,true); lh.v.setUint32(18,data.length,true);
+   lh.v.setUint32(22,data.length,true); lh.v.setUint16(26,name.length,true);
+   parts.push(lh.a,name,data);
+   const ch=w(46); ch.v.setUint32(0,0x02014b50,true); ch.v.setUint16(4,20,true);
+   ch.v.setUint16(6,20,true); ch.v.setUint16(10,0,true);
+   ch.v.setUint16(12,dosT,true); ch.v.setUint16(14,dosD,true);
+   ch.v.setUint32(16,crc,true); ch.v.setUint32(20,data.length,true);
+   ch.v.setUint32(24,data.length,true); ch.v.setUint16(28,name.length,true);
+   ch.v.setUint32(42,off,true);
+   cen.push(ch.a,name);
+   off+=30+name.length+data.length;
+  });
+  const cs=cen.reduce((a,b)=>a+b.length,0);
+  const eo=w(22); eo.v.setUint32(0,0x06054b50,true);
+  eo.v.setUint16(8,files.length,true); eo.v.setUint16(10,files.length,true);
+  eo.v.setUint32(12,cs,true); eo.v.setUint32(16,off,true);
+  return new Blob([...parts,...cen,eo.a],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+ }
+ const colRef=n=>{let r='';n++;while(n>0){const m=(n-1)%26;r=String.fromCharCode(65+m)+r;n=(n-m-1)/26;}return r;};
+ function sheetXml(rows){
+  const body=rows.map((row,ri)=>{
+   const cells=row.map((v,ci)=>{
+    const ref=colRef(ci)+(ri+1);
+    // A number that arrived as a string must still land as a number, or every SUM in
+    // the pivot silently returns 0. Blank stays blank rather than becoming "".
+    if(v===''||v==null) return '';
+    const num=(typeof v==='number')||(/^-?\d+(\.\d+)?$/.test(String(v))&&String(v).trim()!=='');
+    return num?`<c r="${ref}"><v>${Number(v)}</v></c>`
+              :`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${XE(v)}</t></is></c>`;
+   }).join('');
+   return `<row r="${ri+1}">${cells}</row>`;
+  }).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+   `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">`+
+   `<sheetData>${body}</sheetData></worksheet>`;
+ }
+ function xlsx(sheets){
+  const f=[];
+  const push=(n,x)=>f.push({name:n,data:U8(x)});
+  push('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+   `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">`+
+   `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>`+
+   `<Default Extension="xml" ContentType="application/xml"/>`+
+   `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>`+
+   sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+
+   `</Types>`);
+  push('_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+   `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`+
+   `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
+  push('xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+   `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" `+
+   `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>`+
+   sheets.map((s2,i)=>`<sheet name="${XE(s2.name).slice(0,31)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')+
+   `</sheets></workbook>`);
+  push('xl/_rels/workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+   `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`+
+   sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+
+   `</Relationships>`);
+  sheets.forEach((s2,i)=>push(`xl/worksheets/sheet${i+1}.xml`,sheetXml(s2.rows)));
+  return zipStore(f);
+ }
+ const dl=(n,c,t)=>{const b=(c instanceof Blob)?c:new Blob([c],{type:t});const a=document.createElement('a');
   a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
  $s('bsCsv').onclick=()=>{const c=csv();if(c)dl('build-sheet-'+new Date().toISOString().slice(0,10)+'.csv',c,'text/csv');};
+ /* Eight sheets, each one already pivot-shaped: dimensions in columns, measures numeric.
+  * The Racks sheet is the grain — one row per physical cabinet — and every other sheet
+  * either rolls up from it or describes a decision that produced it. */
+ $s('bsXlsx').onclick=()=>{
+  const d=model(); if(!d) return;
+  const perRow=Math.max(1,d.racksPerRow), rpf=Math.max(1,d.rowsPerFloor);
+  const rowsCsv=csv().split('\n').map(r=>r.split(','));
+  const sh=[];
+  sh.push({name:'Summary',rows:[
+   ['Metric','Value','Unit','Basis'],
+   ['Target GPUs',d.realGpus,'GPUs','rounded up to whole scalable units'],
+   ['Scalable units',Math.ceil(d.suNeeded),'SU','576 GPUs per SU'],
+   ['Compute racks',d.computeRacks,'racks','8 per SU — NVIDIA RA'],
+   ['Network racks',d.netRacks,'racks','derived from switch U at 42U/rack'],
+   ['VAST storage racks',d.vRacks,'racks','VAST/NVIDIA RA, extrapolated past 256 GPUs'],
+   ['Total racks',d.racks.length,'racks','sum'],
+   ['Rows',d.totalRows,'rows','racks / racks-per-row'],
+   ['Racks per row',perRow,'racks','user input'],
+   ['Rows per floor',d.rowsPerFloor,'rows',d.rowsPerFloorSet>0?'user constraint — drives floor count':'derived'],
+   ['Floors',d.floors,'floors',d.rowsPerFloorSet>0?'consequence of rows-per-floor':'user input'],
+   ['Network placement',d.place,'','user input'],
+   ['Hub position',Math.round(d.hubF*100),'% along row','draggable'],
+   ['Worst-case horizontal reach',d.rowRun,'m','hops x pitch + tray rise'],
+   ['Total cable links',d.totalLinks,'links','sum of all classes'],
+   ['Spares',d.spares,'links',d.sparesPct+'% of total'],
+   ['Hot/cold aisle modelled',d.aislesOn?'yes':'no','','ASHRAE TC9.9 front-to-front / back-to-back'],
+   ['Custom rack layout',d.customLayout?'yes':'no','','drag-to-reposition'],
+   ['','','',''],
+   ['NOTE','Sizing-grade. Vendor figures are labelled on the References tab. 95% cap — this is not a quote, an electrical stamp or a mechanical stamp.','','']]});
+  sh.push({name:'Racks',rows:rowsCsv});
+  sh.push({name:'BOM',rows:[['Category','Item','Qty','Basis'],...d.bom.map(r=>[r[0],r[1],r[2],r[3]])]});
+  sh.push({name:'Cables',rows:[['Class','Colour','Colour name','Links','Speed','Media','Reach m','Optic/connector','Description'],
+   ...d.L.map(l=>[l.cls,(d.colourMap[l.cls]||{}).hex||'',(d.colourMap[l.cls]||{}).name||'',l.n,l.speed,l.media,l.reach,l.opt,l.desc])]});
+  sh.push({name:'Trunking',rows:[['Metric','Value','Note'],
+   ['Racks per trunk',d.trunkRacks,'user input — the pod size'],
+   ['Panel ports per trunk',d.trunkPorts,'MPO positions per patch panel'],
+   ['Trunk landing',d.trunkSide,d.sideDiv===2?'both ends — halves the worst horizontal walk':'single end'],
+   ['Trunk groups per row',d.trunkGroups,'ceil(racks per row / racks per trunk)'],
+   ['Horizontal trunk assemblies',d.rowTrunks,'groups per row x rows'],
+   ['Panels per trunk group',d.panelsPerTrunk,'MPO positions per rack x racks per trunk / panel ports'],
+   ['Patch panels total',d.trunkPanels,'orderable part'],
+   ['MPO positions per rack',d.portsPerRack,'one position per 800G DR8 link'],
+   ['Lit fibres per rack',d.fibrePerRack,'8 strands of each MPO-12 lit'],
+   ['Trunk fibres',d.trunkFibers,'strand count of the trunk assembly'],
+   ['Links per trunk',d.trunkLinks,'floor(fibres / 8)'],
+   ['Inter-floor riser trunks',d.risers,d.floors>1?'spine assumed on floor 1':'single floor — none required']]});
+  sh.push({name:'Rows and aisles',rows:[['Row','Row letter','Floor','Front faces','Aisle below','Racks in row'],
+   ...Array.from({length:d.totalRows},(_,r)=>{
+     const n=Math.min(perRow,d.racks.length-r*perRow);
+     return [r+1,String.fromCharCode(d.rowStart.charCodeAt(0)+r),Math.floor(r/rpf)+1,
+       d.aislesOn?(d.faceOf(r)>0?'down-plan':'up-plan'):'n/a',
+       d.aislesOn?d.aisleAt(r):'n/a',n];})]});
+  sh.push({name:'Phases',rows:[['Phase','Racks','Compute racks','Network racks','Storage racks','GPUs','Load kW'],
+   ...Array.from({length:d.phases},(_,i)=>{
+     const p=i+1, rs=d.racks.filter(r=>r.phase===p);
+     const c=rs.filter(r=>r.kind==='compute').length;
+     return [p,rs.length,c,rs.filter(r=>r.kind==='network').length,
+       rs.filter(r=>r.kind==='storage').length,c*72,c*142+(rs.length-c)*8];})]});
+  sh.push({name:'Naming',rows:[['Element','Example','Pattern','Note'],
+   ['Site',d.site,'{site}','user input'],['Room',d.room,'{room}','user input'],
+   ['First row',d.rowFirst,'{row}','rows increment alphabetically'],
+   ['Rack',d.name(1),d.patRack,'no dashes — separators break DCIM and NetBIOS fields'],
+   ['Device',d.devName(d.name(1),8,'CT01'),d.patDev,'U position embedded'],
+   ['Port',d.portName(d.devName(d.name(1),8,'CT01'),'IB1'),d.patPort,'includes BMC and management ports'],
+   ...d.racks.map((r,i)=>[r.kind+' rack',d.name(i+1),d.patRack,r.vendor])]});
+  dl('ai-factory-workbook-'+new Date().toISOString().slice(0,10)+'.xlsx',xlsx(sh),'');
+ };
  $s('bsJson').onclick=()=>{const d=model();if(!d)return;
   const perRow=Math.max(1,d.racksPerRow);
   dl('build-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({
@@ -3514,7 +3909,18 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      network_placement:d.place,worst_case_reach_m:d.rowRun,rack_pitch_m:d.pitch,tray_rise_m:d.rise},
    fabric_tuning:{ib_uplinks_per_leaf:d.upPerLeaf,ib_blocking_ratio:`1:${(d.ibBlocking||1).toFixed(1)}`,
      off_spine_fraction:d.offSpineFrac,inter_floor_links:d.interFloor,riser_trunks:d.risers,
-     trunk_fibres:d.trunkFibers||null},
+     trunk_fibres:d.trunkFibers||null,
+     /* Trunking and thermal orientation are design decisions the operator made, not
+      * defaults, so they travel with the export or the export is not reproducible. */
+     trunking:{racks_per_trunk:d.trunkRacks,panel_ports:d.trunkPorts,landing:d.trunkSide,
+       groups_per_row:d.trunkGroups,row_trunk_assemblies:d.rowTrunks,
+       panels_per_trunk:d.panelsPerTrunk,patch_panels_total:d.trunkPanels,
+       mpo_positions_per_rack:d.portsPerRack,lit_fibres_per_rack:d.fibrePerRack,
+       worst_case_hops:d.effHops,both_ends_halves_horizontal_reach:d.sideDiv===2},
+     thermal:{hot_cold_aisle:!!d.aislesOn,standard:'ASHRAE TC9.9 front-to-front / back-to-back',
+       row_orientation:Array.from({length:d.totalRows},(_,r)=>({row:r+1,
+         front_faces:d.faceOf(r)>0?'down-plan':'up-plan',aisle_below:d.aisleAt(r)}))},
+     layout:{custom:d.customLayout,order:d.rackOrder}},
    storage:{cbox:d.vc,enclosures:d.vd,cnodes:d.vCnodes,model:d.vModel&&d.vModel.label,
      basis:d.vAuto&&d.vAuto.basis,extrapolated:!(d.vAuto&&d.vAuto.exact)},
    phases:{count:d.phases,su_per_phase:d.suPerPhase,
