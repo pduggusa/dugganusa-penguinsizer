@@ -1380,7 +1380,17 @@
 
 <script>
 const GPU={B300:{name:"B300 Blackwell Ultra",hbm:288,fp4:15.3,tdp:1.4,capexId:"capex300"},
-           B200:{name:"B200 Blackwell",hbm:192,fp4:9.0,tdp:1.0,capexId:"capex200"}};
+           B200:{name:"B200 Blackwell",hbm:192,fp4:9.0,tdp:1.0,capexId:"capex200"},
+           /* Hopper. FP4 is deliberately null, not zero and not a guess: H100/H200 have
+            * no FP4 datapath — that arrived with Blackwell. Every FP4-denominated figure
+            * on this card therefore reads "n/a (FP8)" instead of a fabricated number, and
+            * the exaFLOPS sizing mode refuses to quantise against it. */
+           H200:{name:"H200 Hopper",hbm:141,fp4:null,fp8:4.0,tdp:0.7,capexId:"capex200",hopper:true},
+           /* NVIDIA Vera Rubin, as carried by Dell's XE8812. Dell publishes the RACK:
+            * 144 GPUs, 300 kW+, 100% direct-liquid-cooled, ORv3. Per-GPU HBM and FP4 are
+            * not published, so they stay null and every per-GPU-denominated figure reads
+            * n/a rather than guessing. The rack numbers are real and are what size it. */
+           VR200:{name:"Vera Rubin",hbm:null,fp4:null,tdp:null,capexId:"capex300",announced:true}};
 /* `per` = GPUs in the purchasable block (NVIDIA's floor tile). `grain` = the smallest unit that
  * physically exists inside it — the GB300 NVL72's 18 compute trays (4× B300 + 2× Grace each),
  * or simply the node for HGX builds. NVIDIA's own sizers quantize to `per`; we size to `grain`. */
@@ -1401,7 +1411,14 @@ const ARCH=[
  {key:"dell-xe9680l",label:"Dell PowerEdge XE9680L",who:"Intel Xeon 6 + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"Xeon 5th Gen",cpuper:2,nvl:8,pkw:10,cool:"liquid DTC",edge:"var(--cool)",
   grain:{gpu:8,cpu:2,per:1,label:"node",pkw:10,fixedKw:0},derivedKw:true},
  {key:"dell-xe9712",label:"Dell PowerEdge XE9712",who:"GB200 NVL72 · rack-scale liquid",gpu:"B200",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:120,cool:"liquid DTC",su:8,edge:"var(--grace)",
-  grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:5,fixedKw:30},sku:"rack",derivedKw:true}
+  grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:5,fixedKw:30},sku:"rack",derivedKw:true},
+ {key:"dell-xe9680",label:"Dell PowerEdge XE9680",who:"8× H200 SXM5 · 6U air-cooled",gpu:"H200",per:8,unit:"node 6U",u:6,cpu:"Xeon 4th/5th Gen",cpuper:2,nvl:8,pkw:7.6,cool:"air",edge:"var(--warn)",
+  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:7.6,fixedKw:0},derivedKw:true,hopper:true},
+ /* Dell publishes 144 GPUs and 300 kW+ per ORv3 rack, 100% direct-liquid-cooled.
+  * 144/4 = 36 NVL4 nodes per rack; 300/36 = 8.3 kW per node. Rack figures are Dell's,
+  * the per-node split is arithmetic on them. Available early 2027. */
+ {key:"dell-xe8812",label:"Dell PowerEdge XE8812",who:"Vera Rubin NVL4 · ORv3 fanless liquid · 2027",gpu:"VR200",per:144,unit:"rack",u:48,cpu:"Vera",cpuper:36,nvl:4,pkw:300,cool:"liquid DTC",su:8,edge:"var(--grace)",
+  grain:{gpu:4,cpu:1,per:36,label:"NVL4 node",pkw:8.3,fixedKw:0},sku:"rack",derivedKw:true,roadmap:true}
 ];
 const MODELS=[
  {n:"Llama 3.1 405B",p:405,t:15},{n:"DeepSeek-V3 671B",p:671,t:14.8},{n:"Mistral Large 2",p:123,t:12},
@@ -1413,7 +1430,7 @@ const usd=n=>"$"+(n>=1e9?(n/1e9).toFixed(2)+"B":n>=1e6?(n/1e6).toFixed(1)+"M":(n
 const commas=n=>Math.round(n).toLocaleString();
 
 function targetGpus(a){const t=val("target");
- if(MODE==="gpus")return t; if(MODE==="exaflops")return Math.ceil(t*1000/GPU[a.gpu].fp4);
+ if(MODE==="gpus")return t; if(MODE==="exaflops"){const f=GPU[a.gpu].fp4; if(!f)return 0; return Math.ceil(t*1000/f);}
  if(MODE==="superpods")return t*((a.su||8)*a.per);
  if(MODE==="nodes")return t*(QUANT==="tile"?a.per:a.grain.gpu); return t;}
 
@@ -1429,7 +1446,7 @@ function size(a){
  const partial=a.unit==="rack"&&grains%gr.per!==0;
  // stranded = GPUs you buy but didn't ask for, purely from rounding up to the next floor tile
  const strandedGpus=tileGpus-grainGpus, strandedCapex=strandedGpus*val(GPU[a.gpu].capexId);
- const hbm=+(gpus*g.hbm/1000).toFixed(1), fp4=+(gpus*g.fp4/1000).toFixed(2);
+ const hbm=+(gpus*g.hbm/1000).toFixed(1), fp4=g.fp4?+(gpus*g.fp4/1000).toFixed(2):null;
  // rack-scale power is non-linear: fixed rack overhead (NVSwitch trays, power shelves) + per-tray
  const power=+(grains*gr.pkw+blocks*(gr.fixedKw||0)).toFixed(1);
  let racks,limit,chip;
@@ -1437,12 +1454,13 @@ function size(a){
  else{const byU=Math.ceil(units*a.u/RACK_U),byP=Math.ceil(power/RACK_KW);racks=Math.max(byU,byP);
    if(byP>byU){limit="POWER-limited";chip="hot";}else if(byU>byP){limit="space-limited";chip="warn";}else{limit="balanced";chip="ok";}}
  const capex=gpus*val(g.capexId), annPower=power*8760*val("pue")*val("kwh"), tco=capex+yrs*(annPower+capex*val("maint"));
- const perEF=fp4?Math.round(capex/fp4):0, storage=Math.round(gpus*val("tbg"));
+ const perEF=fp4?Math.round(capex/fp4):null, storage=Math.round(gpus*val("tbg"));
  const gpuHrs=gpus*8760*yrs*util, ownedHr=gpuHrs?tco/gpuHrs:0;
  const cloud=gpuHrs*val("cloud"), savings=cloud-tco, paybackMo=(gpus*730*util*val("cloud"))?tco/(gpus*730*util*val("cloud")):0;
  const hbmB=hbm*1e12, maxInfer=Math.round(hbmB/(2*1.3)/1e9), maxTrain=Math.round(hbmB/16/1e9);
  let trainDays=null,ckpt=null; const P=val("model"),D=val("tokens");
- if(P>0&&D>0){trainDays=+((6*P*1e9*D*1e12)/(gpus*(g.fp4/2)*1e15*val("mfu"))/86400).toFixed(1);ckpt=+(P*1e9*14/1e12).toFixed(1);}
+ if(P>0&&D>0&&g.fp4){trainDays=+((6*P*1e9*D*1e12)/(gpus*(g.fp4/2)*1e15*val("mfu"))/86400).toFixed(1);ckpt=+(P*1e9*14/1e12).toFixed(1);}
+ else if(P>0&&D>0){ckpt=+(P*1e9*14/1e12).toFixed(1);}
  return{a,g,units,gpus,cpus,hbm,fp4,power,racks,limit,chip,capex,tco,perEF,storage,ownedHr,cloud,savings,paybackMo,maxInfer,maxTrain,trainDays,ckpt,
   grains,blocks,partial,strandedGpus,strandedCapex,grainLabel:gr.label};
 }
@@ -1461,6 +1479,7 @@ function renderSize(rows){
       :`<div class="metric"><span class="k">Rounding avoided</span><span class="v" style="color:var(--ok)">${r.strandedGpus} GPU · ${usd(r.strandedCapex)} not bought</span></div>`):""}
     <div class="metric"><span class="k">Compute · HBM</span><span class="v big">${r.fp4} EF <small>FP4 · ${r.hbm}TB HBM</small></span></div>
     <div class="metric"><span class="k">Power · footprint</span><span class="v">${commas(r.power)}kW · ${r.racks} rack<span class="chip ${r.chip}">${r.limit}</span></span></div>
+    ${!r.g.fp4?`<div class="metric"><span class="k">FP4 exaFLOPS</span><span class="v" style="color:var(--warn)">n/a — ${r.g.hopper?'Hopper is FP8, there is no FP4 datapath':'not published for '+r.g.name}</span></div>`:''}
     ${r.a.derivedKw?`<div class="metric"><span class="k">⚠ Power basis</span><span class="v" style="color:var(--warn)">DERIVED, not posted</span></div>
     <div class="note" style="margin:2px 0 6px">Dell publishes PSU ratings, not a per-node operating draw — so this kW is <b>(GPUs × the accelerator's published TDP) + ~2 kW host</b>. Penguin and NVIDIA figures on the other cards are <b>posted</b>. <b style="color:var(--warn)">Do not read this as a like-for-like win:</b> ideal TDP arithmetic tends to land under a real measured figure, so the derived card is flattered. Put a Redfish-measured draw in before you take it to a customer.</div>`:''}
     ${r.limit==="space-limited"?`<div class="note" style="margin:2px 0 6px;color:var(--ok)">📐 <b>Space-limited</b> — you run out of U before you run out of power, so there is power headroom on this floor. That is the shape where <b>Partner Solutions</b> pays: denser general-purpose kit consolidated into the slack, <i>provided the platform can actually address the workload</i>. Check it on posted numbers, not derived ones.</div>`:''}
@@ -1477,7 +1496,7 @@ function renderSize(rows){
  document.querySelectorAll("#cards [data-build]").forEach(b=>b.onclick=()=>{
   const g=+b.dataset.build, arch=b.dataset.arch;
   if(!window.__advImport&&!window.__archImport){alert("Rack planner not ready — open the Rack Planner tab once, then retry.");return;}
-  const rackScale=(arch==='gb300-nvl72'||arch==='dell-xe9712');
+  const rackScale=(arch==='gb300-nvl72'||arch==='dell-xe9712'||arch==='dell-xe8812');
   const plan=window.__archPlan?window.__archPlan(arch,g):null;
   /* Simple mode lays the architecture out AS ITSELF but holds 5 racks. Advanced mode
    * scales to SuperPOD but is built on the GB300 NVL72 scalable unit and carries only
@@ -1622,6 +1641,12 @@ sync();
   "dell-xe8640": {label:"Dell PowerEdge XE8640 (4x H100)",      unit:"node", nodeU:4, gpuPer:4, pkw:4.8, weight:75,
     pkwEstimated:true, ports:{compute:4,storage:2,mgmt:2,bmc:1},
     note:"2-socket 4U, four H100 700 W SXM5, NVLink-interconnected. 4.8 kW DERIVED."},
+  "dell-xe8812": {label:"Dell PowerEdge XE8812 (Vera Rubin NVL4)", unit:"NVL4 node", nodeU:1, gpuPer:4, pkw:8.3, weight:35,
+    rackScale:true, maxNodes:36, fixedU:10, fixedKw:0, fixedWeight:220,
+    ports:{compute:4,storage:2,mgmt:1,bmc:1},
+    fixedPorts:[{cls:"mgmt",n:2,speed:"25G",desc:"ORv3 rack manager / integrated rack controller uplink"},
+                {cls:"bmc", n:2,speed:"1G", desc:"Rack-level OOB"}],
+    note:"Dell publishes 144 GPUs and 300 kW+ per ORv3 rack, 100% direct-to-chip liquid. 36 NVL4 nodes/rack and 8.3 kW/node are arithmetic on those published rack figures. Fanless — set liquid fraction to 1.0. Available early 2027."},
   "dell-xe7745": {label:"Dell PowerEdge XE7745 (8x PCIe 600 W)",unit:"node", nodeU:4, gpuPer:8, pkw:6.8, weight:75,
     pkwEstimated:true, ports:{compute:4,storage:2,mgmt:2,bmc:1},
     note:"4U air-cooled, up to eight double-wide 600 W PCIe accelerators (e.g. RTX Pro 6000 Blackwell SE). NVIDIA-Certified, named in Spectrum-X solution IDs and aligned to the 2-8-5-200 Enterprise RA. 6.8 kW DERIVED."}
@@ -1737,12 +1762,31 @@ sync();
  const sel=(k,i,vals,cur,unit)=>`<select data-k="${k}" data-i="${i}">${vals.map(v=>`<option value="${v}" ${String(v)===String(cur)?"selected":""}>${v}${unit||""}</option>`).join("")}</select>`;
  const numf=(k,i,cur,step,min,max)=>`<input type="number" data-k="${k}" data-i="${i}" value="${cur}" step="${step||1}"${min!=null?` min="${min}"`:""}${max!=null?` max="${max}"`:""}/>`;
  // ---- render ----------------------------------------------------------------------
+ /* Vendor-grouped architecture picker. Also marks which entries carry a DERIVED
+  * power figure, so the distinction survives into the place people actually pick from. */
+ const ARCHGROUPS=[
+  {g:'Penguin Solutions', keys:['relion-xe4418','altus-xe4318']},
+  {g:'NVIDIA',            keys:['dgx-b300','gb300-nvl72']},
+  {g:'Dell — GPU',        keys:['dell-xe9680','dell-xe9680l','dell-xe8640','dell-xe8812','dell-xe7745']},
+  {g:'Dell — general purpose',keys:['dell-r670','dell-r770','dell-r6725','dell-r7725']},
+  {g:'Dell — storage & fabric',keys:['dell-ps3200t','dell-s5448f']}
+ ];
+ function archSelect(i,cur){
+  const seen=new Set();
+  const groups=ARCHGROUPS.map(G=>{
+   const opts=G.keys.filter(k=>SPEC[k]).map(k=>{seen.add(k);
+    return `<option value="${k}"${k===cur?' selected':''}>${SPEC[k].label}${SPEC[k].pkwEstimated?' · est. kW':''}</option>`;}).join('');
+   return opts?`<optgroup label="${G.g}">${opts}</optgroup>`:'';}).join('');
+  const rest=Object.keys(SPEC).filter(k=>!seen.has(k))
+   .map(k=>`<option value="${k}"${k===cur?' selected':''}>${SPEC[k].label}</option>`).join('');
+  return `<select data-k="arch" data-i="${i}">${groups}${rest?`<optgroup label="Other">${rest}</optgroup>`:''}</select>`;
+ }
  function render(){
   const wrap=$id("rkRacks"); if(!wrap)return;
   wrap.innerHTML=state.racks.map((r,i)=>{const c=calc(r);
    return `<div class="rk-rack">
     <h4><span>Rack ${i+1}${state.racks.length>1?`<span style="color:var(--faint);font-weight:400"> · ${c.s.label.split(" ").slice(-1)}</span>`:""}</span>${state.racks.length>1?`<button class="x" data-del="${i}" title="remove">×</button>`:""}</h4>
-    <div class="rk-f"><label>Architecture</label>${sel("arch",i,Object.keys(SPEC),r.arch).replace(/<option value="([^"]+)"([^>]*)>[^<]*/g,(m,v,a)=>`<option value="${v}"${a}>${SPEC[v].label}`)}</div>
+    <div class="rk-f"><label>Architecture</label>${archSelect(i,r.arch)}</div>
     <div class="rk-row3">
      <div class="rk-f"><label>Rack U</label>${sel("rackU",i,[42,48,52],r.rackU,"U")}</div>
      <div class="rk-f"><label>Reserve U</label>${numf("reserveU",i,r.reserveU,1,0,20)}</div>
@@ -3119,9 +3163,16 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const suTotal=Math.ceil(suNeeded);
   const suPerPhase=Math.ceil(suTotal/phases);
   const racks=[];
+  /* Whose gear is in the compute racks depends on what you built. Hardcoding Penguin
+   * meant a floor plan of Dell kit was labelled — and colour-coded, and exported —
+   * as Penguin. Three different purchase orders and three different support contracts
+   * look identical on a drawing that gets the vendor wrong. */
+  const computeVendor=/^dell-/.test(A.arch||'')?'dell'
+    :/^(gb300|dgx)/.test(A.arch||'')?'nvidia':'penguin';
+  const computeLabel=(ARCH.find(a=>a.key===A.arch)||{}).label||'GB300 NVL72';
   for(let s=0;s<suTotal;s++)
    for(let r=0;r<FABRIC.su.racks;r++)
-    racks.push({kind:'compute',vendor:'penguin',su:s+1,phase:Math.min(phases,Math.floor(s/suPerPhase)+1),idx:racks.length+1,key:'c'+(racks.length+1)});
+    racks.push({kind:'compute',vendor:computeVendor,su:s+1,phase:Math.min(phases,Math.floor(s/suPerPhase)+1),idx:racks.length+1,key:'c'+(racks.length+1)});
   for(let n=0;n<netRacks;n++) racks.push({kind:'network',vendor:'nvidia',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(netRacks/phases)))+1),idx:racks.length+1,key:'n'+(n+1)});
   for(let n=0;n<vRacks;n++) racks.push({kind:'storage',vendor:'vast',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(vRacks/phases)))+1),idx:racks.length+1,key:'v'+(n+1)});
   for(let n=0;n<mRacks;n++) racks.push({kind:'memory',vendor:'penguin',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(mRacks/phases)))+1),idx:racks.length+1,key:'m'+(n+1)});
@@ -3234,6 +3285,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    rowRun,place,pitch,rise,worstHops,hubF,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
    vc,vd,vCnodes,vAuto,manual,vModel,vU,vRacks,vKw,vBE,vFE,vBMC,vCON,
    gpRacks,gpKW,gpLabel,gpNodes,gpKWPerRack:gpRacks?+(gpKW/gpRacks).toFixed(1):0,
+   computeVendor,computeLabel,
    gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
    ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
    interFloor,trunkLinks,risers,racks};
@@ -3589,7 +3641,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    const on=SEL===i;
    return `<button class="rk-tile ${r.kind}${on?' on':''}" data-rk="${i}">
      <span class="tn">${nm}</span>
-     <span class="tt">${r.kind==='compute'?`SU${r.su} · NVL72`:r.kind==='gp'?'general-purpose':'network'}</span>
+     <span class="tt">${r.kind==='compute'?`SU${r.su} · ${d.computeVendor==='dell'?'Dell':d.computeVendor==='nvidia'?'NVIDIA':'Penguin'}`:r.kind==='gp'?'general-purpose':'network'}</span>
      <span class="tb">${r.kind==='compute'?'72 GPU · 142 kW':r.kind==='gp'?`${d.gpLabel} · ${d.gpKWPerRack} kW`:`${FABRIC.sw.ibLeaf.model.split(' ')[0]} + SN5600D`}</span>
    </button>`;}).join('');
   renderArtOnce();
@@ -4026,7 +4078,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   }
   const dl=bands.filter(b=>b.dev);
   return `<div class="rk-card">
-    <div class="rk-cardh"><div><h4>${nm}</h4><div class="s">${r.kind==='compute'?`Scalable Unit ${r.su} · GB300 NVL72 · 72 GPU · 142 kW`:r.kind==='gp'?`General-purpose · ${d.gpLabel} · ${d.gpKWPerRack} kW — power is OUR estimate, not a Dell figure`:'Network rack · leaf, spine and OOB'}</div></div>
+    <div class="rk-cardh"><div><h4>${nm}</h4><div class="s">${r.kind==='compute'?`Scalable Unit ${r.su} · ${d.computeLabel}`:r.kind==='gp'?`General-purpose · ${d.gpLabel} · ${d.gpKWPerRack} kW — power is OUR estimate, not a Dell figure`:'Network rack · leaf, spine and OOB'}</div></div>
       <button class="rk-btn" data-close="1">close</button></div>
     <div class="rk-cardb">
       <div class="rk-elev">
@@ -4038,8 +4090,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
         <div class="rk-elevh">REAR</div>
         <div class="rk-rackbox">
           <div class="rk-band manifold" style="height:52px"><span class="ru">48</span><span class="rl">Coolant return manifold · quick-disconnects</span></div>
-          <div class="rk-band bus" style="height:${r.kind==='compute'?'160':'80'}px"><span class="ru">—</span><span class="rl">${r.kind==='compute'?'DC busbar · power shelf output':'A/B PDU feeds'}</span></div>
-          <div class="rk-band cart" style="height:${r.kind==='compute'?'190':'150'}px;background-image:url('${faceOfKind('cart')}');background-size:100% 100%;background-repeat:no-repeat"><span class="ru">—</span><span class="rl">${r.kind==='compute'?'NVLink copper cable cartridge — spine backplane, NOT a cable-BOM item':'MPO-12/APC patch field · trunk terminations'}</span></div>
+          <div class="rk-band bus" style="height:${r.kind==='compute'?'160':'80'}px"><span class="ru">—</span><span class="rl">${r.kind!=='compute'?'A/B PDU feeds':d.computeVendor==='dell'?'ORv3 DC busbar · rack power shelf':'DC busbar · power shelf output'}</span></div>
+          <div class="rk-band cart" style="height:${r.kind==='compute'?'190':'150'}px;background-image:url('${faceOfKind('cart')}');background-size:100% 100%;background-repeat:no-repeat"><span class="ru">—</span><span class="rl">${r.kind!=='compute'?'MPO-12/APC patch field · trunk terminations':d.computeVendor==='dell'?'ORv3 blind-mate power and liquid manifold — not a cable-BOM item':'NVLink copper cable cartridge — spine backplane, NOT a cable-BOM item'}</span></div>
           <div class="rk-band pdu" style="height:60px;background-image:url('${faceOfKind('pdu')}');background-size:100% 100%;background-repeat:no-repeat"><span class="ru">—</span><span class="rl">Rack PDU A / B · ${r.kind==='compute'?'busway tap-off':'IEC 60309'}</span></div>
         </div>
       </div>
@@ -4129,7 +4181,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  window.__advClearPartner=()=>{A.gpRacks=0;A.gpKW=0;A.gpNodes=0;save();};
  window.__advImport=(gpus,arch)=>{
   const g=Math.max(576,Math.min(9216,gpus));
-  A.gpus=g; save();
+  A.gpus=g; if(arch)A.arch=arch; save();
   const b=document.querySelector('#rkMode button[data-m="advanced"]'); if(b)b.click();
   const n=$a('advImportNote');
   if(n){

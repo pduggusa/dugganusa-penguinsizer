@@ -151,11 +151,70 @@ async function callMistral(env, messages, noTools) {
   return r.json();
 }
 
+/* ─── LICENCE VALIDATION ────────────────────────────────────────────────────────
+ * Deliberately NOT a paywall. The page is a static file in a public,
+ * source-available repository — any client-side lock dies in thirty seconds to
+ * exactly the audience this tool has, and gating the export would block the one
+ * user we most want using it: the person sizing their own estate, for free,
+ * forever.
+ *
+ * What a licence buys is the BYLINE. Unlicensed exports carry an evaluation
+ * banner. A consultant cannot hand that workbook to a client, which is the real
+ * commercial pressure and it needs no enforcement. A licensed key clears the
+ * banner and puts the licensee's own name on the work — buying something
+ * positive rather than removing something negative.
+ *
+ * Keys are HMAC-SHA256 signed payloads. No database, no webhooks, no
+ * subscription plumbing to babysit: Stripe payment link -> we mint a key ->
+ * this validates the signature offline. A key can be denied by adding its id to
+ * LICENCE_DENY (a comma-separated secret) without any storage at all.
+ *
+ * Key format: base64url(JSON payload) + "." + base64url(HMAC)
+ *   payload = { id, name, tier, exp }   exp = unix seconds
+ */
+const b64uDec = (s) => {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s);
+  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+};
+async function verifyLicence(env, key) {
+  if (!env.LICENCE_SECRET) return { valid: false, reason: 'Licence validation is not configured on this deployment.' };
+  if (typeof key !== 'string' || key.length > 2048) return { valid: false, reason: 'Malformed key.' };
+  const dot = key.lastIndexOf('.');
+  if (dot < 1) return { valid: false, reason: 'Malformed key — expected payload.signature.' };
+  let payloadRaw, sig, body;
+  try {
+    payloadRaw = key.slice(0, dot);
+    sig = b64uDec(key.slice(dot + 1));
+    body = new TextDecoder().decode(b64uDec(payloadRaw));
+  } catch { return { valid: false, reason: 'Malformed key encoding.' }; }
+  const mac = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.LICENCE_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+  // Constant-time comparison is SubtleCrypto.verify's job — do not hand-roll it.
+  const ok = await crypto.subtle.verify('HMAC', mac, sig, new TextEncoder().encode(payloadRaw));
+  if (!ok) return { valid: false, reason: 'Signature does not verify.' };
+  let p; try { p = JSON.parse(body); } catch { return { valid: false, reason: 'Unreadable payload.' }; }
+  const now = Math.floor(Date.now() / 1000);
+  if (p.exp && now > p.exp) return { valid: false, reason: 'Licence expired on ' + new Date(p.exp * 1000).toISOString().slice(0, 10) + '.' };
+  const deny = (env.LICENCE_DENY || '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (p.id && deny.includes(String(p.id))) return { valid: false, reason: 'Licence revoked.' };
+  return { valid: true, name: p.name || 'Licensed', tier: p.tier || 'licensed', exp: p.exp || null, id: p.id || null };
+}
+
 export default {
   async fetch(req, env) {
     const origin = req.headers.get('Origin') || '';
     if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(origin) });
     if (req.method !== 'POST') return json({ error: 'POST only' }, 405, origin);
+
+    // Licence check runs BEFORE the rate limiter — it costs nothing, calls no paid
+    // API, and a licensee re-validating on page load must never be told to slow down.
+    if (new URL(req.url).pathname === '/licence' || new URL(req.url).pathname === '/license') {
+      let lb; try { lb = await req.json(); } catch { return json({ error: 'invalid JSON' }, 400, origin); }
+      const res = await verifyLicence(env, lb && lb.key);
+      return json(res, res.valid ? 200 : 402, origin);
+    }
 
     // COST CONTROL - FAIL CLOSED.
     // This endpoint is unauthenticated and every request that gets past this point
