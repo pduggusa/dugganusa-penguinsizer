@@ -18,4 +18,4 @@ simple = { limit = 15, period = 60 }
 
 # SECRET (NOT here): set at deploy with
 #   wrangler secret put MISTRAL_API_KEY
-# value pulled from Azure KV secret `mistral-key` — never committed.
+# value pulled from Azure KV secret `mistral-api-key` — never committed.
