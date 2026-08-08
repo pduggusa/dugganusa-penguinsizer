@@ -1528,7 +1528,32 @@ sync();
     ports:{compute:4,storage:2,mgmt:1,bmc:1},
     fixedPorts:[{cls:"bmc", n:9,speed:"1G", desc:"NVLink switch-tray BMC / OOB (9 switch trays)"},
                 {cls:"mgmt",n:2,speed:"25G",desc:"In-rack SN2201 OOB switch uplink"}],
-    note:"NVLink5 GPU↔GPU = in-rack copper cartridge backplane, not cabled."}
+    note:"NVLink5 GPU↔GPU = in-rack copper cartridge backplane, not cabled."},
+  /* ---- Dell general-purpose estate (Partner Solutions tab) --------------------
+   * Form factors, PowerStore max draw and the S5448F-ON typical power are
+   * VENDOR-PUBLISHED. Per-node kW is NOT: a PSU rating is a ceiling, not a draw,
+   * and Dell publishes no typical per-workload wattage. The pkw figures below are
+   * OURS — a mid-range PSU at a ~0.55 general-purpose load factor — and are meant
+   * to be overridden with a measured draw. Set the load factor on the Partner
+   * Solutions tab and hand off from there to carry a workload-specific number. */
+  "dell-r670":  {label:"Dell PowerEdge R670 (Intel Xeon 6)", unit:"node", nodeU:1, gpuPer:0, pkw:0.8, weight:20,
+    pkwEstimated:true, ports:{compute:2,storage:2,mgmt:1,bmc:1},
+    note:"1U two-socket. 0.8 kW ESTIMATED (1500 W PSU x 0.55 load) — not a Dell figure."},
+  "dell-r770":  {label:"Dell PowerEdge R770 (Intel Xeon 6)", unit:"node", nodeU:2, gpuPer:0, pkw:1.3, weight:30,
+    pkwEstimated:true, ports:{compute:2,storage:2,mgmt:1,bmc:1},
+    note:"2U two-socket. Dell publishes 800-3200 W PSUs and Xeon 6 to 86C/172T. 1.3 kW ESTIMATED (2400 W x 0.55)."},
+  "dell-r6725": {label:"Dell PowerEdge R6725 (AMD EPYC)",    unit:"node", nodeU:1, gpuPer:0, pkw:0.8, weight:20,
+    pkwEstimated:true, ports:{compute:2,storage:2,mgmt:1,bmc:1},
+    note:"1U two-socket AMD. 0.8 kW ESTIMATED — not a Dell figure."},
+  "dell-r7725": {label:"Dell PowerEdge R7725 (AMD EPYC)",    unit:"node", nodeU:2, gpuPer:0, pkw:1.3, weight:30,
+    pkwEstimated:true, ports:{compute:2,storage:2,mgmt:1,bmc:1},
+    note:"2U two-socket AMD, up to 6 TB DDR5. Full Titanium PSU table published (3200 W = 12,000 BTU/hr). 1.3 kW ESTIMATED."},
+  "dell-ps3200t":{label:"Dell PowerStore 3200T",             unit:"appliance", nodeU:2, gpuPer:0, pkw:1.4, weight:42,
+    ports:{compute:0,storage:4,mgmt:2,bmc:2},
+    note:"1393.6 W max draw and 41.7 kg full are VENDOR-PUBLISHED. Input 240 VAC +/-10% single phase."},
+  "dell-s5448f":{label:"Dell PowerSwitch S5448F-ON",         unit:"switch", nodeU:1, gpuPer:0, pkw:0.25, weight:11,
+    ports:{compute:0,storage:0,mgmt:2,bmc:1},
+    note:"250 W typical is VENDOR-PUBLISHED. 48x 100GbE SFP56-DD + 8x 400GbE QSFP56-DD. 1U is our assumption for the class."}
  };
  const BREAKERS=[16,20,30,32,40,50,60,63,80,100,125,150,175,200,225,250,300,350,400];
  const nextBreaker=a=>BREAKERS.find(b=>b>=a)||Math.ceil(a/50)*50;
@@ -1798,6 +1823,42 @@ sync();
    r.nodes=Math.min(perRack,left); left-=r.nodes; return r;}).filter(r=>r.nodes>0);
   if(!state.racks.length)state.racks=[defRack()];
   setDirty(true);persist();render();
+ };
+ /* Bridge from the Partner Solutions tab. Same contract as the Size It import above:
+  * explicit, confirmed, capped, and it never follows the other tab silently. Compute,
+  * storage and switches go into SEPARATE racks because that is how a general-purpose
+  * estate is actually laid out, and because it keeps the per-rack power honest —
+  * a rack of PowerStore and a rack of R7725s are not the same thermal problem. */
+ window.__partnerImport=(mix)=>{
+  const want=[];
+  const pack=(arch,count,liquid)=>{
+   if(!arch||!SPEC[arch]||count<=0)return;
+   const probe={...defRack(),arch,nodes:null,liquidFrac:liquid};
+   const per=Math.max(1,calc(probe).maxSpace);
+   let left=count;
+   while(left>0){const n=Math.min(per,left);left-=n;
+    want.push({...defRack(),arch,nodes:n,liquidFrac:liquid,
+      computeSpeed:"100G",storageSpeed:"100G",mgmtSpeed:"25G",rails:1});}
+  };
+  /* Dell general-purpose PowerEdge is air-cooled by default — carrying the GPU tab’s
+   * 80% direct-to-chip default over would silently understate the air load. */
+  pack(mix.nodeArch, mix.nodes, 0);
+  pack(mix.arrayArch, mix.arrays, 0);
+  pack(mix.swArch, mix.switches, 0);
+  if(!want.length){alert("Nothing to import.");return false;}
+  const truncated=want.length>MAX_RACKS;
+  const msg=`Import from Partner Solutions:\n\n`+
+   `  ${mix.nodes} x ${SPEC[mix.nodeArch]?SPEC[mix.nodeArch].label:'compute'}\n`+
+   (mix.arrays>0?`  ${mix.arrays} x ${SPEC[mix.arrayArch]?SPEC[mix.arrayArch].label:'storage'}\n`:'')+
+   (mix.switches>0?`  ${mix.switches} x ${SPEC[mix.swArch]?SPEC[mix.swArch].label:'switch'}\n`:'')+
+   `\nThat lays out as ${want.length} rack${want.length===1?'':'s'}. `+
+   (truncated?`Simple mode holds ${MAX_RACKS}, so only the first ${MAX_RACKS} will be built.\n`:'')+
+   `\nPer-rack kW for PowerEdge is OUR estimate, not a Dell figure — override it once you have a measured draw.\n\n`+
+   `This replaces the current ${state.racks.length} rack${state.racks.length===1?'':'s'}.`;
+  if(!confirm(msg))return false;
+  state.racks=want.slice(0,MAX_RACKS);
+  setDirty(true);persist();render();
+  return true;
  };
  // ---- save / load JSON -----------------------------------------------------------
  $id("rkSave").onclick=()=>{
@@ -4900,18 +4961,26 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
      not_published:['18G per-model power and thermal data','Z9864F-ON typical power','PowerMax 8500 separate power table'],
      cap:'95% — something here is wrong; a Dell sizing engagement supersedes this tool'}
   },null,1),'application/json');};
+ /* Map the Partner catalog onto the Rack Planner's SPEC keys. Only platforms with a
+  * rack profile can be handed off — if a selection has no profile the button says so
+  * rather than reporting a success that laid out nothing. */
+ const RACKKEY={r670:'dell-r670',r770:'dell-r770',r6725:'dell-r6725',r7725:'dell-r7725'};
+ const RACKSTORE={ps3200t:'dell-ps3200t'};
+ const RACKSW={s5448f:'dell-s5448f'};
  $p('pnToRack').onclick=()=>{const r=sizeIt();
-  if(P.gen===18||r.w.gpu){alert('Nothing to send — 18G has no published power data and GPU training is sized on Size It.');return;}
-  try{
-   const K='penguin-rack-planner-v2', j=JSON.parse(localStorage.getItem(K)||'null')||{racks:[]};
-   j.partner={label:r.plat.label,nodes:r.nodes,nodeU:r.plat.u,nodeKW:r.nodeKW,
-     arrays:r.arrays,arrayLabel:r.st.label,arrayU:r.st.u,arrayKW:r.storeKW!=null?r.storeKW/r.arrays:null,
-     switches:r.switches,switchLabel:r.sw.label,switchU:r.sw.u,totalKW:r.totalKW,racks:r.racks,
-     source:'partner-solutions',stamped:new Date().toISOString()};
-   localStorage.setItem(K,JSON.stringify(j));
-   alert('Sent to the Rack Planner: '+r.nodes+' x '+r.plat.label+', '+r.arrays+' x '+r.st.label+', '+r.switches+' x '+r.sw.label+' — '+r.totalKW+' kW across '+r.racks+' rack(s).');
-   document.querySelector('#tabs button[data-v="rack"]').click();
-  }catch(e){alert('Could not hand off: '+e.message);}
+  if(P.gen===18||r.w.gpu){alert('Nothing to send — 18G has no published power data, and GPU training is sized on Size It.');return;}
+  if(!window.__partnerImport){alert('Rack Planner not ready — open that tab once, then try again.');return;}
+  const nodeArch=RACKKEY[r.plat.k], arrayArch=RACKSTORE[r.st.k], swArch=RACKSW[r.sw.k];
+  if(!nodeArch){alert(r.plat.label+' has no rack profile yet — pick another platform, or lay it out by hand in the Rack Planner.');return;}
+  const missing=[];
+  if(!arrayArch&&r.arrays>0)missing.push(r.st.label);
+  if(!swArch&&r.switches>0)missing.push(r.sw.label);
+  if(missing.length&&!confirm('No rack profile yet for: '+missing.join(', ')+
+    '.\n\nCompute will be laid out; those will be left out of the rack view rather than guessed at.\n\nContinue?'))return;
+  const ok=window.__partnerImport({nodeArch,nodes:r.nodes,
+    arrayArch:arrayArch||null,arrays:arrayArch?r.arrays:0,
+    swArch:swArch||null,switches:swArch?r.switches:0});
+  if(ok)document.querySelector('#tabs button[data-v="rack"]').click();
  };
  paintP();
 })();
