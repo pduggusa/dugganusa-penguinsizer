@@ -1467,12 +1467,31 @@ function renderSize(rows){
     <div class="metric"><span class="k">$/GPU-hr · $/EF</span><span class="v">$${r.ownedHr.toFixed(2)} · ${usd(r.perEF)}</span></div>
     <div class="metric"><span class="k">Fits infer/train</span><span class="v">≤${commas(r.maxInfer)}B / ≤${commas(r.maxTrain)}B</span></div>
     ${r.trainDays!=null?`<div class="metric"><span class="k">Train ${val("model")}B·${val("tokens")}T</span><span class="v" style="color:var(--cool)">${r.trainDays} days <small>· ckpt ${r.ckpt}TB</small></span></div>`:""}
-    <button class="card-build" data-build="${r.gpus}" data-arch="${r.a.key}" title="Open the Advanced rack planner against this build">⚙ Build this in Advanced →</button>
+    <button class="card-build" data-build="${r.gpus}" data-arch="${r.a.key}" title="Lay this build out in the Rack Planner">⚙ Build this in the Rack Planner →</button>
   </div>`).join("");
+ /* Route by SHAPE, not by habit. Advanced mode is built on the GB300 NVL72 scalable
+  * unit and carries only a GPU count, so sending a 4U-node architecture there returned
+  * an NVL72 layout with a footnote apologising for it. Anything that is not rack-scale
+  * now goes to Simple mode and is laid out AS ITSELF. */
  document.querySelectorAll("#cards [data-build]").forEach(b=>b.onclick=()=>{
-  const g=+b.dataset.build;
-  if(!window.__advImport){alert("Rack planner not ready — open the Rack Planner tab once, then retry.");return;}
-  window.__advImport(g, b.dataset.arch);
+  const g=+b.dataset.build, arch=b.dataset.arch;
+  if(!window.__advImport&&!window.__archImport){alert("Rack planner not ready — open the Rack Planner tab once, then retry.");return;}
+  const rackScale=(arch==='gb300-nvl72'||arch==='dell-xe9712');
+  const plan=window.__archPlan?window.__archPlan(arch,g):null;
+  /* Simple mode lays the architecture out AS ITSELF but holds 5 racks. Advanced mode
+   * scales to SuperPOD but is built on the GB300 NVL72 scalable unit and carries only
+   * a GPU count. So: if it fits, build it honestly in Simple. If it doesn't, Advanced
+   * is the only thing that can hold it — and it says what it changed. */
+  if(!rackScale&&plan&&plan.racksNeeded<=plan.max&&window.__archImport){
+   if(!window.__archImport(arch,g))return;
+  }else if(window.__advImport){
+   if(!rackScale&&plan&&!confirm(
+     `${plan.label} at ${g.toLocaleString()} GPUs needs ${plan.racksNeeded} racks.\n\n`+
+     `Simple mode holds ${plan.max}, so this has to go to ADVANCED — which is built on the `+
+     `GB300 NVL72 scalable unit and carries only the GPU target. The rack layout you get `+
+     `will be NVL72-shaped, NOT ${plan.label}.\n\nContinue?`))return;
+   window.__advImport(g,arch);
+  }
   document.querySelector('#tabs button[data-v="rack"]').click();
   window.scrollTo({top:0,behavior:"smooth"});
  });
@@ -1908,6 +1927,42 @@ sync();
    `This replaces the current ${state.racks.length} rack${state.racks.length===1?'':'s'}.`;
   if(!confirm(msg))return false;
   state.racks=want.slice(0,MAX_RACKS);
+  setDirty(true);persist();render();
+  return true;
+ };
+ /* Build a GPU target as real racks of a SPECIFIC architecture, in Simple mode.
+  * This exists because Advanced mode is hardwired to the GB300 NVL72 scalable unit —
+  * it carries only the GPU count, so "Build this in Advanced" from a Dell or DGX card
+  * produced an NVL72 layout with a footnote explaining why it wasn't what you asked
+  * for. A footnote is not a rack elevation. Non-rack-scale architectures come here
+  * instead and get laid out as themselves. */
+ window.__archPlan=(arch,gpus)=>{
+  const s=SPEC[arch]; if(!s)return null;
+  const per=Math.max(1,calc({...defRack(),arch,nodes:null}).maxSpace);
+  const nodesNeeded=Math.max(1,Math.ceil(gpus/Math.max(1,s.gpuPer||1)));
+  return {per,nodesNeeded,racksNeeded:Math.ceil(nodesNeeded/per),max:MAX_RACKS,label:s.label};
+ };
+ window.__archImport=(arch,gpus)=>{
+  const s=SPEC[arch]; if(!s)return false;
+  const probe={...defRack(),arch,nodes:null};
+  const per=Math.max(1,calc(probe).maxSpace);
+  const nodesNeeded=Math.max(1,Math.ceil(gpus/Math.max(1,s.gpuPer||1)));
+  const racksNeeded=Math.ceil(nodesNeeded/per);
+  const racks=Math.min(MAX_RACKS,racksNeeded);
+  const liquid=/DTC|liquid/i.test(s.note||'')?0.8:(s.rackScale?0.8:0);
+  const msg=`Build ${s.label} for ${gpus.toLocaleString()} GPUs:\n\n`+
+   `  ${nodesNeeded} x ${s.unit}${nodesNeeded===1?'':'s'} at ${s.gpuPer} GPU each\n`+
+   `  ${per} per rack -> ${racksNeeded} rack${racksNeeded===1?'':'s'}\n\n`+
+   (racksNeeded>MAX_RACKS
+     ?`Simple mode holds ${MAX_RACKS}, so ${MAX_RACKS} will be built covering ${(MAX_RACKS*per*s.gpuPer).toLocaleString()} of ${gpus.toLocaleString()} GPUs.\n\n`
+     :'')+
+   `This replaces the current ${state.racks.length} rack${state.racks.length===1?'':'s'}.`;
+  if(!confirm(msg))return false;
+  let left=Math.min(nodesNeeded,racks*per);
+  state.racks=Array.from({length:racks},()=>{const n=Math.min(per,left);left-=n;
+    return {...defRack(),arch,nodes:n,liquidFrac:liquid};}).filter(r=>r.nodes>0);
+  if(!state.racks.length)state.racks=[defRack()];
+  const sb=document.querySelector('#rkMode button[data-m="simple"]'); if(sb)sb.click();
   setDirty(true);persist();render();
   return true;
  };
