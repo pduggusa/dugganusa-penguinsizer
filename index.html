@@ -488,6 +488,12 @@
   .pn-b.e{background:rgba(251,191,36,.13);color:var(--warn);border:1px solid rgba(251,191,36,.3)}
   .pn-road{border-color:rgba(251,191,36,.35)}
   .pn-exp{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .pn-drop{border:2px dashed var(--line);border-radius:10px;padding:22px 14px;text-align:center;
+    cursor:pointer;transition:border-color .15s,background .15s;margin:10px 0}
+  .pn-drop:hover,.pn-drop.over{border-color:var(--ok);background:rgba(16,185,129,.06)}
+  .pn-drop b{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}
+  .pn-drop span{display:block;font-size:11.5px;color:var(--faint)}
+  .pn-bom,.pn-gpu,.pn-ra,.pn-res{margin:12px 0}
   @media(max-width:640px){.pn-t{font-size:11.5px}}
 </style>
 </head>
@@ -503,11 +509,11 @@
 
   <nav class="tabs" id="tabs">
     <button data-v="size" class="on">Size It</button>
+    <button data-v="partner">🤝 Partner Solutions</button>
+    <button data-v="rack">Rack Planner</button>
     <button data-v="why">Why Penguin</button>
     <button data-v="rent">Buy vs Rent</button>
     <button data-v="case">The Case</button>
-    <button data-v="rack">Rack Planner</button>
-    <button data-v="partner">🤝 Partner Solutions</button>
     <button data-v="mem">🐧 MemoryAI</button>
     <button data-v="dcgm">DCGM Upload</button>
     <button data-v="tree">🎯 Decide</button>
@@ -723,8 +729,8 @@
 
         <div class="rk-modebar">
           <span class="dt-lbl">Size from</span>
-          <div class="seg" id="pnBasis" style="max-width:420px">
-            <button data-b="profile" class="on">A workload profile</button><button data-b="array">My current array statistics</button>
+          <div class="seg" id="pnBasis" style="max-width:560px">
+            <button data-b="profile" class="on">A workload profile</button><button data-b="array">My array statistics</button><button data-b="liveoptics">📥 Live Optics export</button>
           </div>
           <span class="dt-lbl">Generation</span>
           <div class="seg" id="pnGen" style="max-width:330px">
@@ -743,6 +749,22 @@
         <h3 class="mem-h">Cabling</h3>
         <p class="lede">Per-node port topology × node count, rounded up to lengths the media is actually sold in, then merged by physical part — a 3 m QSFP56-DD DAC is one line whether it lands on storage or management.</p>
         <div class="pn-cable" id="pnCable"></div>
+
+        <h3 class="mem-h">Bill of materials</h3>
+        <p class="lede">Every orderable line the sizing implies — compute, storage, fabric, cabling, racks and power — with quantity, rack units, load and <b style="color:var(--ink)">the basis of each number</b>. Lines derived from an assumption are marked, so a line you have not verified never reaches a purchase order looking like one you have.</p>
+        <div class="pn-bom" id="pnBom"></div>
+
+        <h3 class="mem-h">Dell GPU platforms — XE8xxx / XE9xxx</h3>
+        <p class="lede">Dell's accelerated line. Form factors, GPU counts and accelerator options are <b style="color:var(--ink)">vendor-published</b>; node power is <b style="color:var(--ink)">derived</b> as (GPU count × published accelerator TDP) + host overhead, and says so. Rack-scale and roadmap parts return no wattage at all. Full GPU cluster sizing lives on <b style="color:var(--ink)">Size It</b> — this is the Dell column of that comparison.</p>
+        <div class="pn-gpu" id="pnGpu"></div>
+
+        <h3 class="mem-h">Dell AI Factory with NVIDIA — reference architectures</h3>
+        <p class="lede">Dell's validated designs, as Dell describes them. Note the tie-in: the <b style="color:var(--ink)">2-8-5-200 Enterprise RA</b> is the same NVIDIA Enterprise RA family this tool already models as VAST design profile <b style="color:var(--ink)">2-8-5</b> — so a Dell 2-8-5-200 build and the published VAST storage table line up.</p>
+        <div class="pn-ra" id="pnRa"></div>
+
+        <h3 class="mem-h">Ingest — where the real numbers come from</h3>
+        <p class="lede">The array-statistics mode above is only as good as what you feed it. These are Dell's own collectors and APIs — <b style="color:var(--ink)">use them instead of typing estimates</b>, and the sizing stops being a guess.</p>
+        <div class="pn-res" id="pnRes"></div>
 
         <h3 class="mem-h">Export</h3>
         <div class="pn-exp">
@@ -1369,7 +1391,16 @@ const ARCH=[
  {key:"relion-xe4418",label:"Penguin Relion XE4418GT",who:"Intel Xeon 6 + B300 HGX · 4U DTC",gpu:"B300",per:8,unit:"node 4U",u:4,cpu:"Xeon 6",cpuper:2,nvl:8,pkw:14,cool:"liquid DTC",edge:"var(--ok)",hero:1,
   grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14,fixedKw:0}},
  {key:"altus-xe4318",label:"Penguin Altus XE4318GTS",who:"AMD EPYC Turin + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"EPYC Turin",cpuper:2,nvl:8,pkw:10.5,cool:"liquid DTC",edge:"var(--warn)",
-  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:10.5,fixedKw:0}}
+  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:10.5,fixedKw:0}},
+ /* Dell's NVIDIA architectures, so the comparison is honest about who else builds this.
+  * Form factor, GPU count and cooling are VENDOR-PUBLISHED. Node power is DERIVED —
+  * (GPUs x NVIDIA's published accelerator TDP) + ~2 kW host — because Dell publishes
+  * PSU ratings, and a PSU rating is a ceiling, not a draw. The Partner Solutions tab
+  * carries the same derivation and says so on its face. */
+ {key:"dell-xe9680l",label:"Dell PowerEdge XE9680L",who:"Intel Xeon 6 + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"Xeon 5th Gen",cpuper:2,nvl:8,pkw:10,cool:"liquid DTC",edge:"var(--cool)",
+  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:10,fixedKw:0},derivedKw:true},
+ {key:"dell-xe9712",label:"Dell PowerEdge XE9712",who:"GB200 NVL72 · rack-scale liquid",gpu:"B200",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:120,cool:"liquid DTC",su:8,edge:"var(--grace)",
+  grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:5,fixedKw:30},sku:"rack",derivedKw:true}
 ];
 const MODELS=[
  {n:"Llama 3.1 405B",p:405,t:15},{n:"DeepSeek-V3 671B",p:671,t:14.8},{n:"Mistral Large 2",p:123,t:12},
@@ -1429,6 +1460,9 @@ function renderSize(rows){
       :`<div class="metric"><span class="k">Rounding avoided</span><span class="v" style="color:var(--ok)">${r.strandedGpus} GPU · ${usd(r.strandedCapex)} not bought</span></div>`):""}
     <div class="metric"><span class="k">Compute · HBM</span><span class="v big">${r.fp4} EF <small>FP4 · ${r.hbm}TB HBM</small></span></div>
     <div class="metric"><span class="k">Power · footprint</span><span class="v">${commas(r.power)}kW · ${r.racks} rack<span class="chip ${r.chip}">${r.limit}</span></span></div>
+    ${r.a.derivedKw?`<div class="metric"><span class="k">⚠ Power basis</span><span class="v" style="color:var(--warn)">DERIVED, not posted</span></div>
+    <div class="note" style="margin:2px 0 6px">Dell publishes PSU ratings, not a per-node operating draw — so this kW is <b>(GPUs × the accelerator's published TDP) + ~2 kW host</b>. Penguin and NVIDIA figures on the other cards are <b>posted</b>. <b style="color:var(--warn)">Do not read this as a like-for-like win:</b> ideal TDP arithmetic tends to land under a real measured figure, so the derived card is flattered. Put a Redfish-measured draw in before you take it to a customer.</div>`:''}
+    ${r.limit==="space-limited"?`<div class="note" style="margin:2px 0 6px;color:var(--ok)">📐 <b>Space-limited</b> — you run out of U before you run out of power, so there is power headroom on this floor. That is the shape where <b>Partner Solutions</b> pays: denser general-purpose kit consolidated into the slack, <i>provided the platform can actually address the workload</i>. Check it on posted numbers, not derived ones.</div>`:''}
     <div class="metric"><span class="k">CapEx · ${val("years")}yr TCO</span><span class="v">${usd(r.capex)} · <b class="big" style="font-size:13px">${usd(r.tco)}</b></span></div>
     <div class="metric"><span class="k">$/GPU-hr · $/EF</span><span class="v">$${r.ownedHr.toFixed(2)} · ${usd(r.perEF)}</span></div>
     <div class="metric"><span class="k">Fits infer/train</span><span class="v">≤${commas(r.maxInfer)}B / ≤${commas(r.maxTrain)}B</span></div>
@@ -1553,7 +1587,24 @@ sync();
     note:"1393.6 W max draw and 41.7 kg full are VENDOR-PUBLISHED. Input 240 VAC +/-10% single phase."},
   "dell-s5448f":{label:"Dell PowerSwitch S5448F-ON",         unit:"switch", nodeU:1, gpuPer:0, pkw:0.25, weight:11,
     ports:{compute:0,storage:0,mgmt:2,bmc:1},
-    note:"250 W typical is VENDOR-PUBLISHED. 48x 100GbE SFP56-DD + 8x 400GbE QSFP56-DD. 1U is our assumption for the class."}
+    note:"250 W typical is VENDOR-PUBLISHED. 48x 100GbE SFP56-DD + 8x 400GbE QSFP56-DD. 1U is our assumption for the class."},
+  /* ---- Dell GPU platforms (XE8xxx / XE9xxx) ----------------------------------
+   * Form factor, GPU count and accelerator options are VENDOR-PUBLISHED. Node kW is
+   * DERIVED: (GPU count x the silicon vendor's published accelerator TDP) + 2 kW host.
+   * That arithmetic is transparent and is why these carry a number at all — unlike
+   * the general-purpose PowerEdge rows above, where nothing but a PSU ceiling exists. */
+  "dell-xe9680": {label:"Dell PowerEdge XE9680 (8x H100/H200)", unit:"node", nodeU:6, gpuPer:8, pkw:7.6, weight:100,
+    pkwEstimated:true, ports:{compute:8,storage:2,mgmt:2,bmc:1},
+    note:"6U, eight 700 W SXM5 accelerators. 7.6 kW DERIVED (8 x 700 W + 2 kW host). Air-cooled on HPR fans — leave liquid fraction at 0."},
+  "dell-xe9680l":{label:"Dell PowerEdge XE9680L (8x B200, DTC)",unit:"node", nodeU:4, gpuPer:8, pkw:10.0,weight:110,
+    pkwEstimated:true, ports:{compute:8,storage:2,mgmt:2,bmc:1},
+    note:"4U direct-liquid-cooled, up to eight HGX B200. Six 3000 W Titanium PSUs. 10.0 kW DERIVED (8 x 1000 W + 2 kW host). Set liquid fraction ~0.8."},
+  "dell-xe8640": {label:"Dell PowerEdge XE8640 (4x H100)",      unit:"node", nodeU:4, gpuPer:4, pkw:4.8, weight:75,
+    pkwEstimated:true, ports:{compute:4,storage:2,mgmt:2,bmc:1},
+    note:"2-socket 4U, four H100 700 W SXM5, NVLink-interconnected. 4.8 kW DERIVED."},
+  "dell-xe7745": {label:"Dell PowerEdge XE7745 (8x PCIe 600 W)",unit:"node", nodeU:4, gpuPer:8, pkw:6.8, weight:75,
+    pkwEstimated:true, ports:{compute:4,storage:2,mgmt:2,bmc:1},
+    note:"4U air-cooled, up to eight double-wide 600 W PCIe accelerators (e.g. RTX Pro 6000 Blackwell SE). NVIDIA-Certified, named in Spectrum-X solution IDs and aligned to the 2-8-5-200 Enterprise RA. 6.8 kW DERIVED."}
  };
  const BREAKERS=[16,20,30,32,40,50,60,63,80,100,125,150,175,200,225,250,300,350,400];
  const nextBreaker=a=>BREAKERS.find(b=>b>=a)||Math.ceil(a/50)*50;
@@ -4572,6 +4623,81 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
    note:'Leaf for general-purpose estates. 250 W typical is vendor-published; the 1U height is our assumption for this class and is not verified.'}
  ];
 
+ /* ---- DELL GPU PLATFORMS — XE8xxx / XE9xxx ("800 and 900 series") ---------------
+  * Form factors, GPU counts, CPU generations and PSU ratings below are
+  * VENDOR-PUBLISHED. Per-node operating kW is NOT — Dell publishes PSU ratings, and
+  * a PSU rating is a ceiling. So node power here is DERIVED as
+  *   (GPU count x GPU TDP) + host overhead
+  * which is defensible, transparent, and marked ours. GPU TDPs are NVIDIA's/AMD's/
+  * Intel's own published figures, which is why they can carry the arithmetic. */
+ const HOSTKW=2.0;   // CPU, memory, NICs, fans, losses. OURS.
+ const ACCEL={
+  'H100 SXM5':700,'H200 SXM5':700,'B200 HGX':1000,'MI300X OAM':750,'Gaudi3 OAM':900,
+  'GB200 (B200)':1000,'RTX Pro 6000 PCIe':600,'L40S PCIe':350
+ };
+ const DELLGPU=[
+  {k:'xe8640', label:'PowerEdge XE8640', series:800, u:4, uV:true, sockets:2, cpu:'Intel Xeon 4th/5th Gen (to 64C)',
+   gpus:4, accel:'H100 SXM5', cool:'air', verified:true,
+   note:'2-socket 4U accelerated server. Four NVIDIA H100 700 W SXM5, NVLink-interconnected. Vendor-published.'},
+  {k:'xe8712', label:'PowerEdge XE8712', series:800, u:null, uV:false, sockets:2, cpu:'2x NVIDIA Grace CPU Superchip',
+   gpus:4, accel:'GB200 (B200)', cool:'liquid', verified:true, perRackGpus:144, perRackNodes:36, rack:'IR7000 (ORv3-inspired)',
+   note:'Highest-density GPU node Dell lists: GB200 Grace Blackwell Superchip, 2 Grace CPU Superchips + 4 NVLink-interconnected B200. Dell states up to 144 Blackwell GPUs and 36 nodes per IR7000 rack.'},
+  {k:'xe8812', label:'PowerEdge XE8812', series:800, u:null, uV:false, sockets:null, cpu:'176 CPU cores (Dell-stated)',
+   gpus:4, accel:'GB200 (B200)', cool:'liquid', verified:true, perRackGpus:144, roadmap:true,
+   note:'NVIDIA Vera Rubin NVL4. Dell states up to 144 GPUs per rack, fanless direct-liquid-cooled, 176 CPU cores and 50% more memory per socket. Announced June 2026 — treat power as unpublished.'},
+  {k:'xe9680', label:'PowerEdge XE9680', series:900, u:6, uV:true, sockets:2, cpu:'Intel Xeon 4th/5th Gen (to 64C)',
+   gpus:8, accel:'H100 SXM5', cool:'air', verified:true, psu:'2800 W Titanium, redundant hot-swap',
+   accelOpts:['H100 SXM5','H200 SXM5','MI300X OAM','Gaudi3 OAM'],
+   note:'6U flagship. Eight accelerators: HGX H100 80GB or H200 141GB (700 W SXM5), AMD Instinct MI300X 192GB (750 W OAM), or Intel Gaudi3 128GB (900 W OAM). Air-cooled on HPR gold-grade fans.'},
+  {k:'xe9680l',label:'PowerEdge XE9680L',series:900, u:4, uV:true, sockets:2, cpu:'Intel Xeon 5th Gen (to 64C/350 W)',
+   gpus:8, accel:'B200 HGX', cool:'liquid', verified:true, psu:'6x 3000 W Titanium (B200) / 6x 2800 W (H200)',
+   accelOpts:['B200 HGX','H200 SXM5'],
+   note:'4U direct-liquid-cooled. Up to eight NVIDIA HGX B200 or H200. Six Titanium PSUs — 3000 W each with B200, 2800 W with H200. Vendor-published.'},
+  {k:'xe9685l',label:'PowerEdge XE9685L',series:900, u:4, uV:false, sockets:2, cpu:'not verified here',
+   gpus:8, accel:'B200 HGX', cool:'liquid', verified:false,
+   note:'Dell publishes a chassis height of 174.3 mm (6.86 in), which is why 4U is shown — the rest of this configuration was NOT verified in this session. Confirm against the technical guide before quoting.'},
+  {k:'xe9712', label:'PowerEdge XE9712', series:900, u:null, uV:false, sockets:null, cpu:'NVIDIA Grace',
+   gpus:72, accel:'GB200 (B200)', cool:'liquid', verified:true, rackScale:true,
+   note:'NVIDIA GB200 NVL72 rack-scale, liquid-cooled. Deployed in Monash University’s MAVERIC supercomputer. Rack-scale — size it on the Size It tab alongside the NVIDIA NVL72 entry.'},
+  {k:'xe9780', label:'PowerEdge XE9780', series:900, u:null, uV:false, sockets:2, cpu:'not verified here',
+   gpus:8, accel:'H100 SXM5', cool:'air', verified:false,
+   note:'Dell describes it as a flagship 8-GPU system for training and fine-tuning in the Dell AI Factory with NVIDIA. Form factor and PSU configuration were NOT verified here.'},
+  {k:'xe7745', label:'PowerEdge XE7745', series:700, u:4, uV:true, sockets:2, cpu:'not verified here',
+   gpus:8, accel:'RTX Pro 6000 PCIe', cool:'air', verified:true,
+   note:'4U air-cooled, up to eight double-wide 600 W PCIe accelerators such as the NVIDIA RTX Pro 6000 Blackwell Server Edition. Maximum PCIe GPU density per rack. NVIDIA-Certified; named in Spectrum-X solution IDs.'},
+  {k:'r760xa', label:'PowerEdge R760xa', series:700, u:2, uV:true, sockets:2, cpu:'not verified here',
+   gpus:4, accel:'L40S PCIe', cool:'air', verified:false,
+   note:'2U GPU-accelerated workhorse used for L40S inferencing and fine-tuning in Dell AI Factory validated stacks. GPU count and TDP here are typical for the class, not verified.'}
+ ];
+ /* Node power, derived and labelled. Rack-scale entries (XE9712) and roadmap entries
+  * (XE8812) deliberately return null rather than a number. */
+ const gpuKW=g=>{
+  if(g.rackScale||g.roadmap||!g.gpus||!ACCEL[g.accel])return null;
+  return +((g.gpus*ACCEL[g.accel]/1000)+HOSTKW).toFixed(1);
+ };
+
+ /* ---- DELL AI FACTORY WITH NVIDIA — reference architectures ---------------------
+  * Dell's validated designs, as Dell describes them. The 2-8-5-200 Enterprise RA is
+  * the SAME NVIDIA Enterprise RA family this tool already models on the VAST tab as
+  * design '285' — so a Dell 2-8-5-200 build and the VAST storage table line up. */
+ const DELLRA=[
+  {label:'2-8-5-200 Enterprise RA', servers:'PowerEdge XE7740 / XE7745 (NVIDIA-Certified)',
+   fabric:'NVIDIA Spectrum-X Ethernet',
+   note:'Dell states the XE7740/XE7745 align with the 2-8-5-200 Enterprise RA configuration for validated enterprise AI scalability. This is the same RA family as the VAST design profile "2-8-5" on the Rack Planner’s storage section — 8 GPUs per node, so the published VAST storage table applies.'},
+  {label:'Spectrum-X fabric', servers:'PowerEdge XE7745 in Spectrum-X solution IDs',
+   fabric:'Non-blocking, rail-optimized spine-leaf',
+   note:'Dell describes deterministic GPU paths with RDMA/RoCEv2, PFC, adaptive routing and congestion control for LLM training. Rail-optimized means the rail count drives the leaf count — the Rack Planner’s rails-per-GPU field is the lever.'},
+  {label:'Quantum-X800 InfiniBand', servers:'Q3300-LD switch',
+   fabric:'NVIDIA Quantum-X800 InfiniBand',
+   note:'Dell states the Q3300-LD is a 100% liquid-cooled OSFP pluggable switch. A liquid-cooled switch changes the network rack’s thermal profile — it does not live on the same air budget as an SN2201.'},
+  {label:'PowerRack 9100', servers:'rack-scale integration',
+   fabric:'ORv3 / OCP standards-based',
+   note:'Dell states 300 kW+ per rack, 100% direct-liquid-cooled CPUs and GPUs, an integrated rack controller, automated leak detection, and factory integration to live workloads in just over six hours. At 300 kW a rack is a mechanical project, not an electrical one.'},
+  {label:'IR7000 rack', servers:'PowerEdge XE8712 / M7701 / M7725',
+   fabric:'OCP Open Rack v3 inspired',
+   note:'Dell states up to 36 XE8712 nodes and 144 Blackwell GPUs per IR7000 rack.'}
+ ];
+
  /* ---- AI / HPC PLATFORMS (context, not sized here) ------------------------------ */
  const AIHPC=[
   {label:'PowerEdge XE8812', note:'NVIDIA Vera Rubin NVL4. Dell states up to 144 GPUs per rack, fanless direct-liquid-cooled, 176 CPU cores.'},
@@ -4636,7 +4762,7 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
              mbps:P.mbps??w.mbps, capGB:P.capGB??w.capGB};
   const load=P.load??w.load;
   let demand;
-  if(P.basis==='array'){
+  if(P.basis==='array'||P.basis==='liveoptics'){
    /* Sized from the customer’s own array counters. Capacity and IOPS come straight
     * from what they measured; cores and memory still have to come from a profile,
     * because an array counter cannot tell you how many CPUs the hosts needed. */
@@ -4675,8 +4801,23 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
   const amps=totalKW>0?totalKW*1000/(V*(three?Math.sqrt(3):1)*P.pf):0;
   const BRK=[16,20,30,32,40,50,60,63,80,100,125,150,175,200,225,250,300,350,400];
   const breaker=BRK.find(b=>b>=amps/0.8)||Math.ceil(amps/0.8/50)*50;
-  const connector=three?(breaker<=16?'IEC 60309 16A':breaker<=32?'IEC 60309 32A':breaker<=63?'IEC 60309 63A':breaker<=125?'IEC 60309 125A':'busway tap-off')
-                      :(breaker<=20?'NEMA L6-20':breaker<=30?'NEMA L6-30':'IEC 60309 '+breaker+'A');
+  /* Single-phase matters. Not everyone sizing a build has three-phase in the room —
+   * a two-rack deployment in a converted office runs on whatever the panel already
+   * has, and telling that person "415 V three-phase" is useless. So 120 V is a first
+   * class option, the connector map covers the small-shop plugs, and the engine says
+   * out loud when the load has outgrown what a single-phase feed can actually carry. */
+  const connector=three
+   ?(breaker<=16?'IEC 60309 16A':breaker<=32?'IEC 60309 32A':breaker<=63?'IEC 60309 63A':breaker<=125?'IEC 60309 125A':'busway tap-off')
+   :(V<=120
+     ?(breaker<=15?'NEMA 5-15':breaker<=20?'NEMA 5-20':breaker<=30?'NEMA L5-30':'NEMA L5-30 ×'+Math.ceil(breaker/30))
+     :(breaker<=20?'NEMA L6-20':breaker<=30?'NEMA L6-30':breaker<=50?'NEMA L6-50':'IEC 60309 '+breaker+'A'));
+  /* Practical single-phase ceilings per feed, at 80% continuous derate:
+   * 120 V/20 A ~ 1.9 kW, 120 V/30 A ~ 2.9 kW, 208-240 V/30 A ~ 5.0-5.8 kW,
+   * 208-240 V/50 A ~ 8.3-9.6 kW. Past that you are asking a wall socket to do a
+   * busway's job. */
+  const spCeilKW=three?null:+(V*(V<=120?30:50)*0.8*P.pf/1000).toFixed(1);
+  const spOver=!three&&spCeilKW!=null&&totalKW>spCeilKW;
+  const feedsNeeded=spOver?Math.ceil(totalKW/Math.max(0.1,spCeilKW)):1;
   const feeds=P.redundancy==='2N'?2:P.redundancy==='N+1'?2:1;
   // THERMAL
   const totalBTU=totalKW*3412.14, lf=P.liquidFrac, airBTU=(1-lf)*totalBTU, liquidKW=+(lf*totalKW).toFixed(1);
@@ -4704,9 +4845,31 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
    b.qty+=l.qty;b.uses[l.cls]=(b.uses[l.cls]||0)+l.qty;}
   const bom=Object.values(bin).map(b=>{const sp=Math.ceil(b.qty*(P.sparesPct||0)/100);
    return{...b,spares:sp,total:b.qty+sp,uses:Object.keys(b.uses).sort()};}).sort((a,b)=>b.total-a.total);
+  /* ---- HARDWARE BILL OF MATERIALS -----------------------------------------------
+   * Every orderable line the sizing implies, each carrying its own basis. A line
+   * derived from an assumption must never reach a purchase order looking like a
+   * line that came from a vendor table. */
+  const hw=[];
+  const add=(cat,item,qty,uEach,kwEach,basis,est)=>hw.push({cat,item,qty,uEach,kwEach,
+    uTotal:uEach!=null?+(uEach*qty).toFixed(1):null, kwTotal:kwEach!=null?+(kwEach*qty).toFixed(2):null, basis, est:!!est});
+  add('Compute',plat.label+' — '+plat.cpu+', '+cps+'C/socket × '+plat.sockets+', '+P.ramPerNodeGB+' GB',
+    nodes,plat.u,nodeKW,'Form factor vendor-published; '+psuW+' W PSU × '+load+' load factor is OURS',true);
+  if(st.u!=null&&arrays>0) add('Storage',st.label,arrays,st.u,arrW!=null?arrW/1000:null,
+    st.vendor?'Vendor-published max draw and form factor':'NOT vendor-verified — size from a Dell quote',!st.vendor);
+  else if(arrays>0) add('Storage',st.label,arrays,null,null,'No published U or power figure — excluded from the roll-up',true);
+  add('Network',sw.label,switches,sw.u,sw.w!=null?sw.w/1000:null,
+    (sw.wVerified?'Vendor-published typical power':'Typical power NOT verified')+(sw.uVerified?'':'; rack height assumed'),!sw.wVerified||!sw.uVerified);
+  for(const b of bom) add('Cabling',b.part+' — '+b.conn+', '+b.len+' m',b.total,null,null,
+    'Rounded to stock length; '+P.sparesPct+'% spares included. Port topology is OURS',true);
+  add('Rack',P.rackU+'U rack, '+P.reserveU+'U reserved',racks,null,null,
+    rackLimit+' — '+Math.round(uTotal)+'U of '+Math.round(usableU)+'U usable per rack');
+  add('Power','Feed — '+breaker+' A '+(three?'three-phase':'single-phase')+' '+V+' V, '+connector,
+    racks*feeds*(spOver?feedsNeeded:1),null,null,
+    P.redundancy+' redundancy, 80% continuous-load derate'+(spOver?'; single-phase ceiling exceeded, feeds multiplied':''),spOver);
   return {w,plat,st,sw,per,load,demand,coresPerNode,ramPerNode,nodes,byCore,byRam,nodeLimit,psuW,nodeKW,computeKW,
     capTB,arrays,byCap,byIops,arrLimit,arrW,storeKW,storeU,fabricPorts,switches,swKW,totalKW,amps,breaker,connector,feeds,
-    totalBTU,airBTU,liquidKW,cfm,lpm,usableU,uTotal,racks,rackLimit,lines,bom,growth:P.growth,gen:P.gen};
+    totalBTU,airBTU,liquidKW,cfm,lpm,usableU,uTotal,racks,rackLimit,lines,bom,hw,three,V,
+    spCeilKW,spOver,feedsNeeded,growth:P.growth,gen:P.gen};
  }
  window.__PARTNER=sizeIt;
 
@@ -4735,6 +4898,18 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
     ${num('cores','vCPU cores',null,1)}${num('ramGB','Memory GB',null,1)}
     ${arr?'':num('iops','IOPS',null,100)}${arr?'':num('mbps','Throughput MB/s',null,10)}${arr?'':num('capGB','Capacity GB',null,10)}`}
    </div>
+   ${P.basis==='liveoptics'&&!w.gpu?`<div class="mem-panel" style="border-color:rgba(16,185,129,.4)">
+    <h5>📥 Live Optics export ${badge(true,'dell collector')}</h5>
+    <p class="note"><b>Live Optics</b> is Dell's free workload collector — the evolution of DPACK. Point it at your estate and it returns read/write IOPS, IO size, disk throughput, capacity and average daily write. Export to CSV from the <b>servers</b>, <b>disks</b> or <b>guest VMs</b> tab and drop it here.</p>
+    <p class="note" style="color:var(--warn)"><b>Dell's own guidance: run a 24-hour collect, then a 7-day collect.</b> A daily average hides the batch window, and the batch window is what sizes the array. Whatever window you used gets recorded in the export so the sizing can be audited later.</p>
+    <div class="pn-drop" id="pnDrop">
+      <input type="file" id="pnFile" accept=".csv,.txt,.json" style="display:none"/>
+      <b>Drop a Live Optics CSV here</b><span>or click to choose · parsed in your browser, never uploaded</span>
+    </div>
+    <div id="pnParse">${P.loParse?loPanel(P.loParse):''}</div>
+    <p class="note">Column names vary by export and by Live Optics version, so the parser matches on keywords (iops, throughput/MBps, capacity, latency, read) and <b>tells you exactly which columns it used</b>. If it maps something wrong, switch to “My array statistics” and type the numbers — that path is always available.</p>
+    <a href="https://www.liveoptics.com/" target="_blank" rel="noopener" class="rk-btn" style="display:inline-block;margin-top:4px;text-decoration:none">Get Live Optics →</a>
+   </div>`:''}
    ${arr&&!w.gpu?`<div class="mem-panel"><h5>Your current array</h5>
     <p class="note">Straight from your counters. ${badge(false,'yours')} A sizing from real numbers is only as good as the window they were collected over — if this is a daily average and your batch window triples it, size for the batch.</p>
     ${num('aIops','Measured IOPS',null,100)}${num('aMbps','Measured throughput MB/s',null,10)}
@@ -4765,8 +4940,8 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
    </div>
    <div class="mem-panel"><h5>Rack, power &amp; thermal</h5>
     ${num('rackU','Rack U')}${num('reserveU','Reserved U','PDU, panels, blanking')}
-    ${sel('voltage','Voltage',[208,230,400,415,480].map(v=>`<option value="${v}"${+P.voltage===v?' selected':''}>${v} V</option>`).join(''))}
-    ${sel('phase','Phase',[['1','single'],['3','three']].map(x=>`<option value="${x[0]}"${P.phase===x[0]?' selected':''}>${x[1]}</option>`).join(''))}
+    ${sel('voltage','Voltage',[120,208,230,240,400,415,480].map(v=>`<option value="${v}"${+P.voltage===v?' selected':''}>${v} V${v===120?' — small site':v===208?' — US single or three':''}</option>`).join(''),'120 V is here on purpose. Not every build has three-phase in the room.')}
+    ${sel('phase','Phase',[['1','single-phase'],['3','three-phase']].map(x=>`<option value="${x[0]}"${P.phase===x[0]?' selected':''}>${x[1]}</option>`).join(''))}
     ${sel('redundancy','Redundancy',['N','N+1','2N'].map(x=>`<option value="${x}"${P.redundancy===x?' selected':''}>${x}</option>`).join(''))}
     ${num('liquidFrac','Liquid fraction 0–1','0 for standard air-cooled PowerEdge; DTC options exist',0.05)}
     ${num('dTair','Air ΔT °F',null,1)}${num('dTwater','Water ΔT °C',null,1)}
@@ -4814,6 +4989,8 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
     ${row('Breaker',r.breaker,'A','sized at 80% continuous-load derate')}
     ${row('Connector',r.connector,'','')}
     ${row('Feeds',r.feeds,'','each carries full load at '+P.redundancy)}
+    ${!r.three?row('Single-phase ceiling',N1(r.spCeilKW),'kW/feed',(r.V<=120?'120 V at 30 A':r.V+' V at 50 A')+' × 80% derate — practical limit for one feed'):''}
+    ${r.spOver?`<tr><td colspan="4" style="padding-top:8px"><span class="pn-b e">single-phase exceeded</span> <b style="color:var(--warn)">${N1(r.totalKW)} kW will not run off one ${r.V} V single-phase feed.</b> <span class="pn-basis">You need about ${r.feedsNeeded} separate feeds, or three-phase. This is the honest wall for a small site — better to hit it here than after the kit lands.</span></td></tr>`:''}
     ${row('Racks',N(r.racks),'racks',r.rackLimit+' · '+N(r.uTotal)+'U of '+N(r.usableU)+'U usable per rack')}
    </tbody></table></div>
    <div class="mem-panel"><h5>Cooling</h5><table class="pn-t"><tbody>
@@ -4831,12 +5008,156 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
   </tbody></table>`;
  }
 
+ /* ---- Dell's own collectors and APIs. Verified to exist, with star counts, on
+  * 2026-08-08 — these are the answer to "where do the array numbers come from".
+  * The load factor this tool assumes is the weakest number in the whole engine, and
+  * iDRAC Redfish reports MEASURED wattage, so it is the one that retires it. */
+ const RES=[
+  {k:'Live Optics', kind:'collector', what:'Dell’s free SaaS workload collector — the evolution of DPACK. Point it at your estate, and it returns read/write IOPS, IO size, disk throughput and average daily write, exportable to Excel from the servers, disks, cluster-disk and guest-VM tabs.',
+   use:'This is the intended feed for “size from my current array statistics” above. Dell’s own guidance is a 24-hour collect followed by a 7-day collect to validate the sizing — which is exactly why the collection-window field is recorded in the export.',
+   url:'https://www.liveoptics.com/'},
+  {k:'iDRAC Redfish', kind:'API · 733★', what:'Dell’s scripting library for the PowerEdge iDRAC Redfish API.',
+   use:'RETIRES THE WEAKEST NUMBER IN THIS TOOL. Redfish reports measured chassis power draw, so you can replace the load factor above with what your servers actually pull instead of a fraction of a PSU rating.',
+   url:'https://github.com/dell/iDRAC-Redfish-Scripting'},
+  {k:'PyPowerStore', kind:'SDK · Python', what:'Dell’s Python library for PowerStore, including the metrics endpoints.',
+   use:'Pull per-appliance performance and capacity directly rather than transcribing a screenshot into the fields above.',
+   url:'https://github.com/dell/python-powerstore'},
+  {k:'PyU4V', kind:'SDK · Python · 48★', what:'Dell’s Python module for Unisphere for PowerMax REST.',
+   use:'PowerMax performance and capacity counters. The right source for a PowerMax refresh sizing.',
+   url:'https://github.com/dell/PyU4V'},
+  {k:'PyPowerFlex', kind:'SDK · Python', what:'Dell’s Python library for PowerFlex.',
+   use:'PowerFlex is software-defined, so its sizing is a node count — this is how you get the current one.',
+   url:'https://github.com/dell/python-powerflex'},
+  {k:'OpenManage Ansible', kind:'automation · 392★', what:'Dell OpenManage Ansible modules.',
+   use:'Fleet-wide inventory and power telemetry across an existing PowerEdge estate — the denominator for a refresh.',
+   url:'https://github.com/dell/dellemc-openmanage-ansible-modules'},
+  {k:'Dell CSM', kind:'Kubernetes · 89★', what:'Dell Container Storage Modules.',
+   use:'Relevant when the estate being sized is containerised and the storage has to present to Kubernetes.',
+   url:'https://github.com/dell/csm'}
+ ];
+ function gpuHTML(){
+  return `<table class="pn-t"><thead><tr><th>Model</th><th>Series</th><th>U</th><th>Accelerators</th><th>Cooling</th><th>Node kW</th><th>Basis</th></tr></thead><tbody>
+   ${DELLGPU.map(g=>{const kw=gpuKW(g);
+    return `<tr><td><b>${g.label}</b></td><td>${g.series===900?'900':g.series===800?'800':'700'}</td>
+     <td>${g.u?g.u+'U'+(g.uV?'':' *'):'—'}</td>
+     <td>${g.gpus}× ${g.accel}${ACCEL[g.accel]?` <span class="pn-basis">(${ACCEL[g.accel]} W)</span>`:''}</td>
+     <td>${g.cool}</td>
+     <td>${kw!=null?'<b>'+kw+' kW</b>':'<span class="pn-b e">'+(g.rackScale?'rack-scale':'not published')+'</span>'}</td>
+     <td class="pn-basis">${kw!=null?badge(false,'derived')+' GPU TDP × count + '+HOSTKW+' kW host':badge(false,g.roadmap?'roadmap':'see note')}</td></tr>
+     <tr><td colspan="7" class="pn-basis" style="padding-bottom:9px">${g.verified?badge(true,'vendor'):badge(false,'partly unverified')} ${g.note}${g.psu?' <b>PSU:</b> '+g.psu+'.':''}${g.perRackGpus?' <b>Density:</b> up to '+g.perRackGpus+' GPUs'+(g.perRackNodes?' / '+g.perRackNodes+' nodes':'')+' per '+(g.rack||'rack')+'.':''}</td></tr>`;}).join('')}
+  </tbody></table><p class="note">* rack height not verified. Accelerator TDPs are the silicon vendors' published figures (NVIDIA, AMD, Intel), which is what lets the arithmetic carry. Host overhead of ${HOSTKW} kW is ours.</p>`;
+ }
+ function raHTML(){
+  return `<div class="pn-grid">${DELLRA.map(a=>`<div class="mem-panel">
+   <h5>${a.label}</h5>
+   <div class="pn-basis" style="margin-bottom:6px"><b>${a.servers}</b> · ${a.fabric}</div>
+   <p class="note">${a.note}</p></div>`).join('')}</div>`;
+ }
+ function resHTML(){
+  return `<div class="pn-grid">${RES.map(x=>`<div class="mem-panel">
+   <h5>${x.k} <span class="pn-b v">${x.kind}</span></h5>
+   <p class="note">${x.what}</p>
+   <p class="note" style="color:var(--dim)"><b>Why it matters here:</b> ${x.use}</p>
+   <a href="${x.url}" target="_blank" rel="noopener" class="rk-btn" style="display:inline-block;margin-top:6px;text-decoration:none">Open →</a></div>`).join('')}</div>`;
+ }
+ /* ---- Live Optics CSV ingest ----------------------------------------------------
+  * Live Optics exports vary by version and by which tab you exported, so this
+  * matches column headers on keywords rather than pretending to know the schema,
+  * and then REPORTS WHICH COLUMNS IT USED. A parser that silently guesses wrong is
+  * worse than one that refuses — the number ends up in a build sheet either way. */
+ const MATCH=[
+  {f:'aIops', keys:[/\biops\b/i,/io\s*per\s*sec/i], agg:'sum',  label:'IOPS'},
+  {f:'aMbps', keys:[/mb\/?s/i,/mbps/i,/throughput/i,/bandwidth/i], agg:'sum', label:'Throughput MB/s'},
+  {f:'aCapTB',keys:[/used\s*capacity/i,/capacity.*tb/i,/\btb\b/i,/used\s*space/i], agg:'sum', label:'Capacity TB'},
+  {f:'aLatMs',keys:[/latency/i,/response\s*time/i], agg:'max', label:'Latency ms'},
+  {f:'aReadPct',keys:[/read\s*%/i,/read\s*pct/i,/%\s*read/i,/read\s*ratio/i], agg:'avg', label:'Read %'}
+ ];
+ function parseLO(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2) return {error:'That file has no data rows.'};
+  const delim=(lines[0].match(/\t/g)||[]).length>(lines[0].match(/,/g)||[]).length?'\t':',';
+  const split=l=>{const out=[];let cur='',q=false;
+   for(let i=0;i<l.length;i++){const c=l[i];
+    if(c==='"'){if(q&&l[i+1]==='"'){cur+='"';i++;}else q=!q;}
+    else if(c===delim&&!q){out.push(cur);cur='';}else cur+=c;}
+   out.push(cur);return out.map(x=>x.trim());};
+  // find the header row — Live Optics exports often carry title rows above it
+  let hi=-1,hdr=null;
+  for(let i=0;i<Math.min(25,lines.length);i++){const c=split(lines[i]);
+   if(c.length>=3&&MATCH.some(m=>c.some(h=>m.keys.some(k=>k.test(h))))){hi=i;hdr=c;break;}}
+  if(hi<0) return {error:'No recognisable columns. Looked for IOPS, throughput/MB/s, capacity, latency and read %.'};
+  const rows=lines.slice(hi+1).map(split).filter(r=>r.length===hdr.length);
+  if(!rows.length) return {error:'Found a header row but no data under it.'};
+  const found={},used={};
+  for(const m of MATCH){
+   const ci=hdr.findIndex(h=>m.keys.some(k=>k.test(h)));
+   if(ci<0) continue;
+   const nums=rows.map(r=>parseFloat(String(r[ci]).replace(/[^0-9.eE-]/g,''))).filter(n=>!isNaN(n));
+   if(!nums.length) continue;
+   const v=m.agg==='sum'?nums.reduce((a,b)=>a+b,0):m.agg==='max'?Math.max(...nums):nums.reduce((a,b)=>a+b,0)/nums.length;
+   found[m.f]=Math.round(v*100)/100; used[m.label]=hdr[ci]+' ('+m.agg+' of '+nums.length+' rows)';
+  }
+  if(!Object.keys(found).length) return {error:'Recognised the header but could not read numbers from any matching column.'};
+  return {found,used,rows:rows.length,headerRow:hi+1};
+ }
+ /* The mapping report has to SURVIVE a repaint. First cut wrote it straight into
+  * #pnParse — which lives inside #pnCtl, which paintP() rebuilds — so the panel
+  * telling you which columns were used vanished the instant the numbers landed.
+  * The values stayed and the evidence disappeared, which is the worst combination.
+  * So the parse result is state now, and renders from state. */
+ function loPanel(res){
+  if(res.error) return `<div class="mem-panel" style="border-color:rgba(239,68,68,.45);margin-top:10px"><h5 style="color:var(--hot)">Could not read that export</h5><p class="note">${res.error}</p><p class="note">Switch to <b>My array statistics</b> and type the figures — that path always works and the sizing is identical.</p></div>`;
+  return `<div class="mem-panel" style="border-color:rgba(16,185,129,.45);margin-top:10px">
+   <h5 style="color:var(--ok)">✓ Read ${res.rows.toLocaleString()} rows · header on line ${res.headerRow}</h5>
+   <table class="pn-t"><thead><tr><th>Field</th><th>Value</th><th>Column used</th></tr></thead><tbody>
+   ${Object.entries(res.used).map(([k,v])=>{const m=MATCH.find(x=>x.label===k);
+     return `<tr><td>${k}</td><td><b>${(P[m.f]||0).toLocaleString()}</b></td><td class="pn-basis">${v}</td></tr>`;}).join('')}
+   </tbody></table>
+   <p class="note" style="margin-top:8px"><b>Check the mapping.</b> If a column was matched wrongly, every number below moves with it.</p></div>`;
+ }
+ function wireDrop(){
+  const dz=$p('pnDrop'), fi=$p('pnFile'); if(!dz||!fi) return;
+  const show=h=>{const el=$p('pnParse'); if(el) el.innerHTML=h;};
+  const handle=f=>{ if(!f) return;
+   const rd=new FileReader();
+   rd.onload=()=>{
+    const res=parseLO(String(rd.result));
+    if(res.error){P.loParse=res;savep();show(loPanel(res));return;}
+    Object.assign(P,res.found); P.loParse=res; savep();
+    show(loPanel(res));
+    paintP();
+   };
+   rd.readAsText(f);
+  };
+  dz.onclick=()=>fi.click();
+  fi.onchange=e=>handle(e.target.files[0]);
+  dz.ondragover=e=>{e.preventDefault();dz.classList.add('over');};
+  dz.ondragleave=()=>dz.classList.remove('over');
+  dz.ondrop=e=>{e.preventDefault();dz.classList.remove('over');handle(e.dataTransfer.files[0]);};
+ }
+ function bomHTML(r){
+  if(P.gen===18||r.w.gpu) return '';
+  const tU=r.hw.reduce((a,b)=>a+(b.uTotal||0),0), tK=r.hw.reduce((a,b)=>a+(b.kwTotal||0),0);
+  return `<table class="pn-t"><thead><tr><th>Category</th><th>Item</th><th>Qty</th><th>U ea</th><th>kW ea</th><th>U total</th><th>kW total</th><th>Basis</th></tr></thead><tbody>
+   ${r.hw.map(b=>`<tr><td>${b.cat}</td><td><b>${b.item}</b></td><td>${N(b.qty)}</td>
+    <td>${b.uEach!=null?b.uEach:'—'}</td><td>${b.kwEach!=null?N1(b.kwEach):'—'}</td>
+    <td>${b.uTotal!=null?N1(b.uTotal):'—'}</td><td>${b.kwTotal!=null?N1(b.kwTotal):'—'}</td>
+    <td class="pn-basis">${b.est?badge(false,'assumed'):badge(true,'vendor')} ${b.basis}</td></tr>`).join('')}
+   <tr style="border-top:2px solid var(--line)"><td><b>TOTAL</b></td><td></td><td></td><td></td><td></td>
+    <td><b>${N1(tU)} U</b></td><td><b>${N1(tK)} kW</b></td><td class="pn-basis">across ${N(r.racks)} rack(s)</td></tr>
+  </tbody></table>`;
+ }
  function paintP(){
   $p('pnCtl').innerHTML=ctlHTML();
   const r=sizeIt();
   $p('pnOut').innerHTML=outHTML(r);
   $p('pnPower').innerHTML=powHTML(r);
   $p('pnCable').innerHTML=cabHTML(r);
+  $p('pnBom').innerHTML=bomHTML(r);
+  $p('pnGpu').innerHTML=gpuHTML();
+  $p('pnRa').innerHTML=raHTML();
+  $p('pnRes').innerHTML=resHTML();
+  wireDrop();
   savep();
  }
  $p('pnCtl').addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.pk;if(!k)return;
@@ -4921,6 +5242,30 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
       (s.uplinks||0)+(s.uplinkSpeed?' x '+s.uplinkSpeed:''),s.w||'not verified',s.note]),
     ['','','','','','','',''],
     ['Z9864F-ON detail','2U, 64x 800GbE OSFP112 + 2x 10GbE SFP+, breakout to 320 ports, sub-700 ns latency, 20.3 Bpps, 0-45 C. Dell states up to 8,000 GPU nodes in a single two-tier fabric.','','','','','','vendor-published']]},
+   {name:'BOM',rows:[['Category','Item','Qty','U each','kW each','U total','kW total','Provenance','Basis'],
+    ...r.hw.map(b=>[b.cat,b.item,b.qty,b.uEach!=null?b.uEach:'',b.kwEach!=null?b.kwEach:'',
+      b.uTotal!=null?b.uTotal:'',b.kwTotal!=null?b.kwTotal:'',b.est?'ASSUMED':'vendor',b.basis]),
+    ['','','','','','','','',''],
+    ['TOTAL','','','','',+r.hw.reduce((a,b)=>a+(b.uTotal||0),0).toFixed(1),
+      +r.hw.reduce((a,b)=>a+(b.kwTotal||0),0).toFixed(2),'','across '+r.racks+' rack(s)'],
+    ['','','','','','','','',''],
+    ['NOTE','Lines marked ASSUMED rest on a figure nobody published — most often the load factor, which is a fraction of a PSU ceiling rather than a measured draw. Replace it with iDRAC Redfish telemetry (see the Ingest resources sheet) before this becomes a purchase order.','','','','','','','']]},
+   {name:'Dell GPU platforms',rows:[['Model','Series','U','GPUs','Accelerator','Accel TDP W','Cooling','Node kW','Basis','Note'],
+    ...DELLGPU.map(g=>{const kw=gpuKW(g);
+     return [g.label,g.series,g.u?g.u+(g.uV?'':' (unverified)'):'not published',g.gpus,g.accel,
+       ACCEL[g.accel]||'',g.cool,kw!=null?kw:(g.rackScale?'rack-scale — size on Size It':'NOT PUBLISHED'),
+       kw!=null?'DERIVED: GPU TDP x count + '+HOSTKW+' kW host overhead (ours)':(g.roadmap?'roadmap — announced, no power data':'see note'),
+       g.note];}),
+    ['','','','','','','','','',''],
+    ['NOTE','Form factors, GPU counts and accelerator options are vendor-published. Node kW is NOT — it is derived from the silicon vendors\' published accelerator TDPs plus a '+HOSTKW+' kW host overhead that is ours. Rack-scale (XE9712) and roadmap (XE8812) parts deliberately carry no wattage.','','','','','','','','']]},
+   {name:'Dell AI Factory RA',rows:[['Reference architecture','Servers','Fabric','What Dell states'],
+    ...DELLRA.map(a=>[a.label,a.servers,a.fabric,a.note]),
+    ['','','',''],
+    ['TIE-IN','The 2-8-5-200 Enterprise RA is the same NVIDIA Enterprise RA family this tool models as VAST design profile "2-8-5" (8 GPUs per node), so the published VAST storage table applies to a Dell 2-8-5-200 build.','','']]},
+   {name:'Ingest resources',rows:[['Resource','Kind','What it is','Why it matters for this sizing','URL'],
+    ...RES.map(x=>[x.k,x.kind,x.what,x.use,x.url]),
+    ['','','','',''],
+    ['NOTE','The load factor used above is the weakest number in this engine. iDRAC Redfish reports MEASURED chassis power draw — use it to replace the assumption with a fact. Live Optics is the intended feed for the array-statistics sizing mode; Dell recommends a 24-hour collect then a 7-day collect to validate.','','','']]},
    {name:'Cabling BOM',rows:[['Part','Media','Connector','Speed','Length m','Qty','Spares','Total','Used for'],
     ...r.bom.map(b=>[b.part,b.media,b.conn,b.speed,b.len,b.qty,b.spares,b.total,b.uses.join(' / ')]),
     ['','','','','','','','',''],
