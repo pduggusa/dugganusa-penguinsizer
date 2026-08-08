@@ -771,7 +771,8 @@
           <button class="rk-btn primary" id="pnXlsx">⬇ Workbook (XLSX — 7 sheets)</button>
           <button class="rk-btn" id="pnCsv">⬇ Sizing (CSV)</button>
           <button class="rk-btn" id="pnJson">⬇ Full sizing (JSON)</button>
-          <button class="rk-btn" id="pnToRack">→ Send to Rack Planner</button>
+          <button class="rk-btn" id="pnToRack">→ Send to Rack Planner (simple)</button>
+          <button class="rk-btn" id="pnToAdv">→ Add to Advanced floor</button>
           <span class="wd-hint">The Build Sheet workbook also gains these sheets once this tab has a sizing.</span>
         </div>
 
@@ -3124,6 +3125,13 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   for(let n=0;n<netRacks;n++) racks.push({kind:'network',vendor:'nvidia',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(netRacks/phases)))+1),idx:racks.length+1,key:'n'+(n+1)});
   for(let n=0;n<vRacks;n++) racks.push({kind:'storage',vendor:'vast',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(vRacks/phases)))+1),idx:racks.length+1,key:'v'+(n+1)});
   for(let n=0;n<mRacks;n++) racks.push({kind:'memory',vendor:'penguin',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(mRacks/phases)))+1),idx:racks.length+1,key:'m'+(n+1)});
+  /* General-purpose estate handed over from Partner Solutions. An AI factory almost
+   * never lands on an empty floor — there is an OLTP estate, a virtualization estate
+   * and the arrays under them sharing the room, the power and the cooling. Modelling
+   * the factory alone gives you a plan that fits until the day it has to coexist. */
+  const gpRacks=Math.max(0,Math.round(gi('gpRacks')||0));
+  const gpKW=+(gi('gpKW')||0), gpLabel=A.gpLabel||'Dell general-purpose', gpNodes=Math.round(gi('gpNodes')||0);
+  for(let n=0;n<gpRacks;n++) racks.push({kind:'gp',vendor:'dell',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(gpRacks/phases)))+1),idx:racks.length+1,key:'g'+(n+1)});
 
   /* Custom floor layout. Keys are stable per rack CLASS and ordinal (c7, v2, n1), not
    * per position, so a saved layout survives a change in racks-per-row, floors or
@@ -3225,6 +3233,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    fibrePerRack,portsPerRack,sideDiv,effHops,aislesOn,faceOf,aisleAt,
    rowRun,place,pitch,rise,worstHops,hubF,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
    vc,vd,vCnodes,vAuto,manual,vModel,vU,vRacks,vKw,vBE,vFE,vBMC,vCON,
+   gpRacks,gpKW,gpLabel,gpNodes,gpKWPerRack:gpRacks?+(gpKW/gpRacks).toFixed(1):0,
    gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
    ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
    interFloor,trunkLinks,risers,racks};
@@ -3459,7 +3468,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    const perRow=Math.max(1,gi('racksPerRow'));
    const rowLetter=String.fromCharCode(A.row.charCodeAt(0)+Math.floor(i/perRow));
    out.push({rack:nm,row:rowLetter,su:r.su||'',u:'',asset_type:'rack',
-     device:nm,port:'',identifier:nm,length:nm.length,description:r.kind==='compute'?'GB300 NVL72 compute rack':'Network rack'});
+     device:nm,port:'',identifier:nm,length:nm.length,description:r.kind==='compute'?'GB300 NVL72 compute rack':r.kind==='gp'?'General-purpose rack (Dell)':'Network rack'});
    let u=48;
    for(const b of rows) for(let k=0;k<b.n;k++){
     u-=b.u; const uPos=u+1;
@@ -3580,8 +3589,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    const on=SEL===i;
    return `<button class="rk-tile ${r.kind}${on?' on':''}" data-rk="${i}">
      <span class="tn">${nm}</span>
-     <span class="tt">${r.kind==='compute'?`SU${r.su} · NVL72`:'network'}</span>
-     <span class="tb">${r.kind==='compute'?'72 GPU · 142 kW':`${FABRIC.sw.ibLeaf.model.split(' ')[0]} + SN5600D`}</span>
+     <span class="tt">${r.kind==='compute'?`SU${r.su} · NVL72`:r.kind==='gp'?'general-purpose':'network'}</span>
+     <span class="tb">${r.kind==='compute'?'72 GPU · 142 kW':r.kind==='gp'?`${d.gpLabel} · ${d.gpKWPerRack} kW`:`${FABRIC.sw.ibLeaf.model.split(' ')[0]} + SN5600D`}</span>
    </button>`;}).join('');
   renderArtOnce();
   $a('advElev').innerHTML=`<div class="adv-key" style="margin-bottom:12px">
@@ -3769,9 +3778,9 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       * compute — and where the KV cache sits is the one placement decision that changes
       * a latency number. It gets its own mark. */
      const mem=r.kind==='memory';
-     const fill=mem?'#2b1220':r.vendor==='penguin'?'#0e3a44':r.vendor==='vast'?'#3b1d4a':'#1e2a38';
-     const stroke=mem?'#f472b6':r.vendor==='penguin'?'#22d3ee':r.vendor==='vast'?'#a855f7':'#64748b';
-     const vtag=mem?'M':r.vendor==='penguin'?'P':r.vendor==='vast'?'V':'N';
+     const fill=mem?'#2b1220':r.vendor==='dell'?'#12303f':r.vendor==='penguin'?'#0e3a44':r.vendor==='vast'?'#3b1d4a':'#1e2a38';
+     const stroke=mem?'#f472b6':r.vendor==='dell'?'#0ea5e9':r.vendor==='penguin'?'#22d3ee':r.vendor==='vast'?'#a855f7':'#64748b';
+     const vtag=mem?'M':r.vendor==='dell'?'D':r.vendor==='penguin'?'P':r.vendor==='vast'?'V':'N';
      // the front (intake) face gets a pale strip — it is the edge that must see the cold aisle
      const fy = face>0 ? y+RH-Math.max(2,3*zoom) : y;
      svg.push(`<g class="wd-rack${sel?' on':''}" data-wr="${gi_}" data-key="${r.key}" style="cursor:grab;touch-action:none">
@@ -4017,7 +4026,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   }
   const dl=bands.filter(b=>b.dev);
   return `<div class="rk-card">
-    <div class="rk-cardh"><div><h4>${nm}</h4><div class="s">${r.kind==='compute'?`Scalable Unit ${r.su} · GB300 NVL72 · 72 GPU · 142 kW`:'Network rack · leaf, spine and OOB'}</div></div>
+    <div class="rk-cardh"><div><h4>${nm}</h4><div class="s">${r.kind==='compute'?`Scalable Unit ${r.su} · GB300 NVL72 · 72 GPU · 142 kW`:r.kind==='gp'?`General-purpose · ${d.gpLabel} · ${d.gpKWPerRack} kW — power is OUR estimate, not a Dell figure`:'Network rack · leaf, spine and OOB'}</div></div>
       <button class="rk-btn" data-close="1">close</button></div>
     <div class="rk-cardb">
       <div class="rk-elev">
@@ -4099,6 +4108,25 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    devName,portName,
    colourMap:Object.fromEntries(Object.keys(CDEF).map(k=>[k,{hex:colOf(k),name:colName(k)}]))};};
  // import target from Size It
+ /* Partner Solutions -> Advanced. The general-purpose estate becomes real racks in
+  * the SuperPOD layout, so it shows up in the floor plan, the rack count, the phase
+  * plan, the naming sequence and every export — instead of being a separate sizing
+  * that quietly assumes the AI factory has the room to itself. */
+ window.__advPartner=(mix)=>{
+  A.gpRacks=Math.max(0,Math.round(mix.racks||0));
+  A.gpKW=+(mix.totalKW||0);
+  A.gpNodes=Math.round(mix.nodes||0);
+  A.gpLabel=mix.label||'Dell general-purpose';
+  save();
+  const b=document.querySelector('#rkMode button[data-m="advanced"]'); if(b)b.click();
+  const n=$a('advImportNote');
+  if(n){ n.innerHTML=`Added <b>${A.gpRacks} general-purpose rack${A.gpRacks===1?'':'s'}</b> `
+    +`(${NUMF(A.gpNodes)} × ${A.gpLabel}, ${A.gpKW} kW) from Partner Solutions. `
+    +`They are drawn in the layout and counted in every export. <b>Their power is OUR estimate, not a Dell figure.</b>`;
+   n.className='adv-importnote ok'; }
+  return true;
+ };
+ window.__advClearPartner=()=>{A.gpRacks=0;A.gpKW=0;A.gpNodes=0;save();};
  window.__advImport=(gpus,arch)=>{
   const g=Math.max(576,Math.min(9216,gpus));
   A.gpus=g; save();
@@ -4194,7 +4222,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   d.racks.forEach((r,i)=>{const ri=Math.floor(i/perRow);(rows[ri]=rows[ri]||[]).push({...r,i:i+1});});
   $s('bsRows').innerHTML=Object.entries(rows).map(([ri,rs])=>{
    const letter=String.fromCharCode(d.rowStart.charCodeAt(0)+(+ri));
-   const comp=rs.filter(x=>x.kind==='compute').length, net=rs.length-comp;
+   const comp=rs.filter(x=>x.kind==='compute').length, gpn=rs.filter(x=>x.kind==='gp').length, net=rs.length-comp-gpn;
    return `<tr><td><b>${letter}</b></td><td>${rs.length}</td>
      <td style="font-family:var(--mono);font-size:11px;color:var(--cool)">${d.name(rs[0].i)} … ${d.name(rs[rs.length-1].i)}</td>
      <td>${comp?`${comp} compute`:''}${comp&&net?' + ':''}${net?`${net} network`:''}</td>
@@ -5381,6 +5409,23 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
     arrayArch:arrayArch||null,arrays:arrayArch?r.arrays:0,
     swArch:swArch||null,switches:swArch?r.switches:0});
   if(ok)document.querySelector('#tabs button[data-v="rack"]').click();
+ };
+ /* The other direction: put the general-purpose estate ON the SuperPOD floor, so the
+  * AI factory is not planned as though it has the room to itself. */
+ $p('pnToAdv').onclick=()=>{const r=sizeIt();
+  if(P.gen===18||r.w.gpu){alert('Nothing to add — 18G has no published power data, and GPU training is sized on Size It.');return;}
+  if(!window.__advPartner){alert('Rack Planner not ready — open that tab once, then try again.');return;}
+  if(!confirm(`Add ${r.racks} general-purpose rack${r.racks===1?'':'s'} to the Advanced floor?\n\n`+
+    `  ${r.nodes} × ${r.plat.label}\n`+
+    (r.arrays>0?`  ${r.arrays} × ${r.st.label}\n`:'')+
+    (r.switches>0?`  ${r.switches} × ${r.sw.label}\n`:'')+
+    `  ${r.totalKW} kW total\n\n`+
+    `They join the SuperPOD layout as Dell-tagged racks and are counted in the floor plan, `+
+    `the phase plan, the naming sequence and every export.\n\n`+
+    `Their power is OUR estimate — a load factor on a PSU ceiling, not a Dell figure.`))return;
+  window.__advPartner({racks:r.racks,totalKW:r.totalKW,nodes:r.nodes,label:r.plat.label});
+  document.querySelector('#tabs button[data-v="rack"]').click();
+  window.scrollTo({top:0,behavior:'smooth'});
  };
  paintP();
 })();

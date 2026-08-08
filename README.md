@@ -43,8 +43,10 @@ see the References tab and **[NOTICE.md](NOTICE.md)**. Estimates, not a quote.
 | You are | You pay |
 |---|---|
 | Sizing your **own** infrastructure | Nothing, ever |
-| Using it in **billable client work** | [Practitioner or Partner](COMMERCIAL.md) |
-| **Hosting, embedding or white-labeling** it | [OEM](COMMERCIAL.md) |
+| Using it in **billable client work** | [Practitioner $1,990/yr · Partner $49,500/yr](COMMERCIAL.md) |
+| Running **one large buildout** | [Project licence, from $75,000](COMMERCIAL.md) |
+| **Hosting, embedding or white-labeling** it | [OEM, from $250,000/yr](COMMERCIAL.md) |
+| A **vendor** who wants their kit modelled properly | [Catalog integration, from $150,000](COMMERCIAL.md) |
 
 Converts to **Apache 2.0** four years after publication. Full terms in [LICENSE](LICENSE);
 copyright, beta status and trademark notices in [NOTICE.md](NOTICE.md).

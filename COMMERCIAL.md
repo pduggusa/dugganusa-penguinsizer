@@ -35,35 +35,56 @@ publishing this.
 
 ---
 
+## What this is priced against
+
+A rack of GB300 NVL72 is roughly **$3–4M of silicon**. A single scalable unit is
+eight of them. The builds this tool sizes start in the tens of millions and run
+past a billion — and the decisions it informs are the ones you cannot undo after
+the concrete is poured: how much power you pulled to the pad, how much liquid
+loop you built, how many racks the room actually holds.
+
+Getting the power envelope wrong by 15% on a $500M buildout is a
+nine-figure mistake. **We are not going to price that like a text editor.**
+
 ## Tiers
 
-### Practitioner — $49/month or $499/year
-One named consultant or engineer. Use in billable client engagements. Exports
-carry your name alongside ours. Email support, best-effort.
+### Practitioner — $199/month or $1,990/year
+One named consultant or engineer, billable client work. Exports carry your name
+alongside ours. Email support.
 
-### Partner — $4,950/year
-Up to 25 named users at one firm. Everything in Practitioner, plus **co-branded
-exports** (your logo on the workbook and build sheet), a named contact, and
-early access to new vendor catalogs.
+### Partner — $49,500/year
+Up to 25 named users at one firm. Everything above, plus **co-branded exports**
+(your logo on the workbook and build sheet), a named contact, early access to
+new vendor catalogs, and quarterly catalog refreshes as vendors publish.
 
-### OEM / White-label — from $25,000/year
-Rebranded, embedded, or hosted on your own domain. Your product catalog, your
-reference architectures, your numbers. Includes a support SLA, a joint
-provenance review, and the right to present it as your own tool.
+### Project license — $75,000 per buildout under $250M · $250,000 at $250M+
+Unlimited seats for one named project, for its duration. The right shape when a
+programme team, its integrator and its vendors all need the same numbers and
+nobody wants to count seats. Priced against the build, because that is what it
+is worth.
+
+### OEM / White-label — from $250,000/year
+Rebranded, embedded, or hosted on your own domain. Your catalog, your reference
+architectures, your numbers, presented as your tool. Includes a support SLA, a
+joint provenance review, and roadmap input.
 
 *The provenance labelling stays functional in every tier. You may put your name
 on it; you may not strip the line that separates a vendor-published figure from
-an estimate. That line is why the tool is worth having.*
+an estimate. That line is why the tool is worth having, and it is the one thing
+that is not for sale.*
 
-### Custom catalog / integration — quoted
-Adding a vendor's SKUs, reference architectures, power and thermal tables, and
-cabling topology to the engine. Typically a 2–4 week engagement. This is how
-Dell, VAST and Penguin coverage got built; the same path is open to anyone
-else's kit.
+### Vendor catalog integration — from $150,000
+Your SKUs, reference architectures, PSU tables, thermal envelopes and cabling
+topology modelled properly in the engine, with provenance, and maintained as you
+publish new kit. This is how the Dell, VAST, NVIDIA and Penguin coverage was
+built. If your hardware is being sized by somebody else's assumptions today,
+this is the fix.
 
-### Sizing engagement — quoted
-We run the sizing with you, on your real numbers, and hand you the workbook and
-the reasoning. Useful when the answer matters more than the tool.
+### Sizing engagement — from $50,000
+We run the sizing with you, on your real numbers — Live Optics collections,
+Redfish telemetry, your array counters — and hand you the workbook, the BOM and
+the reasoning. Priced by scope. Useful when the answer matters more than the
+tool, which on a buildout of this size it usually does.
 
 ---
 
@@ -87,12 +108,14 @@ lawyer.
 What the license actually does is make the **conversation possible**. Before it
 existed, this repository had no license at all — which meant a partner who
 wanted to white-label it had no lawful way to say yes, and no reason to call.
-That was costing us the deals we actually want: the OEM builds and the custom
-catalog work, where a vendor pays for their own kit to be modelled properly.
 
-So the tiers above are real and we will honour them. But the line we are most
-interested in is the last two: **someone's hardware belongs in this engine and
-they would like it done right.**
+So the seat tiers are real and we will honour them, but they are not the point.
+The point is the bottom three: **project licenses, catalog integration and
+sizing engagements** — where the price is set by the size of the build rather
+than the number of logins, because that is where the value actually is.
+
+If you are sizing something in the hundreds of millions and the number above
+looks large, compare it to one wrong assumption about your power envelope.
 
 ---
 
