@@ -464,6 +464,31 @@
   .dt-ip{font-size:13.5px;font-weight:650;color:var(--ink);margin:4px 0 8px}
   .dt-id{font-size:12px;color:var(--dim);line-height:1.55} .dt-id b{color:var(--ink)}
   .dt-if{font-size:11px;color:var(--faint);line-height:1.5;margin-top:8px;border-top:1px solid #16212e;padding-top:7px} .dt-if b{color:var(--dim)}
+  /* ---- Partner Solutions (Dell) ---- */
+  .pn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:13px;margin:12px 0}
+  .pn-ctl,.pn-out,.pn-power,.pn-cable{margin:12px 0}
+  .pn-f{display:block;margin:9px 0}
+  .pn-f>span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--faint);margin-bottom:4px}
+  .pn-f input,.pn-f select{width:100%;background:#0e1721;border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);padding:7px 9px;font-size:13px;font-family:inherit}
+  .pn-f input:focus,.pn-f select:focus{outline:none;border-color:var(--e)}
+  .pn-f em{display:block;font-style:normal;font-size:11px;color:var(--faint);line-height:1.45;margin-top:4px}
+  .pn-f em b{color:var(--dim)}
+  .pn-sub{font-size:10.5px;text-transform:uppercase;letter-spacing:1.1px;color:var(--faint);
+    margin:14px 0 2px;border-top:1px solid #16212e;padding-top:9px}
+  .pn-t{width:100%;border-collapse:collapse;font-size:12.5px;display:block;overflow-x:auto}
+  .pn-t th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--faint);
+    padding:5px 8px 5px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+  .pn-t td{padding:5px 8px 5px 0;border-bottom:1px solid #131d28;vertical-align:top}
+  .pn-t td b{color:var(--ink)}
+  .pn-basis{font-size:11px;color:var(--faint);line-height:1.45}
+  .pn-b{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.8px;
+    padding:1px 6px;border-radius:5px;white-space:nowrap}
+  .pn-b.v{background:rgba(16,185,129,.14);color:var(--ok);border:1px solid rgba(16,185,129,.3)}
+  .pn-b.e{background:rgba(251,191,36,.13);color:var(--warn);border:1px solid rgba(251,191,36,.3)}
+  .pn-road{border-color:rgba(251,191,36,.35)}
+  .pn-exp{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:640px){.pn-t{font-size:11.5px}}
 </style>
 </head>
 <body>
@@ -482,6 +507,7 @@
     <button data-v="rent">Buy vs Rent</button>
     <button data-v="case">The Case</button>
     <button data-v="rack">Rack Planner</button>
+    <button data-v="partner">🤝 Partner Solutions</button>
     <button data-v="mem">🐧 MemoryAI</button>
     <button data-v="dcgm">DCGM Upload</button>
     <button data-v="tree">🎯 Decide</button>
@@ -691,6 +717,47 @@
       </section>
 
       <!-- MEMORY AI -->
+      <section class="view" id="v-partner">
+        <h2 class="sec">Partner Solutions — Dell general-purpose compute, storage &amp; networking</h2>
+        <p class="lede">The GPU tabs size an <b style="color:var(--ink)">AI factory</b>. Real estates are not only AI factories — the same floor carries OLTP, analytics, SAP, virtualization and the arrays underneath them. This tab sizes that half on <b style="color:var(--ink)">Dell PowerEdge, PowerStore/PowerMax/PowerFlex and PowerSwitch</b>, from either a workload description or your current array's own counters, and carries <b style="color:var(--ink)">power, cooling and cabling</b> through to the same rack planner and the same workbook. <span class="note">Dell figures are vendor-published where the badge says <b>vendor</b>; anything we derived says so on its face.</span></p>
+
+        <div class="rk-modebar">
+          <span class="dt-lbl">Size from</span>
+          <div class="seg" id="pnBasis" style="max-width:420px">
+            <button data-b="profile" class="on">A workload profile</button><button data-b="array">My current array statistics</button>
+          </div>
+          <span class="dt-lbl">Generation</span>
+          <div class="seg" id="pnGen" style="max-width:330px">
+            <button data-g="17" class="on">17G — shipping</button><button data-g="18">18G — roadmap</button>
+          </div>
+          <span class="rk-modenote" id="pnGenNote">17th gen is what you can buy, power and rack today. Dell has published its PSU tables and BTU/hr figures.</span>
+        </div>
+
+        <div class="pn-ctl" id="pnCtl"></div>
+        <div class="pn-out" id="pnOut"></div>
+
+        <h3 class="mem-h">Rack, power &amp; thermal roll-up</h3>
+        <p class="lede">Air and liquid split, current per phase, breaker and connector, airflow and loop flow — the same relationships the Rack Planner uses, applied to the general-purpose estate. <b style="color:var(--ink)">CFM = air BTU/hr ÷ (1.08 × ΔT°F)</b> and <b style="color:var(--ink)">L/min = kW × 60 ÷ (4.186 × ΔT°C)</b>: sizing-grade, standard air density, water not glycol.</p>
+        <div class="pn-power" id="pnPower"></div>
+
+        <h3 class="mem-h">Cabling</h3>
+        <p class="lede">Per-node port topology × node count, rounded up to lengths the media is actually sold in, then merged by physical part — a 3 m QSFP56-DD DAC is one line whether it lands on storage or management.</p>
+        <div class="pn-cable" id="pnCable"></div>
+
+        <h3 class="mem-h">Export</h3>
+        <div class="pn-exp">
+          <button class="rk-btn primary" id="pnXlsx">⬇ Workbook (XLSX — 7 sheets)</button>
+          <button class="rk-btn" id="pnCsv">⬇ Sizing (CSV)</button>
+          <button class="rk-btn" id="pnJson">⬇ Full sizing (JSON)</button>
+          <button class="rk-btn" id="pnToRack">→ Send to Rack Planner</button>
+          <span class="wd-hint">The Build Sheet workbook also gains these sheets once this tab has a sizing.</span>
+        </div>
+
+        <footer style="margin-top:18px">
+          <span class="note">⚠ <b>Provenance.</b> Dell PSU tables, BTU/hr, weights, port counts and switch throughput are <b>vendor-published</b> and cited on the References tab. <b>Operating power is not.</b> A PSU rating is a ceiling, not a draw — Dell does not publish a typical per-workload wattage, so the load figures here are <b>ours</b>: a workload-dependent fraction of platform capacity, shown as an editable field so you can drop a measured figure in its place. Workload→node ratios are <b>our heuristics</b>, not Dell sizing rules. 18G models are <b>announced with no published power or thermal data</b> and deliberately produce no wattage. A Dell sizing engagement supersedes this tool. 95% cap.</span>
+        </footer>
+      </section>
+
       <section class="view" id="v-mem">
         <h2 class="sec">🐧 MemoryAI — because a starving Blackwell is the most expensive idle object you own</h2>
 
@@ -989,6 +1056,62 @@
       <section class="view" id="v-ref">
         <h2 class="sec">📚 References — the published numbers, and who published them</h2>
         <p class="lede">Every figure this tool leans on, with its source. <b style="color:var(--ink)">Vendor numbers are labelled as vendor numbers</b> and separated from what the tool derives itself — so when you quote something in front of a customer, you know exactly which kind of claim you're making and who stands behind it.</p>
+
+        <h3 class="mem-h">Dell — PowerEdge, PowerStore, PowerMax and PowerSwitch <span class="note">(Partner Solutions tab)</span></h3>
+        <div class="ref-g">
+          <div class="ref-c" style="--e:var(--ok)">
+            <h4>PowerEdge 17th generation — what you can buy today</h4>
+            <div class="src">Dell · product pages + Installation &amp; Service Manuals · vendor-published</div>
+            <div class="ref-n"><span class="k">R770 — Intel Xeon 6</span><span class="v">2U · 2 socket</span></div>
+            <div class="ref-n"><span class="k">R670 / R6725 / R7725</span><span class="v">1U / 1U / 2U</span></div>
+            <div class="ref-n"><span class="k">R770 PSU range</span><span class="v">800 W – 3200 W</span></div>
+            <div class="ref-n"><span class="k">R770 top Xeon 6 SKU listed</span><span class="v">6787P · 86C/172T</span></div>
+            <div class="ref-n"><span class="k">R7725 max memory</span><span class="v">6 TB DDR5</span></div>
+            <div class="ref-n"><span class="k">R7725 launch</span><span class="v">November 2025</span></div>
+            <a href="https://www.dell.com/en-us/shop/dell-poweredge-servers/poweredge-r770-rack-server/spd/poweredge-r770" target="_blank" rel="noopener">R770 specifications →</a>
+            <a href="https://www.dell.com/support/manuals/en-us/poweredge-r7725/per7725_ism/psu-specifications" target="_blank" rel="noopener">R7725 PSU table →</a>
+            <div class="ref-warn">The PSU table is transcribed verbatim, including Dell's own BTU/hr per PSU (3200 W → 12,000 BTU/hr) rather than a W × 3.412 conversion. <b>A PSU rating is a ceiling, not a draw.</b> Dell publishes no typical per-workload operating wattage, which is why the Partner tab's load factor is ours and editable. AMD cores-per-socket is <b>not</b> a verified Dell figure — confirm the SKU.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--warn)">
+            <h4>PowerEdge 18th generation — announced, not sizeable</h4>
+            <div class="src">Dell Technologies World · 19 May 2026 · announcement only</div>
+            <div class="ref-n"><span class="k">R9825 · R9815 · M9825</span><span class="v">2H 2026</span></div>
+            <div class="ref-n"><span class="k">XE5845 · XE7845</span><span class="v">Q1 2027</span></div>
+            <div class="ref-n"><span class="k">R9810 · R8815 · R6815 · R7815 · R7815xd · R7825</span><span class="v">2027</span></div>
+            <div class="ref-n"><span class="k">Silicon</span><span class="v">AMD EPYC "Venice" · one Intel "Diamond Rapids"</span></div>
+            <div class="ref-n"><span class="k">Dell's performance claim</span><span class="v">up to 70% over 17G</span></div>
+            <div class="ref-n"><span class="k">Published power / thermal data</span><span class="v" style="color:var(--hot)">none</span></div>
+            <a href="https://www.dell.com/en-us/dt/corporate/newsroom/announcements/detailpage.press-releases~usa~2026~05~dell-technologies-reimagines-the-modern-data-center-for-the-ai-era.htm" target="_blank" rel="noopener">Announcement →</a>
+            <div class="ref-warn">The Partner tab <b>refuses to emit a wattage, thermal load or rack count</b> for an 18G model. A percentage performance claim is not a power figure, and sizing a room off one is how you build a hall that cannot cool what you bought.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--ok)">
+            <h4>PowerStore &amp; PowerMax</h4>
+            <div class="src">Dell · Hardware Information Guide / Site Planning Guide · vendor-published</div>
+            <div class="ref-n"><span class="k">PowerStore form factor</span><span class="v">2U base enclosure</span></div>
+            <div class="ref-n"><span class="k">PowerStore input</span><span class="v">240 VAC ±10% single phase</span></div>
+            <div class="ref-n"><span class="k">3200T / 5200T / 9200T max draw</span><span class="v">1393.6 / 1734.4 / 1919.4 W</span></div>
+            <div class="ref-n"><span class="k">Published heat range</span><span class="v">4,338 – 6,985 BTU/hr</span></div>
+            <div class="ref-n"><span class="k">3200T weight</span><span class="v">35.8 kg empty · 41.7 kg full</span></div>
+            <div class="ref-n"><span class="k">PowerMax 2500 single / dual node pair</span><span class="v">3,131 / 6,262 VA</span></div>
+            <div class="ref-n"><span class="k">PowerMax bay</span><span class="v">199.2 × 60 × 114.8 cm · 306–408 kg</span></div>
+            <a href="https://www.dell.com/support/manuals/en-us/powerstore-1000/pwrstr-hwg/power-requirements-for-the-base-enclosure" target="_blank" rel="noopener">PowerStore power →</a>
+            <a href="https://www.dell.com/support/manuals/en-us/powermax/pmax2_plang/system-specifications" target="_blank" rel="noopener">PowerMax site planning →</a>
+            <div class="ref-warn">PowerMax figures are <b>VA at &gt;35 °C</b> — deliberately elevated, covering battery recharge and high-ambient cooling. Treated as W at unity power factor, which the tool states rather than silently applying. <b>Usable TB and IOPS per array are your inputs, not vendor facts</b>: effective capacity depends on the reduction ratio you actually achieve. No separate PowerMax 8500 power table was verified — size that from a quote.</div>
+          </div>
+          <div class="ref-c" style="--e:var(--cool)">
+            <h4>PowerSwitch &amp; PowerFlex</h4>
+            <div class="src">Dell · spec sheets · vendor-published where marked</div>
+            <div class="ref-n"><span class="k">Z9864F-ON</span><span class="v">2U · 64× 800GbE OSFP112</span></div>
+            <div class="ref-n"><span class="k">Z9864F-ON breakout / latency</span><span class="v">320 ports · &lt;700 ns</span></div>
+            <div class="ref-n"><span class="k">Z9864F-ON throughput</span><span class="v">20.3 Bpps</span></div>
+            <div class="ref-n"><span class="k">Dell's stated fabric scale</span><span class="v">8,000 GPU nodes, two-tier</span></div>
+            <div class="ref-n"><span class="k">S5448F-ON</span><span class="v">48× 100GbE + 8× 400GbE · 250 W typ</span></div>
+            <div class="ref-n"><span class="k">PowerFlex certified nodes</span><span class="v">R660 / R760 / R6625 / R7625 (16G)</span></div>
+            <a href="https://www.delltechnologies.com/asset/en-us/products/networking/technical-support/dell-powerswitch-z9864f-on-spec-sheet.pdf" target="_blank" rel="noopener">Z9864F-ON spec sheet →</a>
+            <a href="https://www.dell.com/en-us/shop/ipovw/networking-z-series" target="_blank" rel="noopener">Z-series overview →</a>
+            <div class="ref-warn">Not verified here and flagged in the tool: <b>Z9864F-ON typical power</b>, and the <b>S5448F-ON rack height</b> (1U is our assumption for the class). PowerFlex 4.5 certifies <b>16th-generation</b> nodes — 17G certification was not confirmed, so check before planning a 17G PowerFlex estate.</div>
+          </div>
+        </div>
 
         <h3 class="mem-h">Penguin Solutions — MemoryAI KV cache server</h3>
         <div class="ref-g">
@@ -4076,6 +4199,9 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  }
  const dl=(n,c,t)=>{const b=(c instanceof Blob)?c:new Blob([c],{type:t});const a=document.createElement('a');
   a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+ /* The Partner Solutions tab writes its own workbook and contributes sheets to this
+  * one. Rather than carry a second hand-rolled XLSX writer, expose this one. */
+ window.__XLSX=xlsx;
  $s('bsCsv').onclick=()=>{const c=csv();if(c)dl('build-sheet-'+new Date().toISOString().slice(0,10)+'.csv',c,'text/csv');};
  /* Eight sheets, each one already pivot-shaped: dimensions in columns, measures numeric.
   * The Racks sheet is the grain — one row per physical cabinet — and every other sheet
@@ -4268,6 +4394,527 @@ async function send(){
 }
 cSend.onclick=send;
 cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}});
+
+/* ═══ PARTNER SOLUTIONS — Dell general-purpose compute, storage & networking ═══════
+ * The GPU tabs size an AI factory. This one sizes the rest of the floor.
+ *
+ * PROVENANCE DISCIPLINE (same as the rest of this tool):
+ *   vendor:true      — Dell publishes this number; cited on the References tab.
+ *   estimated:true   — OURS. A defensible engineering figure, editable in the UI.
+ *   unpublished:true — announced hardware with NO published power/thermal data. The
+ *                      engine refuses to emit a wattage for these rather than guess.
+ *
+ * The single most important honesty here: a PSU RATING IS A CEILING, NOT A DRAW.
+ * Dell publishes the PSU table (and we transcribe it exactly); Dell does not publish
+ * a typical per-workload operating wattage. Every load figure below is therefore a
+ * load FACTOR applied to platform capacity, it is ours, it is labelled, and it is
+ * editable so a measured figure can replace it. */
+(function(){
+ const $p=id=>document.getElementById(id);
+ if(!$p('pnCtl')) return;
+
+ /* ---- COMPUTE ------------------------------------------------------------------
+  * 17G is the generation you can buy, power and rack today (R7725/R6725 launched
+  * November 2025). Core counts: Dell lists Xeon 6 options from 6507P (8C/16T) to
+  * 6787P (86C/172T) on the R770 page — that top figure is vendor-published. We did
+  * NOT verify a maximum AMD Turin core count from a Dell source in this session, so
+  * coresPerSocket for the AMD platforms is marked estimated and is user-editable
+  * rather than asserted. */
+ const CPU17=[
+  {k:'r670', label:'PowerEdge R670',  u:1, sockets:2, cpu:'Intel Xeon 6',   vendor:'Dell', maxPsuW:3200, psuVerified:false,
+   coresPerSocket:86, coresVerified:false, maxRamTB:null, gen:17,
+   note:'1U two-socket Intel Xeon 6. PSU range assumed to follow the R770 family — not separately verified.'},
+  {k:'r770', label:'PowerEdge R770',  u:2, sockets:2, cpu:'Intel Xeon 6',   vendor:'Dell', maxPsuW:3200, psuVerified:true,
+   coresPerSocket:86, coresVerified:true,  maxRamTB:null, gen:17,
+   note:'2U two-socket. Dell lists PSUs from 800 W to 3200 W and Xeon 6 SKUs to 6787P (86C/172T). Up to 16 SAS4/SATA, 24 mixed, or 40 E3.S NVMe.'},
+  {k:'r6725',label:'PowerEdge R6725', u:1, sockets:2, cpu:'AMD EPYC Turin', vendor:'Dell', maxPsuW:3200, psuVerified:false,
+   coresPerSocket:128, coresVerified:false, maxRamTB:null, gen:17,
+   note:'1U two-socket AMD, built for performance density.'},
+  {k:'r7725',label:'PowerEdge R7725', u:2, sockets:2, cpu:'AMD EPYC Turin', vendor:'Dell', maxPsuW:3200, psuVerified:true,
+   coresPerSocket:128, coresVerified:false, maxRamTB:6, gen:17,
+   note:'2U two-socket AMD. Up to 6 TB DDR5, 8x PCIe Gen5, dual OCP. Full Titanium PSU table published.'}
+ ];
+ /* R7725 PSU table — transcribed verbatim from Dell\'s Installation & Service Manual.
+  * BTU/hr is DELL\'S OWN figure, not W x 3.412, which is why it is carried here. */
+ const PSU=[{w:3200,cls:'Titanium',v:'200-240 Vac',btu:12000},{w:2400,cls:'Titanium',v:'100-240 Vac',btu:9000},
+            {w:1800,cls:'Titanium',v:'200-240 Vac',btu:6750,late:true},{w:1500,cls:'Titanium',v:'100-240 Vac',btu:5625},
+            {w:1400,cls:'—',v:'(-48)-(-60) Vdc',btu:5310},{w:1100,cls:'Titanium / Platinum',v:'100-240 Vac',btu:4100},
+            {w:800,cls:'Titanium / Platinum',v:'100-240 Vac',btu:3000}];
+ /* 18G — announced at Dell Technologies World, 19 May 2026. AMD EPYC "Venice" plus one
+  * Intel "Diamond Rapids" model. Dell has published availability windows and a headline
+  * "up to 70% more performance" claim; it has NOT published per-model power, thermal or
+  * physical data. So these carry unpublished:true and the engine will not emit a load. */
+ const CPU18=[
+  {k:'r9825',label:'PowerEdge R9825',  avail:'2H 2026', cpu:'AMD EPYC (Venice)'},
+  {k:'r9815',label:'PowerEdge R9815',  avail:'2H 2026', cpu:'AMD EPYC (Venice)'},
+  {k:'m9825',label:'PowerEdge M9825',  avail:'2H 2026', cpu:'AMD EPYC (Venice)'},
+  {k:'xe5845',label:'PowerEdge XE5845',avail:'Q1 2027', cpu:'AMD EPYC (Venice)'},
+  {k:'xe7845',label:'PowerEdge XE7845',avail:'Q1 2027', cpu:'AMD EPYC (Venice)'},
+  {k:'r9810',label:'PowerEdge R9810',  avail:'2027',    cpu:'Intel (Diamond Rapids)'},
+  {k:'r8815',label:'PowerEdge R8815',  avail:'2027',    cpu:'AMD EPYC (Venice)'},
+  {k:'r6815',label:'PowerEdge R6815',  avail:'2027',    cpu:'AMD EPYC (Venice)'},
+  {k:'r7815',label:'PowerEdge R7815',  avail:'2027',    cpu:'AMD EPYC (Venice)'},
+  {k:'r7815xd',label:'PowerEdge R7815xd',avail:'2027',  cpu:'AMD EPYC (Venice)'},
+  {k:'r7825',label:'PowerEdge R7825',  avail:'2027',    cpu:'AMD EPYC (Venice)'}
+ ].map(m=>({...m,u:null,unpublished:true,gen:18,vendor:'Dell'}));
+
+ /* ---- STORAGE ------------------------------------------------------------------
+  * PowerStore max power draw and the 2U form factor are vendor-published (Hardware
+  * Information Guide, base-enclosure power requirements: 240 VAC +/-10% single phase).
+  * Dell also publishes a heat-dissipation range of 4,338 BTU/hr (1200T) to 6,985 BTU/hr
+  * (9000T); per-model BTU below is computed W x 3.41214 and lands inside that range,
+  * which is the corroboration rather than the source.
+  * USABLE CAPACITY AND IOPS PER APPLIANCE ARE NOT ENCODED AS FACTS — they are user
+  * inputs, because effective capacity depends on the data-reduction ratio you actually
+  * achieve and Dell publishes no single per-model IOPS number we verified here. */
+ const STORE=[
+  {k:'ps1200t',label:'PowerStore 1200T', fam:'PowerStore', u:2, w:1271.3, vendor:true},
+  {k:'ps3200t',label:'PowerStore 3200T', fam:'PowerStore', u:2, w:1393.6, vendor:true, kgEmpty:35.8, kgFull:41.7},
+  {k:'ps3200q',label:'PowerStore 3200Q', fam:'PowerStore', u:2, w:1505.1, vendor:true},
+  {k:'ps5200t',label:'PowerStore 5200T', fam:'PowerStore', u:2, w:1734.4, vendor:true},
+  {k:'ps5200q',label:'PowerStore 5200Q', fam:'PowerStore', u:2, w:1873.2, vendor:true},
+  {k:'ps9200t',label:'PowerStore 9200T', fam:'PowerStore', u:2, w:1919.4, vendor:true},
+  /* PowerMax is bay-scale, not a 2U appliance. Dell publishes maximum total power in VA
+   * at >35 C (elevated: battery recharge + high-ambient cooling), the C13 outlet counts,
+   * the bay envelope and the maximum weights. VA is carried as VA — at an assumed unity
+   * power factor W ~= VA, which is stated rather than silently applied. */
+  {k:'pmax2500-1',label:'PowerMax 2500 — single node pair', fam:'PowerMax', u:44, va:3131, vendor:true,
+   outlets:'4x C13 Zone A + 4x C13 Zone B', kg:306,
+   note:'Bay 199.2 cm H x 60 cm W x 114.8 cm D. Power stated at >35 C. 306 kg with one drive enclosure.'},
+  {k:'pmax2500-2',label:'PowerMax 2500 — dual node pair', fam:'PowerMax', u:44, va:6262, vendor:true,
+   outlets:'8x C13 Zone A + 8x C13 Zone B', kg:408,
+   note:'408 kg with two drive enclosures.'},
+  {k:'pmax8500',label:'PowerMax 8500', fam:'PowerMax', u:44, va:null, vendor:false, unpublished:true,
+   note:'Shares the 2500 bay envelope and weights per Dell’s site-planning guide. We did NOT verify a separate 8500 power table in this session — size it from a Dell quote.'},
+  /* PowerFlex is software-defined: the power and U come from the PowerEdge node under
+   * it, so it is modelled as a node count, not an appliance. Dell certifies R660/R760
+   * (Intel) and R6625/R7625 (AMD) for PowerFlex 4.5 — those are 16G. We did not verify
+   * 17G certification, and saying so is the point. */
+  {k:'pflex',label:'PowerFlex (software-defined on PowerEdge)', fam:'PowerFlex', u:null, w:null, vendor:false,
+   nodes:[{k:'r660',label:'PowerEdge R660',u:1,cpu:'Intel'},{k:'r760',label:'PowerEdge R760',u:2,cpu:'Intel'},
+          {k:'r6625',label:'PowerEdge R6625',u:1,cpu:'AMD'},{k:'r7625',label:'PowerEdge R7625',u:2,cpu:'AMD'}],
+   note:'PowerFlex 4.5 certifies R660/R760 (Intel) and R6625/R7625 (AMD) — 16th generation. 17G certification was NOT verified here; confirm with Dell before planning a 17G PowerFlex estate.'}
+ ];
+
+ /* ---- NETWORKING ---------------------------------------------------------------
+  * Z9864F-ON: 2U, 64x 800GbE OSFP112 + 2x 10GbE SFP+, breakout to 320 ports, sub-700 ns
+  * latency, 20.3 Bpps, 0-45 C operating — all vendor-published. Dell states it can carry
+  * an AI/ML fabric of up to 8,000 GPU nodes in a single two-tier design.
+  * S5448F-ON: 48x 100GbE SFP56-DD + 8x 400GbE QSFP56-DD, 250 W typical — vendor-published.
+  * Rack units for the S5448F-ON and switch power for the Z9864F-ON were NOT verified. */
+ const NET=[
+  {k:'z9864f',label:'PowerSwitch Z9864F-ON', u:2, uVerified:true, ports:64, speed:'800G', cage:'OSFP112',
+   breakout:320, extra:'2x 10GbE SFP+', w:null, wVerified:false, latency:'<700 ns', bpps:20.3, vendor:true,
+   note:'AI/ML spine or super-spine. Dell states up to 8,000 GPU nodes in a two-tier fabric. Typical power not verified here.'},
+  {k:'s5448f',label:'PowerSwitch S5448F-ON', u:1, uVerified:false, ports:48, speed:'100G', cage:'SFP56-DD',
+   uplinks:8, uplinkSpeed:'400G', uplinkCage:'QSFP56-DD', w:250, wVerified:true, vendor:true,
+   note:'Leaf for general-purpose estates. 250 W typical is vendor-published; the 1U height is our assumption for this class and is not verified.'}
+ ];
+
+ /* ---- AI / HPC PLATFORMS (context, not sized here) ------------------------------ */
+ const AIHPC=[
+  {label:'PowerEdge XE8812', note:'NVIDIA Vera Rubin NVL4. Dell states up to 144 GPUs per rack, fanless direct-liquid-cooled, 176 CPU cores.'},
+  {label:'PowerEdge XE9712', note:'NVIDIA GB200 NVL72, liquid-cooled. Deployed in Monash University’s MAVERIC.'},
+  {label:'PowerRack 9100',   note:'ORv3 / OCP-standards rack. Dell states 300 kW+ and 100% direct-liquid-cooled CPUs and GPUs, with an integrated rack controller.'}
+ ];
+
+ /* ---- WORKLOAD PROFILES --------------------------------------------------------
+  * THESE ARE OURS. They are engineering heuristics for turning a workload description
+  * into cores, memory, IOPS, throughput and capacity — they are NOT Dell sizing rules
+  * and they are NOT a substitute for a Dell sizing engagement. Every one of them is
+  * editable in the UI. `load` is the fraction of platform PSU capacity we assume the
+  * workload actually draws, which is the single biggest lever on every power number
+  * downstream and is therefore surfaced as a field rather than buried. */
+ const WL=[
+  {k:'oltp', label:'OLTP database',        unit:'1,000 transactions/sec', cores:6,  ramGB:24,   iops:8000, mbps:250,  capGB:400,   load:0.65, hint:'Latency-bound, small-block, read/write mixed. IOPS drives the array, not capacity.'},
+  {k:'olap', label:'OLAP / analytics',     unit:'TB scanned per day',     cores:4,  ramGB:48,   iops:1500, mbps:900,  capGB:1200,  load:0.75, hint:'Throughput-bound, large-block sequential. Bandwidth drives the array.'},
+  {k:'sap',  label:'SAP HANA',             unit:'TB of HANA memory',      cores:16, ramGB:1024, iops:4000, mbps:600,  capGB:3000,  load:0.70, hint:'Memory-bound. Persistence plus log is modelled at ~3x memory — confirm against the SAP sizing report.'},
+  {k:'virt', label:'Virtualization',       unit:'100 virtual machines',   cores:25, ramGB:400,  iops:6000, mbps:300,  capGB:8000,  load:0.55, hint:'Consolidation ratio assumed at 4 vCPU:1 core. Adjust if your estate is denser.'},
+  {k:'vdi',  label:'VDI',                  unit:'100 virtual desktops',   cores:15, ramGB:350,  iops:5000, mbps:200,  capGB:5000,  load:0.55, hint:'Steady-state. Boot and login storms are multiples of this — size the array for the storm, not the average.'},
+  {k:'gp',   label:'General-purpose',      unit:'100 workloads',          cores:20, ramGB:320,  iops:3000, mbps:250,  capGB:6000,  load:0.55, hint:'Mixed consolidation baseline.'},
+  {k:'hpc',  label:'HPC',                  unit:'1,000 cores',            cores:1000,ramGB:4000,iops:2000, mbps:2000, capGB:20000, load:0.85, hint:'Compute-bound and near-continuous — the highest load factor here.'},
+  {k:'infer',label:'AI inference (CPU)',   unit:'100 concurrent streams', cores:40, ramGB:600,  iops:2000, mbps:400,  capGB:3000,  load:0.80, hint:'CPU-side inference only. GPU inference belongs on the Size It tab.'},
+  {k:'train',label:'AI training',          unit:'—',                 cores:0,  ramGB:0,    iops:0,    mbps:0,    capGB:0,     load:0,    gpu:true, hint:'GPU training is sized on the Size It tab, not here. This tab sizes the estate around it.'},
+  {k:'custom',label:'Custom — my own numbers',unit:'units',          cores:10, ramGB:100,  iops:2000, mbps:200,  capGB:1000,  load:0.60, hint:'Every field is yours. Nothing below is assumed.'}
+ ];
+
+ const LS_P='penguin-partner-v1';
+ const D={basis:'profile',gen:17,wl:'oltp',units:10,plat:'r770',
+   cores:null,ramGB:null,iops:null,mbps:null,capGB:null,load:null,
+   coresPerSocket:null, ramPerNodeGB:2048, psuW:2400,
+   aIops:0,aMbps:0,aCapTB:0,aLatMs:0,aReadPct:70,aWindow:'',
+   sfam:'PowerStore',smodel:'ps3200t',arrayTB:150,arrayIops:150000,
+   sw:'s5448f', rackU:42, reserveU:4, voltage:415, phase:'3', pf:0.98, redundancy:'2N',
+   liquidFrac:0, dTair:20, dTwater:10, intraLen:3, uplinkLen:10, slack:1, sparesPct:5, growth:25};
+ let P=(()=>{try{const j=JSON.parse(localStorage.getItem(LS_P));if(j&&typeof j==='object')return {...D,...j};}catch(e){}return {...D};})();
+ const savep=()=>{try{localStorage.setItem(LS_P,JSON.stringify(P));}catch(e){}};
+ const N=n=>Math.round(n).toLocaleString();
+ const N1=n=>(Math.round(n*10)/10).toLocaleString();
+ const wlOf=()=>WL.find(w=>w.k===P.wl)||WL[0];
+ const platOf=()=>CPU17.find(c=>c.k===P.plat)||CPU17[1];
+ const storeOf=()=>STORE.find(s=>s.k===P.smodel)||STORE[1];
+ const swOf=()=>NET.find(s=>s.k===P.sw)||NET[1];
+ const badge=(ok,t)=>`<span class="pn-b ${ok?'v':'e'}">${t}</span>`;
+
+ /* ---- cabling helpers (local — the rack planner’s are scoped to its own module) */
+ const LAD={'Passive DAC':[0.5,1,1.5,2,2.5,3],'Active DAC (ACC)':[1,2,3,4,5],'AOC':[3,5,7,10,15,20,30],
+   'Transceiver + fiber':[5,10,15,20,30,50,100],'Cat6A copper':[1,2,3,5,7,10,15,20,30]};
+ const stdL=(m,l)=>{const L=LAD[m];if(!L)return l;for(const x of L)if(x>=l)return x;return L[L.length-1];};
+ function med(cls,speed,len){
+  if(cls==='bmc')return{m:'Cat6A copper',c:'RJ45'};
+  const hi=(speed==='400G'||speed==='800G');
+  if(hi){if(len<=2)return{m:'Passive DAC',c:'QSFP56-DD'};if(len<=3)return{m:'Active DAC (ACC)',c:'QSFP56-DD'};if(len<=5)return{m:'AOC',c:'QSFP56-DD'};return{m:'Transceiver + fiber',c:'QSFP56-DD'};}
+  if(len<=3)return{m:'Passive DAC',c:'SFP56-DD'};if(len<=7)return{m:'AOC',c:'SFP56-DD'};return{m:'Transceiver + fiber',c:'SFP56-DD'};
+ }
+
+ /* ---- THE ENGINE ---------------------------------------------------------------- */
+ function sizeIt(){
+  const w=wlOf(), plat=platOf(), st=storeOf(), sw=swOf();
+  const g=1+(P.growth||0)/100;                       // headroom applied to demand, not to the answer
+  const per={cores:P.cores??w.cores, ramGB:P.ramGB??w.ramGB, iops:P.iops??w.iops,
+             mbps:P.mbps??w.mbps, capGB:P.capGB??w.capGB};
+  const load=P.load??w.load;
+  let demand;
+  if(P.basis==='array'){
+   /* Sized from the customer’s own array counters. Capacity and IOPS come straight
+    * from what they measured; cores and memory still have to come from a profile,
+    * because an array counter cannot tell you how many CPUs the hosts needed. */
+   demand={cores:Math.ceil(per.cores*P.units*g), ramGB:Math.ceil(per.ramGB*P.units*g),
+           iops:Math.ceil((P.aIops||0)*g), mbps:Math.ceil((P.aMbps||0)*g),
+           capGB:Math.ceil((P.aCapTB||0)*1000*g), fromArray:true};
+  }else{
+   demand={cores:Math.ceil(per.cores*P.units*g), ramGB:Math.ceil(per.ramGB*P.units*g),
+           iops:Math.ceil(per.iops*P.units*g), mbps:Math.ceil(per.mbps*P.units*g),
+           capGB:Math.ceil(per.capGB*P.units*g), fromArray:false};
+  }
+  const cps=P.coresPerSocket??plat.coresPerSocket;
+  const coresPerNode=cps*plat.sockets, ramPerNode=P.ramPerNodeGB;
+  const byCore=Math.ceil(demand.cores/Math.max(1,coresPerNode));
+  const byRam=Math.ceil(demand.ramGB/Math.max(1,ramPerNode));
+  const nodes=Math.max(1,byCore,byRam);
+  const nodeLimit=byRam>byCore?'memory-bound':byCore>byRam?'core-bound':'balanced';
+  // POWER — load factor x PSU capacity. Ours, editable, and the biggest lever here.
+  const psuW=P.psuW, nodeKW=psuW*load/1000, computeKW=+(nodes*nodeKW).toFixed(1);
+  // STORAGE
+  const capTB=demand.capGB/1000;
+  const byCap=Math.ceil(capTB/Math.max(1,P.arrayTB)), byIops=Math.ceil(demand.iops/Math.max(1,P.arrayIops));
+  const arrays=Math.max(1,byCap,byIops);
+  const arrLimit=byIops>byCap?'IOPS-bound':byCap>byIops?'capacity-bound':'balanced';
+  const arrW=st.w!=null?st.w:(st.va!=null?st.va:null);   // VA at assumed unity PF, stated in the UI
+  const storeKW=arrW!=null?+(arrays*arrW/1000).toFixed(1):null;
+  const storeU=st.u!=null?arrays*st.u:null;
+  // NETWORK — per node: 2 fabric + 2 storage + 1 mgmt + 1 BMC (our assumption, stated)
+  const pn={fabric:2,storage:2,mgmt:1,bmc:1};
+  const fabricPorts=nodes*pn.fabric+arrays*2;
+  const swPorts=sw.ports, switches=Math.max(2,Math.ceil(fabricPorts/swPorts)*1); // min 2 for redundancy
+  const swKW=sw.w!=null?+(switches*sw.w/1000).toFixed(2):null;
+  // ROLL-UP
+  const totalKW=+(computeKW+(storeKW||0)+(swKW||0)).toFixed(1);
+  const V=P.voltage, three=P.phase==='3';
+  const amps=totalKW>0?totalKW*1000/(V*(three?Math.sqrt(3):1)*P.pf):0;
+  const BRK=[16,20,30,32,40,50,60,63,80,100,125,150,175,200,225,250,300,350,400];
+  const breaker=BRK.find(b=>b>=amps/0.8)||Math.ceil(amps/0.8/50)*50;
+  const connector=three?(breaker<=16?'IEC 60309 16A':breaker<=32?'IEC 60309 32A':breaker<=63?'IEC 60309 63A':breaker<=125?'IEC 60309 125A':'busway tap-off')
+                      :(breaker<=20?'NEMA L6-20':breaker<=30?'NEMA L6-30':'IEC 60309 '+breaker+'A');
+  const feeds=P.redundancy==='2N'?2:P.redundancy==='N+1'?2:1;
+  // THERMAL
+  const totalBTU=totalKW*3412.14, lf=P.liquidFrac, airBTU=(1-lf)*totalBTU, liquidKW=+(lf*totalKW).toFixed(1);
+  const cfm=P.dTair>0?airBTU/(1.08*P.dTair):0, lpm=P.dTwater>0?liquidKW*60/(4.186*P.dTwater):0;
+  // RACKS — space vs power, the same split the Rack Planner uses
+  const usableU=Math.max(1,P.rackU-P.reserveU);
+  const uTotal=nodes*plat.u+(storeU||0)+switches*sw.u;
+  const byU=Math.ceil(uTotal/usableU);
+  const rackKWcap=totalKW/Math.max(1,byU);
+  const racks=byU, rackLimit=uTotal/usableU>totalKW/20?'space-limited':'power-limited';
+  // CABLING
+  const intra=P.intraLen+P.slack, up=P.uplinkLen+P.slack, lines=[];
+  const cls=[{c:'fabric',n:pn.fabric*nodes,sp:sw.speed,d:'Node → leaf (OCP/LOM)'},
+             {c:'storage',n:pn.storage*nodes,sp:sw.speed,d:'Node → storage fabric'},
+             {c:'array',n:arrays*2,sp:sw.speed,d:'Array → leaf'},
+             {c:'mgmt',n:pn.mgmt*nodes,sp:'25G',d:'In-band management'},
+             {c:'bmc',n:pn.bmc*nodes,sp:'1G',d:'iDRAC / OOB'}];
+  for(const c of cls){if(c.n<=0)continue;const m=med(c.c,c.sp,intra);
+   lines.push({cls:c.c,qty:c.n,speed:c.sp,media:m.m,conn:m.c,len:stdL(m.m,intra),desc:c.d});}
+  if(sw.uplinks){const m=med('fabric',sw.uplinkSpeed||'400G',up);
+   lines.push({cls:'uplink',qty:switches*(sw.uplinks||0),speed:sw.uplinkSpeed||'400G',media:m.m,conn:sw.uplinkCage||m.c,len:stdL(m.m,up),desc:'Leaf → spine uplink'});}
+  const bin={};
+  for(const l of lines){const key=l.media+'|'+l.conn+'|'+l.speed+'|'+l.len;
+   const b=bin[key]||(bin[key]={part:l.media+' '+l.speed,media:l.media,conn:l.conn,speed:l.speed,len:l.len,qty:0,uses:{}});
+   b.qty+=l.qty;b.uses[l.cls]=(b.uses[l.cls]||0)+l.qty;}
+  const bom=Object.values(bin).map(b=>{const sp=Math.ceil(b.qty*(P.sparesPct||0)/100);
+   return{...b,spares:sp,total:b.qty+sp,uses:Object.keys(b.uses).sort()};}).sort((a,b)=>b.total-a.total);
+  return {w,plat,st,sw,per,load,demand,coresPerNode,ramPerNode,nodes,byCore,byRam,nodeLimit,psuW,nodeKW,computeKW,
+    capTB,arrays,byCap,byIops,arrLimit,arrW,storeKW,storeU,fabricPorts,switches,swKW,totalKW,amps,breaker,connector,feeds,
+    totalBTU,airBTU,liquidKW,cfm,lpm,usableU,uTotal,racks,rackLimit,lines,bom,growth:P.growth,gen:P.gen};
+ }
+ window.__PARTNER=sizeIt;
+
+ /* ---- CONTROLS ------------------------------------------------------------------ */
+ function ctlHTML(){
+  const w=wlOf(), arr=P.basis==='array';
+  const num=(k,l,note,step)=>`<label class="pn-f"><span>${l}</span><input type="number" data-pk="${k}" value="${P[k]}" step="${step||1}" min="0"/>${note?`<em>${note}</em>`:''}</label>`;
+  const sel=(k,l,opts,note)=>`<label class="pn-f"><span>${l}</span><select data-pk="${k}">${opts}</select>${note?`<em>${note}</em>`:''}</label>`;
+  if(P.gen===18){
+   return `<div class="mem-panel pn-road"><h5>18th generation — announced, not sizeable</h5>
+    <p class="lede">Dell unveiled 18G at Dell Technologies World on <b style="color:var(--ink)">19 May 2026</b>: primarily AMD EPYC “Venice” with one Intel “Diamond Rapids” model, and a headline claim of up to <b style="color:var(--ink)">70% more performance</b> than 17G through advanced air and liquid cooling designs.</p>
+    <p class="lede"><b style="color:var(--hot)">This tab will not produce a wattage, a thermal load or a rack count for an 18G model.</b> Dell has published availability windows and a performance claim — it has not published per-model power, thermal or physical data. Sizing a data centre off a percentage claim is how you end up with a room that cannot cool what you bought. Plan the build on 17G, and treat the table below as a procurement calendar.</p>
+    <table class="pn-t"><thead><tr><th>Model</th><th>CPU</th><th>Stated availability</th><th>Power / thermal data</th></tr></thead><tbody>
+    ${CPU18.map(m=>`<tr><td><b>${m.label}</b></td><td>${m.cpu}</td><td>${m.avail}</td><td><span class="pn-b e">not published</span></td></tr>`).join('')}
+    </tbody></table>
+    <p class="note" style="margin-top:10px">Also announced for AI/HPC: ${AIHPC.map(a=>`<b>${a.label}</b>`).join(', ')}. ${AIHPC.map(a=>a.note).join(' ')}</p></div>`;
+  }
+  return `<div class="pn-grid">
+   <div class="mem-panel"><h5>Workload</h5>
+    ${sel('wl','Profile',WL.map(x=>`<option value="${x.k}"${x.k===P.wl?' selected':''}>${x.label}</option>`).join(''))}
+    <p class="note">${w.hint}</p>
+    ${w.gpu?`<p class="note" style="color:var(--warn)">Pick a different profile here — GPU training is sized on <b>Size It</b>. This tab sizes the estate around the factory.</p>`:`
+    ${num('units','How many? — '+w.unit,'the scale of the workload')}
+    ${num('growth','Growth headroom %','applied to demand before sizing')}
+    <div class="pn-sub">Per ${w.unit} — ${badge(false,'our heuristic')} override any of these</div>
+    ${num('cores','vCPU cores',null,1)}${num('ramGB','Memory GB',null,1)}
+    ${arr?'':num('iops','IOPS',null,100)}${arr?'':num('mbps','Throughput MB/s',null,10)}${arr?'':num('capGB','Capacity GB',null,10)}`}
+   </div>
+   ${arr&&!w.gpu?`<div class="mem-panel"><h5>Your current array</h5>
+    <p class="note">Straight from your counters. ${badge(false,'yours')} A sizing from real numbers is only as good as the window they were collected over — if this is a daily average and your batch window triples it, size for the batch.</p>
+    ${num('aIops','Measured IOPS',null,100)}${num('aMbps','Measured throughput MB/s',null,10)}
+    ${num('aCapTB','Used capacity TB',null,1)}${num('aLatMs','Observed latency ms',null,0.1)}
+    ${num('aReadPct','Read %',null,1)}
+    <label class="pn-f"><span>Collection window</span><input type="text" data-pk="aWindow" value="${P.aWindow||''}" placeholder="e.g. 30 days, peak included"/><em>recorded in the export so the sizing can be audited later</em></label>
+   </div>`:''}
+   <div class="mem-panel"><h5>Compute platform</h5>
+    ${sel('plat','PowerEdge 17G',CPU17.map(c=>`<option value="${c.k}"${c.k===P.plat?' selected':''}>${c.label} — ${c.u}U ${c.cpu}</option>`).join(''))}
+    <p class="note">${platOf().note}</p>
+    ${num('coresPerSocket','Cores per socket','R770: 86C/172T is Dell-listed. AMD figure is ours — confirm the SKU.')}
+    ${num('ramPerNodeGB','Memory per node GB','R7725 supports up to 6 TB — vendor-published')}
+    ${sel('psuW','PSU',PSU.map(p=>`<option value="${p.w}"${+P.psuW===p.w?' selected':''}>${p.w} W ${p.cls} — ${p.btu.toLocaleString()} BTU/hr</option>`).join(''),'Dell’s published table. This is a CEILING.')}
+    ${num('load','Load factor 0–1','<b>ours, and the biggest lever on every number below</b> — replace with a measured draw',0.05)}
+   </div>
+   <div class="mem-panel"><h5>Storage</h5>
+    ${sel('smodel','Array',STORE.filter(s=>!s.nodes).map(s=>`<option value="${s.k}"${s.k===P.smodel?' selected':''}>${s.label}</option>`).join(''))}
+    <p class="note">${storeOf().note||(storeOf().w?`${storeOf().u}U, ${storeOf().w} W max draw — ${badge(true,'vendor')} 240 VAC ±&thinsp;10% single phase.`:'')}</p>
+    ${num('arrayTB','Usable TB per array','yours — depends on the reduction ratio you actually achieve',1)}
+    ${num('arrayIops','IOPS per array','yours — Dell publishes no single per-model figure we verified',1000)}
+    <p class="note">PowerFlex is software-defined — its power and U come from the PowerEdge node beneath it. ${STORE.find(s=>s.k==='pflex').note}</p>
+   </div>
+   <div class="mem-panel"><h5>Network</h5>
+    ${sel('sw','Leaf / spine',NET.map(s=>`<option value="${s.k}"${s.k===P.sw?' selected':''}>${s.label}</option>`).join(''))}
+    <p class="note">${swOf().note}</p>
+    ${num('intraLen','Intra-rack reach m',null,0.5)}${num('uplinkLen','Uplink reach m',null,1)}
+    ${num('slack','Service slack m','slide-out service loop',0.5)}${num('sparesPct','Spares %',null,1)}
+   </div>
+   <div class="mem-panel"><h5>Rack, power &amp; thermal</h5>
+    ${num('rackU','Rack U')}${num('reserveU','Reserved U','PDU, panels, blanking')}
+    ${sel('voltage','Voltage',[208,230,400,415,480].map(v=>`<option value="${v}"${+P.voltage===v?' selected':''}>${v} V</option>`).join(''))}
+    ${sel('phase','Phase',[['1','single'],['3','three']].map(x=>`<option value="${x[0]}"${P.phase===x[0]?' selected':''}>${x[1]}</option>`).join(''))}
+    ${sel('redundancy','Redundancy',['N','N+1','2N'].map(x=>`<option value="${x}"${P.redundancy===x?' selected':''}>${x}</option>`).join(''))}
+    ${num('liquidFrac','Liquid fraction 0–1','0 for standard air-cooled PowerEdge; DTC options exist',0.05)}
+    ${num('dTair','Air ΔT °F',null,1)}${num('dTwater','Water ΔT °C',null,1)}
+   </div>
+  </div>`;
+ }
+
+ function outHTML(r){
+  if(P.gen===18) return '';
+  if(r.w.gpu) return `<div class="mem-panel"><p class="lede">Choose a non-GPU profile to size this estate. GPU training belongs on <b style="color:var(--ink)">Size It</b>.</p></div>`;
+  const row=(k,v,u,b)=>`<tr><td>${k}</td><td><b>${v}</b></td><td>${u||''}</td><td class="pn-basis">${b||''}</td></tr>`;
+  return `<div class="pn-grid">
+   <div class="mem-panel"><h5>Compute</h5><table class="pn-t"><tbody>
+    ${row('Platform',r.plat.label,r.plat.u+'U',r.plat.cpu+' · '+badge(true,'vendor')+' form factor')}
+    ${row('Nodes',N(r.nodes),'nodes',r.nodeLimit+' — '+N(r.byCore)+' by cores, '+N(r.byRam)+' by memory')}
+    ${row('Cores delivered',N(r.nodes*r.coresPerNode),'cores',r.coresPerNode+' per node · '+N(r.demand.cores)+' demanded')}
+    ${row('Memory delivered',N(r.nodes*r.ramPerNode/1024),'TB',N(r.demand.ramGB/1024)+' TB demanded')}
+    ${row('Rack units',N(r.nodes*r.plat.u),'U',r.plat.u+'U each')}
+    ${row('Load per node',N1(r.nodeKW),'kW',`${r.psuW} W PSU × ${r.load} load factor — `+badge(false,'ours'))}
+    ${row('Compute load',N1(r.computeKW),'kW','nodes × per-node')}
+   </tbody></table></div>
+   <div class="mem-panel"><h5>Storage</h5><table class="pn-t"><tbody>
+    ${row('Array',r.st.label,r.st.u?r.st.u+'U':'—',badge(!!r.st.vendor,r.st.vendor?'vendor':'unverified'))}
+    ${row('Appliances',N(r.arrays),'',r.arrLimit+' — '+N(r.byCap)+' by capacity, '+N(r.byIops)+' by IOPS')}
+    ${row('Capacity demanded',N1(r.capTB),'TB',r.demand.fromArray?'from your array counters':'from the profile')}
+    ${row('IOPS demanded',N(r.demand.iops),'IOPS',r.demand.fromArray?'measured'+(P.aWindow?' over '+P.aWindow:''):'profile heuristic')}
+    ${row('Throughput demanded',N(r.demand.mbps),'MB/s','')}
+    ${row('Storage load',r.storeKW!=null?N1(r.storeKW):'—',r.storeKW!=null?'kW':'',r.st.va!=null?'VA at assumed unity power factor — stated, not silently applied':(r.storeKW!=null?badge(true,'vendor')+' max draw':'no published power figure'))}
+    ${row('Rack units',r.storeU!=null?N(r.storeU):'—','U','')}
+   </tbody></table></div>
+   <div class="mem-panel"><h5>Network</h5><table class="pn-t"><tbody>
+    ${row('Switch',r.sw.label,r.sw.u+'U',badge(!!r.sw.uVerified,r.sw.uVerified?'vendor U':'U assumed'))}
+    ${row('Ports required',N(r.fabricPorts),'ports','nodes × 2 + arrays × 2 — '+badge(false,'our topology'))}
+    ${row('Switches',N(r.switches),'','minimum 2 for redundancy')}
+    ${row('Switch load',r.swKW!=null?N1(r.swKW):'—',r.swKW!=null?'kW':'',r.sw.wVerified?badge(true,'vendor')+' typical':'typical power not verified')}
+   </tbody></table></div>
+  </div>`;
+ }
+ function powHTML(r){
+  if(P.gen===18||r.w.gpu) return '';
+  const row=(k,v,u,b)=>`<tr><td>${k}</td><td><b>${v}</b></td><td>${u||''}</td><td class="pn-basis">${b||''}</td></tr>`;
+  return `<div class="pn-grid"><div class="mem-panel"><h5>Power</h5><table class="pn-t"><tbody>
+    ${row('Total load',N1(r.totalKW),'kW','compute + storage + network')}
+    ${row('Current',N1(r.amps),'A',`${P.voltage} V ${P.phase==='3'?'three-phase':'single-phase'} at pf ${P.pf}`)}
+    ${row('Breaker',r.breaker,'A','sized at 80% continuous-load derate')}
+    ${row('Connector',r.connector,'','')}
+    ${row('Feeds',r.feeds,'','each carries full load at '+P.redundancy)}
+    ${row('Racks',N(r.racks),'racks',r.rackLimit+' · '+N(r.uTotal)+'U of '+N(r.usableU)+'U usable per rack')}
+   </tbody></table></div>
+   <div class="mem-panel"><h5>Cooling</h5><table class="pn-t"><tbody>
+    ${row('Total heat',N(r.totalBTU),'BTU/hr','kW × 3412.14')}
+    ${row('Air-side heat',N(r.airBTU),'BTU/hr',(100-P.liquidFrac*100).toFixed(0)+'% of load')}
+    ${row('Airflow',N(r.cfm),'CFM','air BTU/hr ÷ (1.08 × '+P.dTair+'°F) — standard air density, understates at altitude')}
+    ${row('Liquid load',N1(r.liquidKW),'kW',(P.liquidFrac*100).toFixed(0)+'% — 0 for standard air-cooled PowerEdge')}
+    ${row('Loop flow',N1(r.lpm),'L/min','kW × 60 ÷ (4.186 × '+P.dTwater+'°C) — water, not glycol')}
+   </tbody></table></div></div>`;
+ }
+ function cabHTML(r){
+  if(P.gen===18||r.w.gpu) return '';
+  return `<table class="pn-t"><thead><tr><th>Part</th><th>Media</th><th>Connector</th><th>Speed</th><th>Length</th><th>Qty</th><th>Spares</th><th>Total</th><th>Used for</th></tr></thead><tbody>
+   ${r.bom.map(b=>`<tr><td><b>${b.part}</b></td><td>${b.media}</td><td>${b.conn}</td><td>${b.speed}</td><td>${b.len} m</td><td>${N(b.qty)}</td><td>${N(b.spares)}</td><td><b>${N(b.total)}</b></td><td class="pn-basis">${b.uses.join(', ')}</td></tr>`).join('')}
+  </tbody></table>`;
+ }
+
+ function paintP(){
+  $p('pnCtl').innerHTML=ctlHTML();
+  const r=sizeIt();
+  $p('pnOut').innerHTML=outHTML(r);
+  $p('pnPower').innerHTML=powHTML(r);
+  $p('pnCable').innerHTML=cabHTML(r);
+  savep();
+ }
+ $p('pnCtl').addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.pk;if(!k)return;
+  const v=e.target.type==='number'?parseFloat(e.target.value):e.target.value;
+  P[k]=(e.target.type==='number'&&isNaN(v))?0:v;
+  if(k==='wl'){P.cores=P.ramGB=P.iops=P.mbps=P.capGB=P.load=null;}   // new profile → drop overrides
+  if(k==='plat'){P.coresPerSocket=null;}
+  paintP();});
+ $p('pnCtl').addEventListener('change',e=>{if(e.target.tagName==='SELECT')paintP();});
+ document.querySelectorAll('#pnBasis button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#pnBasis button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  P.basis=b.dataset.b;paintP();});
+ document.querySelectorAll('#pnGen button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#pnGen button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  P.gen=+b.dataset.g;
+  $p('pnGenNote').textContent=P.gen===18
+   ?'Announced 19 May 2026. Availability runs 2H 2026 through 2027 — and Dell has published no power or thermal data, so this tab will not invent one.'
+   :'17th gen is what you can buy, power and rack today. Dell has published its PSU tables and BTU/hr figures.';
+  paintP();});
+ document.querySelector('#tabs button[data-v="partner"]').addEventListener('click',()=>setTimeout(paintP,0));
+
+ /* ---- EXPORT -------------------------------------------------------------------- */
+ function dlp(name,content,type){const b=content instanceof Blob?content:new Blob([content],{type:type||'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+ const stamp=()=>new Date().toISOString().slice(0,10);
+ function sheetsFor(r){
+  const yn=b=>b?'yes':'no';
+  return [
+   {name:'Summary',rows:[['Metric','Value','Unit','Basis'],
+    ['Workload',r.w.label,'',r.demand.fromArray?'sized from customer array statistics':'sized from workload profile'],
+    ['Scale',P.units,r.w.unit,'user input'],
+    ['Growth headroom',P.growth,'%','applied to demand before sizing'],
+    ['Generation','17G (shipping)','','18G is announced with no published power/thermal data'],
+    ['Compute platform',r.plat.label,r.plat.u+'U',r.plat.cpu],
+    ['Nodes',r.nodes,'nodes',r.nodeLimit],
+    ['Cores delivered',r.nodes*r.coresPerNode,'cores',r.coresPerNode+' per node'],
+    ['Memory delivered',Math.round(r.nodes*r.ramPerNode/1024),'TB',''],
+    ['Storage',r.st.label,'',r.arrLimit],
+    ['Appliances',r.arrays,'',''],
+    ['Switch',r.sw.label,'',''],
+    ['Switches',r.switches,'','minimum 2 for redundancy'],
+    ['Total load',r.totalKW,'kW','compute + storage + network'],
+    ['Current',Math.round(r.amps*10)/10,'A',P.voltage+' V '+(P.phase==='3'?'three-phase':'single-phase')],
+    ['Breaker',r.breaker,'A','80% continuous-load derate'],
+    ['Racks',r.racks,'racks',r.rackLimit],
+    ['Total heat',Math.round(r.totalBTU),'BTU/hr','kW x 3412.14'],
+    ['Airflow',Math.round(r.cfm),'CFM','air BTU/hr / (1.08 x dT F)'],
+    ['Loop flow',Math.round(r.lpm*10)/10,'L/min','kW x 60 / (4.186 x dT C)'],
+    ['','','',''],
+    ['NOTE','Dell PSU tables, BTU/hr, weights, port counts and switch throughput are vendor-published. Operating power is NOT: a PSU rating is a ceiling, not a draw. Load factor '+r.load+' is ours and editable. Workload ratios are our heuristics, not Dell sizing rules. A Dell sizing engagement supersedes this tool. 95% cap.','','']]},
+   {name:'Workload',rows:[['Field','Per unit','Total demanded','Source'],
+    ['Profile',r.w.label,'',r.demand.fromArray?'array statistics':'profile heuristic'],
+    ['Units',P.units,P.units+' x '+r.w.unit,'user input'],
+    ['vCPU cores',r.per.cores,r.demand.cores,'our heuristic, user-editable'],
+    ['Memory GB',r.per.ramGB,r.demand.ramGB,'our heuristic, user-editable'],
+    ['IOPS',r.demand.fromArray?'measured':r.per.iops,r.demand.iops,r.demand.fromArray?'customer array counters':'our heuristic'],
+    ['Throughput MB/s',r.demand.fromArray?'measured':r.per.mbps,r.demand.mbps,r.demand.fromArray?'customer array counters':'our heuristic'],
+    ['Capacity GB',r.demand.fromArray?'measured':r.per.capGB,r.demand.capGB,r.demand.fromArray?'customer array counters':'our heuristic'],
+    ['Load factor',r.load,'','OURS — fraction of PSU capacity assumed drawn'],
+    ['Collection window',P.aWindow||'n/a','',r.demand.fromArray?'as reported by the customer — a sizing is only as good as this':'not applicable'],
+    ['Observed latency ms',P.aLatMs||'n/a','',''],['Read %',P.aReadPct||'n/a','','']]},
+   {name:'Compute',rows:[['Model','Form factor','CPU','Sockets','Cores/socket','PSU W','BTU/hr','Provenance'],
+    ...CPU17.map(c=>[c.label,c.u+'U',c.cpu,c.sockets,c.coresPerSocket+(c.coresVerified?'':' (ours)'),
+      c.maxPsuW+(c.psuVerified?'':' (assumed)'),'see PSU sheet',c.note]),
+    ['','','','','','','',''],
+    ['18G — ANNOUNCED, NO PUBLISHED POWER OR THERMAL DATA','','','','','','',''],
+    ...CPU18.map(m=>[m.label,'not published',m.cpu,'','','','',m.avail])]},
+   {name:'PSU table',rows:[['Watts','Class','Input','Heat BTU/hr','Note'],
+    ...PSU.map(p=>[p.w,p.cls,p.v,p.btu,p.late?'not available at product launch, November 2025':'']),
+    ['','','','',''],
+    ['SOURCE','Dell PowerEdge R7725 Installation and Service Manual, PSU specifications. Transcribed verbatim. BTU/hr is Dell’s figure, not a conversion.','','','']]},
+   {name:'Storage',rows:[['Model','Family','U','Max draw W','Max VA','Weight kg','Provenance'],
+    ...STORE.filter(s=>!s.nodes).map(s=>[s.label,s.fam,s.u||'',s.w||'',s.va||'',s.kg||s.kgFull||'',
+      s.vendor?'vendor-published':'NOT verified — size from a Dell quote']),
+    ['','','','','','',''],
+    ['PowerFlex','software-defined','','','','',STORE.find(s=>s.k==='pflex').note],
+    ['','','','','','',''],
+    ['NOTE','Usable TB and IOPS per array are USER INPUTS, not encoded facts — effective capacity depends on the reduction ratio achieved, and no single per-model IOPS figure was verified. PowerStore input is 240 VAC +/-10% single phase; 100-120 V needs a customer-supplied step-up transformer.','','','','','']]},
+   {name:'Network',rows:[['Model','U','Ports','Speed','Cage','Uplinks','Typical W','Provenance'],
+    ...NET.map(s=>[s.label,s.u+(s.uVerified?'':' (assumed)'),s.ports,s.speed,s.cage,
+      (s.uplinks||0)+(s.uplinkSpeed?' x '+s.uplinkSpeed:''),s.w||'not verified',s.note]),
+    ['','','','','','','',''],
+    ['Z9864F-ON detail','2U, 64x 800GbE OSFP112 + 2x 10GbE SFP+, breakout to 320 ports, sub-700 ns latency, 20.3 Bpps, 0-45 C. Dell states up to 8,000 GPU nodes in a single two-tier fabric.','','','','','','vendor-published']]},
+   {name:'Cabling BOM',rows:[['Part','Media','Connector','Speed','Length m','Qty','Spares','Total','Used for'],
+    ...r.bom.map(b=>[b.part,b.media,b.conn,b.speed,b.len,b.qty,b.spares,b.total,b.uses.join(' / ')]),
+    ['','','','','','','','',''],
+    ['NOTE','Port topology per node (2 fabric + 2 storage + 1 mgmt + 1 BMC) is OUR assumption, not a Dell specification. Lengths are rounded up to stock lengths and merged by physical part.','','','','','','','']]}
+  ];
+ }
+ $p('pnXlsx').onclick=()=>{const r=sizeIt();
+  if(P.gen===18){alert('18G is announced with no published power or thermal data — there is nothing honest to export. Switch to 17G.');return;}
+  if(r.w.gpu){alert('GPU training is sized on the Size It tab. Pick a non-GPU profile here.');return;}
+  if(!window.__XLSX){alert('Workbook writer unavailable.');return;}
+  dlp('dell-partner-sizing-'+stamp()+'.xlsx',window.__XLSX(sheetsFor(r)),'');};
+ $p('pnCsv').onclick=()=>{const r=sizeIt();if(P.gen===18||r.w.gpu)return;
+  const rows=sheetsFor(r)[0].rows;
+  dlp('dell-partner-sizing-'+stamp()+'.csv',rows.map(x=>x.map(c=>{const s=String(c==null?'':c);
+   return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\n'),'text/csv');};
+ $p('pnJson').onclick=()=>{const r=sizeIt();if(P.gen===18||r.w.gpu)return;
+  dlp('dell-partner-sizing-'+stamp()+'.json',JSON.stringify({
+   tool:'dell-partner-sizing-v1',generated:new Date().toISOString(),
+   basis:P.basis,generation:'17G',inputs:P,
+   workload:{profile:r.w.label,unit:r.w.unit,units:P.units,growth_pct:P.growth,per_unit:r.per,demanded:r.demand,
+     load_factor:r.load,load_factor_provenance:'OURS — fraction of PSU capacity, not a Dell figure',
+     collection_window:P.aWindow||null},
+   compute:{platform:r.plat.label,u:r.plat.u,cpu:r.plat.cpu,nodes:r.nodes,limit:r.nodeLimit,
+     cores_per_node:r.coresPerNode,cores_delivered:r.nodes*r.coresPerNode,psu_w:r.psuW,kw:r.computeKW},
+   storage:{model:r.st.label,family:r.st.fam,appliances:r.arrays,limit:r.arrLimit,kw:r.storeKW,u:r.storeU,
+     usable_tb_per_array:P.arrayTB,iops_per_array:P.arrayIops,
+     capacity_provenance:'usable TB and IOPS per array are USER INPUTS, not vendor figures'},
+   network:{switch:r.sw.label,count:r.switches,ports_required:r.fabricPorts,kw:r.swKW},
+   power:{total_kw:r.totalKW,amps:r.amps,breaker_a:r.breaker,connector:r.connector,feeds:r.feeds,
+     voltage:P.voltage,phase:P.phase,pf:P.pf,redundancy:P.redundancy},
+   thermal:{total_btu_hr:r.totalBTU,air_btu_hr:r.airBTU,cfm:r.cfm,liquid_kw:r.liquidKW,lpm:r.lpm,
+     dt_air_f:P.dTair,dt_water_c:P.dTwater,
+     note:'CFM assumes standard air density and understates at altitude; loop flow is water, not glycol'},
+   racks:{count:r.racks,limit:r.rackLimit,u_total:r.uTotal,usable_u_per_rack:r.usableU},
+   cabling:r.bom,
+   provenance:{vendor_published:['PowerEdge PSU table and BTU/hr','PowerEdge form factors','PowerStore max draw and 2U form factor','PowerMax VA, outlets, bay envelope and weights','PowerSwitch port counts, speeds, latency, throughput','S5448F-ON 250 W typical'],
+     ours:['load factor','workload-to-resource ratios','per-node port topology','usable TB and IOPS per array','S5448F-ON rack units','AMD cores per socket'],
+     not_published:['18G per-model power and thermal data','Z9864F-ON typical power','PowerMax 8500 separate power table'],
+     cap:'95% — something here is wrong; a Dell sizing engagement supersedes this tool'}
+  },null,1),'application/json');};
+ $p('pnToRack').onclick=()=>{const r=sizeIt();
+  if(P.gen===18||r.w.gpu){alert('Nothing to send — 18G has no published power data and GPU training is sized on Size It.');return;}
+  try{
+   const K='penguin-rack-planner-v2', j=JSON.parse(localStorage.getItem(K)||'null')||{racks:[]};
+   j.partner={label:r.plat.label,nodes:r.nodes,nodeU:r.plat.u,nodeKW:r.nodeKW,
+     arrays:r.arrays,arrayLabel:r.st.label,arrayU:r.st.u,arrayKW:r.storeKW!=null?r.storeKW/r.arrays:null,
+     switches:r.switches,switchLabel:r.sw.label,switchU:r.sw.u,totalKW:r.totalKW,racks:r.racks,
+     source:'partner-solutions',stamped:new Date().toISOString()};
+   localStorage.setItem(K,JSON.stringify(j));
+   alert('Sent to the Rack Planner: '+r.nodes+' x '+r.plat.label+', '+r.arrays+' x '+r.st.label+', '+r.switches+' x '+r.sw.label+' — '+r.totalKW+' kW across '+r.racks+' rack(s).');
+   document.querySelector('#tabs button[data-v="rack"]').click();
+  }catch(e){alert('Could not hand off: '+e.message);}
+ };
+ paintP();
+})();
 </script>
 </body>
 </html>
