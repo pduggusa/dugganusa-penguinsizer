@@ -775,6 +775,9 @@
           <button class="rk-btn" id="pnToAdv">→ Add to Advanced floor</button>
           <span class="wd-hint">The Build Sheet workbook also gains these sheets once this tab has a sizing.</span>
         </div>
+        <div class="mem-panel" id="pnLic" style="margin-top:12px"></div>
+        <div style="display:none">
+        </div>
 
         <footer style="margin-top:18px">
           <span class="note">⚠ <b>Provenance.</b> Dell PSU tables, BTU/hr, weights, port counts and switch throughput are <b>vendor-published</b> and cited on the References tab. <b>Operating power is not.</b> A PSU rating is a ceiling, not a draw — Dell does not publish a typical per-workload wattage, so the load figures here are <b>ours</b>: a workload-dependent fraction of platform capacity, shown as an editable field so you can drop a measured figure in its place. Workload→node ratios are <b>our heuristics</b>, not Dell sizing rules. 18G models are <b>announced with no published power or thermal data</b> and deliberately produce no wattage. A Dell sizing engagement supersedes this tool. 95% cap.</span>
@@ -1646,7 +1649,7 @@ sync();
     ports:{compute:4,storage:2,mgmt:1,bmc:1},
     fixedPorts:[{cls:"mgmt",n:2,speed:"25G",desc:"ORv3 rack manager / integrated rack controller uplink"},
                 {cls:"bmc", n:2,speed:"1G", desc:"Rack-level OOB"}],
-    note:"Dell publishes 144 GPUs and 300 kW+ per ORv3 rack, 100% direct-to-chip liquid. 36 NVL4 nodes/rack and 8.3 kW/node are arithmetic on those published rack figures. Fanless — set liquid fraction to 1.0. Available early 2027."},
+    note:"Dell publishes 144 GPUs and 300 kW+ per ORv3-style rack, 100% direct-to-chip liquid. 36 NVL4 nodes/rack and 8.3 kW/node are arithmetic on those published rack figures. NOTE: OCP&rsquo;s Open Rack v3 BASE spec is a 48 V DC busbar rated to about 18 kW — Dell&rsquo;s 300 kW+ is ORv3-INSPIRED, not base-spec ORv3, so do not size a busbar from the OCP document. Fanless — set liquid fraction to 1.0. Available early 2027."},
   "dell-xe7745": {label:"Dell PowerEdge XE7745 (8x PCIe 600 W)",unit:"node", nodeU:4, gpuPer:8, pkw:6.8, weight:75,
     pkwEstimated:true, ports:{compute:4,storage:2,mgmt:2,bmc:1},
     note:"4U air-cooled, up to eight double-wide 600 W PCIe accelerators (e.g. RTX Pro 6000 Blackwell SE). NVIDIA-Certified, named in Spectrum-X solution IDs and aligned to the 2-8-5-200 Enterprise RA. 6.8 kW DERIVED."}
@@ -4090,8 +4093,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
         <div class="rk-elevh">REAR</div>
         <div class="rk-rackbox">
           <div class="rk-band manifold" style="height:52px"><span class="ru">48</span><span class="rl">Coolant return manifold · quick-disconnects</span></div>
-          <div class="rk-band bus" style="height:${r.kind==='compute'?'160':'80'}px"><span class="ru">—</span><span class="rl">${r.kind!=='compute'?'A/B PDU feeds':d.computeVendor==='dell'?'ORv3 DC busbar · rack power shelf':'DC busbar · power shelf output'}</span></div>
-          <div class="rk-band cart" style="height:${r.kind==='compute'?'190':'150'}px;background-image:url('${faceOfKind('cart')}');background-size:100% 100%;background-repeat:no-repeat"><span class="ru">—</span><span class="rl">${r.kind!=='compute'?'MPO-12/APC patch field · trunk terminations':d.computeVendor==='dell'?'ORv3 blind-mate power and liquid manifold — not a cable-BOM item':'NVLink copper cable cartridge — spine backplane, NOT a cable-BOM item'}</span></div>
+          <div class="rk-band bus" style="height:${r.kind==='compute'?'160':'80'}px"><span class="ru">—</span><span class="rl">${r.kind!=='compute'?'A/B PDU feeds':d.computeVendor==='dell'?'48 V DC busbar · rack power shelf — ORv3-style':'DC busbar · power shelf output'}</span></div>
+          <div class="rk-band cart" style="height:${r.kind==='compute'?'190':'150'}px;background-image:url('${faceOfKind('cart')}');background-size:100% 100%;background-repeat:no-repeat"><span class="ru">—</span><span class="rl">${r.kind!=='compute'?'MPO-12/APC patch field · trunk terminations':d.computeVendor==='dell'?'ORv3-style blind-mate power (OCP ORv3 base spec is a 48 V DC busbar rated ~18 kW; Dell&rsquo;s 300 kW+ racks are ORv3-INSPIRED, not base-spec) + liquid manifold — not a cable-BOM item':'NVLink copper cable cartridge — spine backplane, NOT a cable-BOM item'}</span></div>
           <div class="rk-band pdu" style="height:60px;background-image:url('${faceOfKind('pdu')}');background-size:100% 100%;background-repeat:no-repeat"><span class="ru">—</span><span class="rl">Rack PDU A / B · ${r.kind==='compute'?'busway tap-off':'IEC 60309'}</span></div>
         </div>
       </div>
@@ -4827,7 +4830,7 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
    note:'Dell states the Q3300-LD is a 100% liquid-cooled OSFP pluggable switch. A liquid-cooled switch changes the network rack’s thermal profile — it does not live on the same air budget as an SN2201.'},
   {label:'PowerRack 9100', servers:'rack-scale integration',
    fabric:'ORv3 / OCP standards-based',
-   note:'Dell states 300 kW+ per rack, 100% direct-liquid-cooled CPUs and GPUs, an integrated rack controller, automated leak detection, and factory integration to live workloads in just over six hours. At 300 kW a rack is a mechanical project, not an electrical one.'},
+   note:'Dell states 300 kW+ per rack, 100% direct-liquid-cooled CPUs and GPUs, an integrated rack controller, automated leak detection, and factory integration to live workloads in just over six hours. At 300 kW a rack is a mechanical project, not an electrical one. VALIDATED 2026-08-08: OCP&rsquo;s Open Rack v3 base specification defines a 48 V DC busbar rated to roughly 18 kW with blind-mate power connectors — so a 300 kW rack is ORv3-INSPIRED, roughly 17x the base busbar envelope. Do not size power from the OCP base document.'},
   {label:'IR7000 rack', servers:'PowerEdge XE8712 / M7701 / M7725',
    fabric:'OCP Open Rack v3 inspired',
    note:'Dell states up to 36 XE8712 nodes and 144 Blackwell GPUs per IR7000 rack.'}
@@ -5008,6 +5011,38 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
  }
  window.__PARTNER=sizeIt;
 
+ /* ---- LICENCE ----------------------------------------------------------------
+  * Not a paywall. Exports always work — blocking them would block the person sizing
+  * their own estate, who is exactly who this is free for. What a licence buys is the
+  * BYLINE: unlicensed workbooks carry an evaluation line a consultant cannot hand to
+  * a client. Removing it without a key is an affirmative act, and a clean breach of
+  * LICENSE clause (d), which is a far better place for this fight than a JS check
+  * that dies in thirty seconds on a public repo. */
+ const LICURL='https://penguinsizer-chat.hacksawduggan.workers.dev/licence';
+ const licOk=()=>!!(P.licName&&P.licValid);
+ async function checkLic(key){
+  try{
+   const r=await fetch(LICURL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
+   const j=await r.json();
+   if(j&&j.valid){P.licKey=key;P.licName=j.name;P.licTier=j.tier;P.licExp=j.exp;P.licValid=true;P.licErr=null;}
+   else{P.licValid=false;P.licErr=(j&&j.reason)||'Not valid.';}
+  }catch(e){P.licValid=false;P.licErr='Could not reach the licence service — exports still work, watermarked.';}
+  savep();paintP();
+ }
+ function licHTML(){
+  if(licOk())return `<h5 style="color:var(--ok)">✓ Licensed — ${P.licName}</h5>
+   <p class="note">Tier <b>${P.licTier}</b>${P.licExp?` · expires ${new Date(P.licExp*1000).toISOString().slice(0,10)}`:''}. Exports carry your name and no evaluation banner.</p>
+   <button class="rk-btn" id="licClear">Remove licence</button>`;
+  return `<h5>Evaluation copy</h5>
+   <p class="note">Every export works — nothing is locked. Unlicensed workbooks carry a line reading <b>“EVALUATION COPY — not licensed for client engagements”</b>. That is fine forever if you are sizing <b>your own</b> estate, which is free under the licence and always will be.</p>
+   <p class="note">If you are being paid for work this produced, a key removes the banner and puts <b>your</b> name on the workbook instead.</p>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+    <input type="text" id="licKey" placeholder="Paste licence key…" style="flex:1;min-width:240px;background:#0e1721;border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 9px;font-size:12px"/>
+    <button class="rk-btn primary" id="licGo">Activate</button>
+    <a href="https://github.com/pduggusa/dugganusa-penguinsizer/blob/main/COMMERCIAL.md" target="_blank" rel="noopener" class="rk-btn" style="text-decoration:none">Pricing →</a>
+   </div>${P.licErr?`<p class="note" style="color:var(--hot);margin-top:7px">${P.licErr}</p>`:''}`;
+ }
+ const WM=['','EVALUATION COPY — not licensed for client engagements. Sizing your own estate? This is free forever and the banner is harmless. Being paid for this? See COMMERCIAL.md.',''];
  /* ---- CONTROLS ------------------------------------------------------------------ */
  function ctlHTML(){
   const w=wlOf(), arr=P.basis==='array';
@@ -5292,6 +5327,9 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
   $p('pnGpu').innerHTML=gpuHTML();
   $p('pnRa').innerHTML=raHTML();
   $p('pnRes').innerHTML=resHTML();
+  const lp=$p('pnLic'); if(lp){lp.innerHTML=licHTML();
+   const g=$p('licGo'); if(g)g.onclick=()=>{const k=($p('licKey').value||'').trim(); if(k)checkLic(k);};
+   const c=$p('licClear'); if(c)c.onclick=()=>{P.licKey=P.licName=P.licTier=P.licExp=null;P.licValid=false;savep();paintP();};}
   wireDrop();
   savep();
  }
@@ -5322,7 +5360,8 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
  function sheetsFor(r){
   const yn=b=>b?'yes':'no';
   return [
-   {name:'Summary',rows:[['Metric','Value','Unit','Basis'],
+   {name:'Summary',rows:[...(licOk()?[['LICENSED TO',P.licName,'',(P.licTier||'')],['','','','']]:[WM,['','','','']]),
+    ['Metric','Value','Unit','Basis'],
     ['Workload',r.w.label,'',r.demand.fromArray?'sized from customer array statistics':'sized from workload profile'],
     ['Scale',P.units,r.w.unit,'user input'],
     ['Growth headroom',P.growth,'%','applied to demand before sizing'],
@@ -5419,6 +5458,8 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
  $p('pnJson').onclick=()=>{const r=sizeIt();if(P.gen===18||r.w.gpu)return;
   dlp('dell-partner-sizing-'+stamp()+'.json',JSON.stringify({
    tool:'dell-partner-sizing-v1',generated:new Date().toISOString(),
+   licence:licOk()?{licensed_to:P.licName,tier:P.licTier}:{status:'EVALUATION COPY',
+     note:'Not licensed for client engagements. Free forever for sizing your own estate. See COMMERCIAL.md.'},
    basis:P.basis,generation:'17G',inputs:P,
    workload:{profile:r.w.label,unit:r.w.unit,units:P.units,growth_pct:P.growth,per_unit:r.per,demanded:r.demand,
      load_factor:r.load,load_factor_provenance:'OURS — fraction of PSU capacity, not a Dell figure',
