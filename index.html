@@ -580,6 +580,7 @@
     <div>
       <!-- SIZE IT -->
       <section class="view on" id="v-size">
+        <div class="mem-panel" id="idBar" style="margin-bottom:16px"></div>
         <div class="cards" id="cards"></div>
         <div class="compare">
           <h3>Compare — <span id="cmpname">4-yr TCO</span></h3>
@@ -1472,6 +1473,74 @@ const MODELS=[
  {n:"Frontier MoE ~1.8T",p:1800,t:13},{n:"Reasoning 671B",p:671,t:20}
 ];
 const $=id=>document.getElementById(id), val=id=>parseFloat($(id).value)||0;
+
+/* ═══ IDENTITY AND SAVED CONFIGURATIONS ═══════════════════════════════════════════
+ * A workbook with no name on it gets renamed by hand, emailed, and then nobody can
+ * tell which customer it was for. Partner / customer / project are set once here and
+ * carried into EVERY export class on every tab.
+ *
+ * Configurations are named snapshots of every module's state. They never leave this
+ * browser — there is no account, no server and no sync, which is deliberate: a
+ * partner sizing three competitors' estates should not be uploading any of it to us.
+ * The cost of that choice is stated plainly in the UI: clearing site data loses them,
+ * so the export IS the backup. */
+const IDK='penguin-identity-v1', CFGK='penguin-configs-v1';
+const STATE_KEYS=['penguin-rack-planner-v2','penguin-adv-planner-v1','penguin-partner-v1',
+  'penguin-aifactory-v1','penguin-cable-colours'];
+let ID=(()=>{try{return JSON.parse(localStorage.getItem(IDK))||{};}catch(e){return {};}})();
+window.__IDENTITY=()=>({partner:ID.partner||null,customer:ID.customer||null,project:ID.project||null});
+/* Header rows every exporter prepends, so attribution is identical across all of them. */
+window.__IDROWS=(cols=4)=>{const i=window.__IDENTITY();
+  if(!i.partner&&!i.customer&&!i.project)return [];
+  const pad=a=>{while(a.length<cols)a.push('');return a;};
+  return [pad(['Partner',i.partner||'—']),pad(['Customer',i.customer||'—']),
+          pad(['Project',i.project||'—']),pad(['',''])];};
+const cfgs=()=>{try{return JSON.parse(localStorage.getItem(CFGK))||{};}catch(e){return {};}};
+function saveCfg(name){
+  const snap={saved:new Date().toISOString(),identity:{...ID},state:{}};
+  STATE_KEYS.forEach(k=>{const v=localStorage.getItem(k); if(v!=null)snap.state[k]=v;});
+  const all=cfgs(); all[name]=snap;
+  try{localStorage.setItem(CFGK,JSON.stringify(all));}catch(e){alert('Could not save — browser storage is full.');return;}
+  renderId();
+}
+function loadCfg(name){
+  const c=cfgs()[name]; if(!c)return;
+  if(!confirm(`Load "${name}"?\n\nThis replaces the current state of every tab. Anything unsaved is lost.`))return;
+  ID={...(c.identity||{})}; localStorage.setItem(IDK,JSON.stringify(ID));
+  STATE_KEYS.forEach(k=>localStorage.removeItem(k));
+  Object.entries(c.state||{}).forEach(([k,v])=>localStorage.setItem(k,v));
+  location.reload();
+}
+function delCfg(name){
+  if(!confirm(`Delete "${name}"? This cannot be undone, and it is only stored in this browser.`))return;
+  const all=cfgs(); delete all[name]; localStorage.setItem(CFGK,JSON.stringify(all)); renderId();
+}
+function renderId(){
+  const el=$('idBar'); if(!el)return;
+  const all=cfgs(), names=Object.keys(all).sort();
+  el.innerHTML=`<h5>Who this sizing is for</h5>
+   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+    ${['partner','customer','project'].map(k=>`<label class="pn-f"><span>${k}</span>
+      <input type="text" data-id="${k}" value="${(ID[k]||'').replace(/"/g,'&quot;')}" placeholder="${k==='partner'?'Your firm':k==='customer'?'End customer':'Refresh FY27'}"/></label>`).join('')}
+   </div>
+   <p class="note">Carried into <b>every</b> export on every tab — workbooks, CSV and JSON — so a file is attributable without being renamed by hand.</p>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+    <input type="text" id="cfgName" placeholder="Save this configuration as…" style="flex:1;min-width:200px;background:#0e1721;border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 9px;font-size:12.5px"/>
+    <button class="rk-btn primary" id="cfgSave">Save</button>
+    ${names.length?`<select id="cfgPick" class="rk-btn" style="padding:6px 9px">${names.map(x=>`<option>${x}</option>`).join('')}</select>
+      <button class="rk-btn" id="cfgLoad">Load</button><button class="rk-btn" id="cfgDel">Delete</button>`:''}
+   </div>
+   <p class="note">${names.length?`<b>${names.length}</b> saved: ${names.map(x=>`${x} <span style="color:var(--faint)">(${(all[x].saved||'').slice(0,10)})</span>`).join(' · ')}`:'No saved configurations yet.'}
+    <br/><b>These never leave this browser</b> — no account, no server, no sync. A partner sizing three competitors' estates should not be uploading any of it to us. The cost of that: clearing site data loses them, so <b>the export is the backup</b>.</p>`;
+  el.querySelectorAll('[data-id]').forEach(i=>i.oninput=e=>{ID[e.target.dataset.id]=e.target.value;
+    try{localStorage.setItem(IDK,JSON.stringify(ID));}catch(err){}});
+  const b=id=>el.querySelector('#'+id);
+  if(b('cfgSave'))b('cfgSave').onclick=()=>{const nm=(b('cfgName').value||'').trim();
+    if(!nm){alert('Give the configuration a name first.');return;} saveCfg(nm);};
+  if(b('cfgLoad'))b('cfgLoad').onclick=()=>loadCfg(b('cfgPick').value);
+  if(b('cfgDel'))b('cfgDel').onclick=()=>delCfg(b('cfgPick').value);
+}
+renderId();
 let MODE="gpus",CMP="tco",VIEW="size",QUANT="grain";
 const usd=n=>"$"+(n>=1e9?(n/1e9).toFixed(2)+"B":n>=1e6?(n/1e6).toFixed(1)+"M":(n/1e3).toFixed(0)+"K");
 const commas=n=>Math.round(n).toLocaleString();
@@ -4575,17 +4644,35 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  }
  const colRef=n=>{let r='';n++;while(n>0){const m=(n-1)%26;r=String.fromCharCode(65+m)+r;n=(n-m-1)/26;}return r;};
  function sheetXml(rows){
+  /* Style index per row, chosen from the row's own shape rather than passed in — the
+   * callers build plain arrays and should not have to think about formatting.
+   *   row 1                  -> bold header on a rule
+   *   NOTE / SOURCE / TIE-IN -> grey note
+   *   ASSUMED / not published / EXTRAPOLATED / OURS -> amber, because those are the
+   *                             lines a reader must not mistake for vendor figures
+   *   TOTAL                  -> bold */
+  const styleFor=(row,ri)=>{
+   if(ri===0) return 1;
+   const first=String(row[0]||'').trim().toUpperCase();
+   if(first==='NOTE'||first==='SOURCE'||first==='TIE-IN') return 4;
+   const joined=row.map(x=>String(x==null?'':x)).join(' ');
+   if(/ASSUMED|NOT PUBLISHED|EXTRAPOLATED|\bOURS\b|UNVERIFIED/.test(joined)) return 3;
+   if(first==='TOTAL'||first.startsWith('LICENSED TO')||first==='EVALUATION COPY') return 2;
+   return 0;
+  };
   const body=rows.map((row,ri)=>{
+   const st=styleFor(row,ri);
+   const sAttr=st?` s="${st}"`:'';
    const cells=row.map((v,ci)=>{
     const ref=colRef(ci)+(ri+1);
     // A number that arrived as a string must still land as a number, or every SUM in
     // the pivot silently returns 0. Blank stays blank rather than becoming "".
     if(v===''||v==null) return '';
     const num=(typeof v==='number')||(/^-?\d+(\.\d+)?$/.test(String(v))&&String(v).trim()!=='');
-    return num?`<c r="${ref}"><v>${Number(v)}</v></c>`
-              :`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${XE(v)}</t></is></c>`;
+    return num?`<c r="${ref}"${sAttr}><v>${Number(v)}</v></c>`
+              :`<c r="${ref}"${sAttr} t="inlineStr"><is><t xml:space="preserve">${XE(v)}</t></is></c>`;
    }).join('');
-   return `<row r="${ri+1}">${cells}</row>`;
+   return `<row r="${ri+1}"${st===1?' ht="18" customHeight="1"':''}>${cells}</row>`;
   }).join('');
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">`+
@@ -4599,19 +4686,48 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>`+
    `<Default Extension="xml" ContentType="application/xml"/>`+
    `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>`+
+   `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>`+
    sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+
    `</Types>`);
   push('_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
    `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`+
    `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
-  push('xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+  /* Minimal styles part. Four cellXfs: header (bold, white on slate, bottom rule),
+  * bold, amber warning, grey note. Anything richer is a maintenance burden for a
+  * hand-rolled writer and Excel will happily reformat it anyway. */
+ push('xl/styles.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+  `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">`+
+  `<fonts count="5">`+
+   `<font><sz val="11"/><name val="Calibri"/></font>`+
+   `<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>`+
+   `<font><b/><sz val="11"/><name val="Calibri"/></font>`+
+   `<font><sz val="11"/><color rgb="FF8A5A00"/><name val="Calibri"/></font>`+
+   `<font><i/><sz val="10"/><color rgb="FF6B7280"/><name val="Calibri"/></font>`+
+  `</fonts>`+
+  `<fills count="4"><fill><patternFill patternType="none"/></fill>`+
+   `<fill><patternFill patternType="gray125"/></fill>`+
+   `<fill><patternFill patternType="solid"><fgColor rgb="FF1F2937"/><bgColor indexed="64"/></patternFill></fill>`+
+   `<fill><patternFill patternType="solid"><fgColor rgb="FFFEF3C7"/><bgColor indexed="64"/></patternFill></fill>`+
+  `</fills>`+
+  `<borders count="2"><border/><border><bottom style="thin"><color rgb="FF9CA3AF"/></bottom></border></borders>`+
+  `<cellStyleXfs count="1"><xf/></cellStyleXfs>`+
+  `<cellXfs count="5">`+
+   `<xf xfId="0"/>`+
+   `<xf xfId="0" fontId="1" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>`+
+   `<xf xfId="0" fontId="2" applyFont="1"/>`+
+   `<xf xfId="0" fontId="3" fillId="3" applyFont="1" applyFill="1" applyAlignment="1"><alignment wrapText="1"/></xf>`+
+   `<xf xfId="0" fontId="4" applyFont="1" applyAlignment="1"><alignment wrapText="1"/></xf>`+
+  `</cellXfs></styleSheet>`);
+ push('xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
    `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" `+
    `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>`+
    sheets.map((s2,i)=>`<sheet name="${XE(s2.name).slice(0,31)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')+
    `</sheets></workbook>`);
+  const SREL=sheets.length+1;
   push('xl/_rels/workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
    `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`+
    sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+
+   `<Relationship Id="rId${SREL}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`+
    `</Relationships>`);
   sheets.forEach((s2,i)=>push(`xl/worksheets/sheet${i+1}.xml`,sheetXml(s2.rows)));
   return zipStore(f);
@@ -4631,6 +4747,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   const rowsCsv=csv().split('\n').map(r=>r.split(','));
   const sh=[];
   sh.push({name:'Summary',rows:[
+   ...(window.__IDROWS?window.__IDROWS(4):[]),
    ['Metric','Value','Unit','Basis'],
    ['Target GPUs',d.realGpus,'GPUs','rounded up to whole scalable units'],
    ['Scalable units',Math.ceil(d.suNeeded),'SU','576 GPUs per SU'],
@@ -4789,6 +4906,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   const perRow=Math.max(1,d.racksPerRow);
   dl('build-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({
    tool:'penguin-build-sheet-v1',generated:new Date().toISOString(),
+   identity:window.__IDENTITY?window.__IDENTITY():null,
    gpus:d.realGpus,scalable_units:Math.ceil(d.suNeeded),fabric:d.f,
    site:{floors:d.floors,rows_per_floor:d.rowsPerFloor,total_rows:d.totalRows,
      rows_per_floor_is_constraint:d.rowsPerFloorSet>0,racks_per_floor:d.perFloorRacks,racks_per_row:perRow,
@@ -5216,7 +5334,8 @@ window.__MATH=(function(){
  const stamp=()=>new Date().toISOString().slice(0,10);
  $f('afXlsx').onclick=()=>{const r=size(); if(!r||!window.__XLSX)return;
   dl('dell-ai-factory-'+stamp()+'.xlsx',window.__XLSX([
-   {name:'Summary',rows:[['Metric','Value','Unit','Basis'],
+   {name:'Summary',rows:[...(window.__IDROWS?window.__IDROWS(4):[]),
+    ['Metric','Value','Unit','Basis'],
     ['Platform',r.g.label,r.g.u?r.g.u+'U':'rack-scale',r.g.cpu||''],
     ['GPUs',r.gpus,r.g.accel,r.isRack?'whole racks at '+r.perRack+'/rack':'whole nodes'],
     ['Nodes',r.nodes,'',''],['Racks',r.racks,'',''],
@@ -5235,7 +5354,7 @@ window.__MATH=(function(){
   ]),'');};
  $f('afJson').onclick=()=>{const r=size(); if(!r)return;
   dl('dell-ai-factory-'+stamp()+'.json',JSON.stringify({tool:'dell-ai-factory-v1',
-   generated:new Date().toISOString(),inputs:F,
+   generated:new Date().toISOString(),identity:window.__IDENTITY?window.__IDENTITY():null,inputs:F,
    platform:{label:r.g.label,u:r.g.u,gpus_per_node:r.g.gpus,accelerator:r.g.accel,
      accelerator_tdp_w:C().ACCEL[r.g.accel]||null,cooling:r.g.cool,vendor_verified:!!r.g.verified},
    build:{gpus:r.gpus,nodes:r.nodes,racks:r.racks,kw:r.kW,kw_per_node:r.kwNode,basis:r.basis},
@@ -6150,7 +6269,8 @@ window.__MATH=(function(){
  function sheetsFor(r){
   const yn=b=>b?'yes':'no';
   return [
-   {name:'Summary',rows:[...(licOk()?[['LICENSED TO',P.licName,'',(P.licTier||'')],['','','','']]:[WM,['','','','']]),
+   {name:'Summary',rows:[...(window.__IDROWS?window.__IDROWS(4):[]),
+    ...(licOk()?[['LICENSED TO',P.licName,'',(P.licTier||'')],['','','','']]:[WM,['','','','']]),
     ['Metric','Value','Unit','Basis'],
     ['Workload',r.w.label,'',r.demand.fromArray?'sized from customer array statistics':'sized from workload profile'],
     ['Scale',P.units,r.w.unit,'user input'],
@@ -6248,6 +6368,7 @@ window.__MATH=(function(){
  $p('pnJson').onclick=()=>{const r=sizeIt();if(P.gen===18||r.w.gpu)return;
   dlp('dell-partner-sizing-'+stamp()+'.json',JSON.stringify({
    tool:'dell-partner-sizing-v1',generated:new Date().toISOString(),
+   identity:window.__IDENTITY?window.__IDENTITY():null,
    licence:licOk()?{licensed_to:P.licName,tier:P.licTier}:{status:'EVALUATION COPY',
      note:'Not licensed for client engagements. Free forever for sizing your own estate. See COMMERCIAL.md.'},
    basis:P.basis,generation:'17G',inputs:P,
