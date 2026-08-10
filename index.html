@@ -4912,6 +4912,8 @@ window.__MATH=(function(){
     basis:(g.verified?'form factor vendor-published; ':'form factor NOT verified; ')+basis,est:true});
   hw.push({cat:'Accelerator',item:g.accel,qty:gpus,u:null,kw:(C().ACCEL[g.accel]||0)/1000,
     basis:'TDP published by the silicon vendor',est:false});
+  hw.push({cat:'Power',item:'Feed path — '+F.redundancy+' redundancy',qty:racks*(F.redundancy==='2N'?2:F.redundancy==='N+1'?2:1),u:null,kw:null,
+    basis:'each feed carries the full rack load at '+F.redundancy,est:false});
   hw.push({cat:'Rack',item:isRack(g)?(g.rack||'ORv3-style rack'):F.rackU+'U rack',qty:racks,u:null,kw:null,
     basis:isRack(g)?'Dell-published density: '+perRack+' GPUs per rack':'packed at '+(F.rackU-F.reserveU)+'U usable',est:false});
   const sw=C().NET[0];
@@ -4922,7 +4924,8 @@ window.__MATH=(function(){
     basis:'rail-optimised topology per NVIDIA/Dell RA — 1 rail per GPU',est:true});
   hw.push({cat:'Cabling',item:'Storage + management + BMC',qty:links.storage+links.mgmt+links.bmc,u:null,kw:null,
     basis:'2 storage + 1 mgmt + 1 BMC per node — OUR topology assumption',est:true});
-  return {g,nodes,racks,gpus,kW,kwNode,basis,perRack,amps,breaker,connector,three,V,totalBTU,airBTU,liquidKW,lf,cfm,lpm,links,hw,swCount,sw,isRack:isRack(g)};
+  const feeds=F.redundancy==='2N'?2:F.redundancy==='N+1'?2:1;
+  return {g,nodes,racks,gpus,kW,kwNode,basis,perRack,amps,breaker,connector,feeds,three,V,totalBTU,airBTU,liquidKW,lf,cfm,lpm,links,hw,swCount,sw,isRack:isRack(g)};
  }
  window.__AIFACTORY=size;
 
@@ -5072,6 +5075,7 @@ window.__MATH=(function(){
     ${row('Current',N1(r.amps),'A',F.voltage+' V '+(r.three?'three-phase':'single-phase'))}
     ${row('Breaker',r.breaker,'A','80% continuous-load derate — shared sizing math')}
     ${row('Connector',r.connector,'','')}
+    ${row('Feeds',r.feeds,'','each carries full load at '+F.redundancy)}
     ${row('Per rack',r.racks?N1((r.kW||0)/r.racks):'—','kW',r.isRack&&r.g.k==='xe8812'?'Dell publishes 300 kW+ per rack — ORv3-INSPIRED, not the ~18 kW OCP base busbar':'derived')}
    </tbody></table></div>
    <div class="mem-panel"><h5>Cooling</h5><table class="pn-t"><tbody>
