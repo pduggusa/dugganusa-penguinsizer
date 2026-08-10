@@ -4695,6 +4695,64 @@ async function send(){
 cSend.onclick=send;
 cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}});
 
+/* ═══ SHARED SIZING MATH ═══════════════════════════════════════════════════════════
+ * ONE implementation of the electrical, thermal and cabling relationships, used by
+ * every tab. They were duplicated across modules, which is how two tabs start
+ * quoting different breaker sizes for the same load and nobody notices until a
+ * customer does. Each constant carries the assumption it hides.                     */
+window.__MATH=(function(){
+ const BRK=[16,20,30,32,40,50,60,63,80,100,125,150,175,200,225,250,300,350,400,600,800];
+ const nextBreaker=a=>BRK.find(b=>b>=a)||Math.ceil(a/100)*100;
+ /* Per-phase current. sqrt(3) for three-phase line-to-line. */
+ const amps=(kW,V,three,pf)=>kW>0?kW*1000/(V*(three?Math.sqrt(3):1)*(pf||0.98)):0;
+ /* Breaker at the 80% continuous-load derate, which is the code rule people forget. */
+ const breakerFor=(a)=>nextBreaker(a/0.8);
+ const connectorFor=(V,three,breaker)=>three
+   ?(breaker<=16?'IEC 60309 16A':breaker<=32?'IEC 60309 32A':breaker<=63?'IEC 60309 63A':breaker<=125?'IEC 60309 125A':'busway tap-off')
+   :(V<=120
+     ?(breaker<=15?'NEMA 5-15':breaker<=20?'NEMA 5-20':breaker<=30?'NEMA L5-30':'NEMA L5-30 x'+Math.ceil(breaker/30))
+     :(breaker<=20?'NEMA L6-20':breaker<=30?'NEMA L6-30':breaker<=50?'NEMA L6-50':'IEC 60309 '+breaker+'A'));
+ /* Practical single-phase ceiling per feed at 80% derate. Past this you are asking a
+  * wall socket to do a busway's job. */
+ const spCeilKW=(V,pf)=>+(V*(V<=120?30:50)*0.8*(pf||0.98)/1000).toFixed(1);
+ const btu=kW=>kW*3412.14;
+ /* 1.08 assumes standard air density — it UNDERSTATES airflow at altitude. */
+ const cfm=(airBTU,dTf)=>dTf>0?airBTU/(1.08*dTf):0;
+ /* 4.186 is water. Glycol changes it. */
+ const lpm=(kW,dTc)=>dTc>0?kW*60/(4.186*dTc):0;
+ /* You cannot order a 3.7 m DAC — every reach rounds UP to a stock length. */
+ const LADDER={'Passive DAC':[0.5,1,1.5,2,2.5,3],'Active DAC (ACC)':[1,2,3,4,5],
+   'AOC':[3,5,7,10,15,20,30],'Transceiver + fiber':[5,10,15,20,30,50,100],
+   'Transceiver pair + MPO-12 SMF':[5,10,15,20,30,50,100],
+   'Cat6A copper':[1,2,3,5,7,10,15,20,30]};
+ const stdLen=(m,l)=>{const L=LADDER[m];if(!L)return l;for(const x of L)if(x>=l)return x;return L[L.length-1];};
+ const media=(cls,speed,len)=>{
+  if(cls==='bmc')return{m:'Cat6A copper',c:'RJ45'};
+  const hi=(speed==='400G'||speed==='800G');
+  if(hi){if(len<=2)return{m:'Passive DAC',c:'OSFP'};if(len<=3)return{m:'Active DAC (ACC)',c:'OSFP'};
+    if(len<=5)return{m:'AOC',c:'OSFP'};return{m:'Transceiver pair + MPO-12 SMF',c:'OSFP'};}
+  if(speed==='200G'){if(len<=3)return{m:'Passive DAC',c:'QSFP56'};if(len<=7)return{m:'AOC',c:'QSFP56'};return{m:'Transceiver + fiber',c:'QSFP56'};}
+  if(len<=3)return{m:'Passive DAC',c:speed==='25G'?'SFP28':'QSFP28'};
+  if(len<=7)return{m:'AOC',c:speed==='25G'?'SFP28':'QSFP28'};
+  return{m:'Transceiver + fiber',c:speed==='25G'?'SFP28':'QSFP28'};};
+ /* One provenance vocabulary, so "vendor" means the same thing on every tab. */
+ const PROV={
+  vendor:'Published by the manufacturer and cited on the References tab.',
+  derived:'Arithmetic on published figures. The inputs are theirs, the sum is ours.',
+  ours:'Our engineering assumption. Editable, and it says so on its face.',
+  unpublished:'Nobody has published this. The tool refuses to invent one.'
+ };
+ const NOTES={
+  psu:'A PSU rating is a CEILING, not a draw. Dell publishes PSU tables; Dell does not publish a typical per-workload operating wattage.',
+  orv3:'OCP Open Rack v3 base spec is a 48 V DC busbar rated to roughly 18 kW with blind-mate power connectors. Dell 300 kW+ racks are ORv3-INSPIRED, not base-spec — about 17x that envelope. Do not size a busbar from the OCP document.',
+  air:'CFM assumes standard air density and understates airflow at altitude.',
+  water:'Loop flow is water, not glycol.',
+  fp4:'FP4 is a Blackwell-and-later datapath. Hopper (H100/H200) has no FP4, so FP4-denominated figures read n/a rather than a converted number.',
+  cap:'95% cap. Something here is wrong. A vendor sizing engagement supersedes this tool.'
+ };
+ return {BRK,nextBreaker,amps,breakerFor,connectorFor,spCeilKW,btu,cfm,lpm,LADDER,stdLen,media,PROV,NOTES};
+})();
+
 /* ═══ DELL AI FACTORY — reference-architecture sizing ══════════════════════════════
  * Sized TO a published architecture: pick a platform and a GPU target, get nodes,
  * racks, power, cooling, cabling and a BOM. Distinct from Dell Enterprise next door,
@@ -4736,13 +4794,14 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
    basis='('+g.gpus+' × '+(C().ACCEL[g.accel]||'?')+' W) + '+C().HOSTKW+' kW host — accelerator TDP is the silicon vendor\'s, the host overhead is ours';
   }
   const gpus=isRack(g)?racks*perRack:nodes*g.gpus;
+  const M=window.__MATH;
   const V=F.voltage, three=F.phase==='3';
-  const amps=kW?kW*1000/(V*(three?Math.sqrt(3):1)*F.pf):0;
-  const BRK=[16,20,30,32,40,50,60,63,80,100,125,150,175,200,225,250,300,350,400,600,800];
-  const breaker=BRK.find(x=>x>=amps/0.8)||Math.ceil(amps/0.8/100)*100;
-  const totalBTU=(kW||0)*3412.14, lf=g.cool==='liquid'?Math.max(F.liquidFrac,0.9):F.liquidFrac;
+  const amps=M.amps(kW||0,V,three,F.pf);
+  const breaker=M.breakerFor(amps);
+  const connector=M.connectorFor(V,three,breaker);
+  const totalBTU=M.btu(kW||0), lf=g.cool==='liquid'?Math.max(F.liquidFrac,0.9):F.liquidFrac;
   const airBTU=(1-lf)*totalBTU, liquidKW=+(lf*(kW||0)).toFixed(1);
-  const cfm=F.dTair>0?airBTU/(1.08*F.dTair):0, lpm=F.dTwater>0?liquidKW*60/(4.186*F.dTwater):0;
+  const cfm=M.cfm(airBTU,F.dTair), lpm=M.lpm(liquidKW,F.dTwater);
   // cabling: one compute link per GPU (rail), plus storage, mgmt, BMC per node
   const links={compute:gpus,storage:nodes*2,mgmt:nodes*1,bmc:nodes*1};
   const hw=[];
@@ -4760,7 +4819,7 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
     basis:'rail-optimised topology per NVIDIA/Dell RA — 1 rail per GPU',est:true});
   hw.push({cat:'Cabling',item:'Storage + management + BMC',qty:links.storage+links.mgmt+links.bmc,u:null,kw:null,
     basis:'2 storage + 1 mgmt + 1 BMC per node — OUR topology assumption',est:true});
-  return {g,nodes,racks,gpus,kW,kwNode,basis,perRack,amps,breaker,three,V,totalBTU,airBTU,liquidKW,lf,cfm,lpm,links,hw,swCount,sw,isRack:isRack(g)};
+  return {g,nodes,racks,gpus,kW,kwNode,basis,perRack,amps,breaker,connector,three,V,totalBTU,airBTU,liquidKW,lf,cfm,lpm,links,hw,swCount,sw,isRack:isRack(g)};
  }
  window.__AIFACTORY=size;
 
@@ -4786,6 +4845,35 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
     ${num('dTair','Air ΔT °F',null,1)}${num('dTwater','Water ΔT °C',null,1)}
     ${num('sparesPct','Cable spares %',null,1)}
    </div>
+  </div>`;
+ }
+ /* Print THEIR engineering, not our paraphrase of it. For the selected platform this
+  * renders Dell's own published design points — density, cooling approach, rack and
+  * fabric — as the engineered approach, with our arithmetic clearly downstream of it.
+  * The customer is buying Dell's design; the tool's job is to lay it out honestly. */
+ function approach(r){
+  if(!r) return '';
+  const b=C().badge, g=r.g, M=window.__MATH;
+  const ra=C().DELLRA.filter(a=>new RegExp(g.k.replace(/^xe/,'XE'),'i').test(a.servers)||/2-8-5-200/.test(a.label)&&/xe77/.test(g.k));
+  const pts=[];
+  pts.push(['Form factor', g.u?g.u+'U':(g.rackScale?'rack-scale':'not published'), g.uV||g.rackScale?'vendor':'unverified']);
+  pts.push(['Accelerator', g.gpus+'× '+g.accel+(C().ACCEL[g.accel]?' @ '+C().ACCEL[g.accel]+' W':''), 'vendor']);
+  if(g.cpu) pts.push(['Host', g.cpu, 'vendor']);
+  pts.push(['Cooling', g.cool==='liquid'?'direct-to-chip liquid'+(g.k==='xe8812'?', fanless':''):'air, high-performance fans', 'vendor']);
+  if(g.perRackGpus) pts.push(['Rack density', g.perRackGpus+' GPUs'+(g.perRackNodes?' / '+g.perRackNodes+' nodes':'')+' per rack', 'vendor']);
+  if(g.rack) pts.push(['Rack', g.rack, 'vendor']);
+  if(g.psu) pts.push(['PSU', g.psu, 'vendor']);
+  if(g.accelOpts) pts.push(['Accelerator options', g.accelOpts.join(' · '), 'vendor']);
+  return `<div class="mem-panel" style="border-color:rgba(14,165,233,.4)">
+   <h5>Dell&rsquo;s engineered approach — ${g.label}</h5>
+   <p class="note">These are <b>Dell&rsquo;s design points</b>, as Dell publishes them. Everything the tool computes below is arithmetic on top of this — the design is theirs.</p>
+   <table class="pn-t"><tbody>
+    ${pts.map(x=>`<tr><td>${x[0]}</td><td><b>${x[1]}</b></td><td class="pn-basis">${b(x[2]==='vendor',x[2])}</td></tr>`).join('')}
+   </tbody></table>
+   <p class="note" style="margin-top:8px">${g.note}</p>
+   ${ra.length?`<p class="note" style="color:var(--ok);margin-top:6px"><b>Reference architecture:</b> ${ra.map(a=>a.label).join(' · ')} — ${ra[0].fabric}. ${ra[0].note}</p>`:''}
+   ${g.rackScale||g.perRackGpus?`<p class="note" style="color:var(--warn);margin-top:6px">⚠ ${M.NOTES.orv3}</p>`:''}
+   <p class="note" style="margin-top:6px">${M.NOTES.psu}</p>
   </div>`;
  }
  function out(r){
@@ -4815,7 +4903,8 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
    <div class="mem-panel"><h5>Power</h5><table class="pn-t"><tbody>
     ${row('Total load',r.kW!=null?N1(r.kW):'—','kW',r.basis)}
     ${row('Current',N1(r.amps),'A',F.voltage+' V '+(r.three?'three-phase':'single-phase'))}
-    ${row('Breaker',r.breaker,'A','80% continuous-load derate')}
+    ${row('Breaker',r.breaker,'A','80% continuous-load derate — shared sizing math')}
+    ${row('Connector',r.connector,'','')}
     ${row('Per rack',r.racks?N1((r.kW||0)/r.racks):'—','kW',r.isRack&&r.g.k==='xe8812'?'Dell publishes 300 kW+ per rack — ORv3-INSPIRED, not the ~18 kW OCP base busbar':'derived')}
    </tbody></table></div>
    <div class="mem-panel"><h5>Cooling</h5><table class="pn-t"><tbody>
@@ -4840,7 +4929,7 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
  function paint(){
   $f('afCtl').innerHTML=ctl();
   const r=size();
-  $f('afOut').innerHTML=out(r);
+  $f('afOut').innerHTML=approach(r)+out(r);
   $f('afPower').innerHTML=pow(r);
   $f('afBom').innerHTML=bom(r);
   if(C()&&C().gpuHTML){const gp=$f('pnGpu'),ra=$f('pnRa');
@@ -5203,31 +5292,27 @@ cText.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventD
   const swKW=sw.w!=null?+(switches*sw.w/1000).toFixed(2):null;
   // ROLL-UP
   const totalKW=+(computeKW+(storeKW||0)+(swKW||0)).toFixed(1);
+  const M=window.__MATH;
   const V=P.voltage, three=P.phase==='3';
-  const amps=totalKW>0?totalKW*1000/(V*(three?Math.sqrt(3):1)*P.pf):0;
-  const BRK=[16,20,30,32,40,50,60,63,80,100,125,150,175,200,225,250,300,350,400];
-  const breaker=BRK.find(b=>b>=amps/0.8)||Math.ceil(amps/0.8/50)*50;
+  const amps=M.amps(totalKW,V,three,P.pf);
+  const breaker=M.breakerFor(amps);
   /* Single-phase matters. Not everyone sizing a build has three-phase in the room —
    * a two-rack deployment in a converted office runs on whatever the panel already
    * has, and telling that person "415 V three-phase" is useless. So 120 V is a first
    * class option, the connector map covers the small-shop plugs, and the engine says
    * out loud when the load has outgrown what a single-phase feed can actually carry. */
-  const connector=three
-   ?(breaker<=16?'IEC 60309 16A':breaker<=32?'IEC 60309 32A':breaker<=63?'IEC 60309 63A':breaker<=125?'IEC 60309 125A':'busway tap-off')
-   :(V<=120
-     ?(breaker<=15?'NEMA 5-15':breaker<=20?'NEMA 5-20':breaker<=30?'NEMA L5-30':'NEMA L5-30 ×'+Math.ceil(breaker/30))
-     :(breaker<=20?'NEMA L6-20':breaker<=30?'NEMA L6-30':breaker<=50?'NEMA L6-50':'IEC 60309 '+breaker+'A'));
+  const connector=M.connectorFor(V,three,breaker);
   /* Practical single-phase ceilings per feed, at 80% continuous derate:
    * 120 V/20 A ~ 1.9 kW, 120 V/30 A ~ 2.9 kW, 208-240 V/30 A ~ 5.0-5.8 kW,
    * 208-240 V/50 A ~ 8.3-9.6 kW. Past that you are asking a wall socket to do a
    * busway's job. */
-  const spCeilKW=three?null:+(V*(V<=120?30:50)*0.8*P.pf/1000).toFixed(1);
+  const spCeilKW=three?null:M.spCeilKW(V,P.pf);
   const spOver=!three&&spCeilKW!=null&&totalKW>spCeilKW;
   const feedsNeeded=spOver?Math.ceil(totalKW/Math.max(0.1,spCeilKW)):1;
   const feeds=P.redundancy==='2N'?2:P.redundancy==='N+1'?2:1;
   // THERMAL
-  const totalBTU=totalKW*3412.14, lf=P.liquidFrac, airBTU=(1-lf)*totalBTU, liquidKW=+(lf*totalKW).toFixed(1);
-  const cfm=P.dTair>0?airBTU/(1.08*P.dTair):0, lpm=P.dTwater>0?liquidKW*60/(4.186*P.dTwater):0;
+  const totalBTU=M.btu(totalKW), lf=P.liquidFrac, airBTU=(1-lf)*totalBTU, liquidKW=+(lf*totalKW).toFixed(1);
+  const cfm=M.cfm(airBTU,P.dTair), lpm=M.lpm(liquidKW,P.dTwater);
   // RACKS — space vs power, the same split the Rack Planner uses
   const usableU=Math.max(1,P.rackU-P.reserveU);
   const uTotal=nodes*plat.u+(storeU||0)+switches*sw.u;
