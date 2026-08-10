@@ -511,11 +511,11 @@
     <button data-v="size" class="on">Size It</button>
     <button data-v="aifactory">🏭 Dell AI Factory</button>
     <button data-v="partner">🏢 Dell Enterprise</button>
+    <button data-v="mem">🐧 MemoryAI</button>
     <button data-v="rack">Rack Planner</button>
     <button data-v="why">Why Penguin</button>
     <button data-v="rent">Buy vs Rent</button>
     <button data-v="case">The Case</button>
-    <button data-v="mem">🐧 MemoryAI</button>
     <button data-v="dcgm">DCGM Upload</button>
     <button data-v="tree">🎯 Decide</button>
     <button data-v="ref">📚 References</button>
@@ -650,6 +650,10 @@
           <span class="dt-lbl">Network placement</span>
           <div class="seg" id="rkPlace" style="max-width:330px">
             <button data-p="left">Left of row</button><button data-p="mor">Middle of row</button><button data-p="eor" class="on">Right of row</button><button data-p="tor">Top of rack</button>
+          </div>
+          <span class="dt-lbl">Memory tier</span>
+          <div class="seg" id="rkMem" style="max-width:250px">
+            <button data-m="on" class="on">MemoryAI in</button><button data-m="off">out</button>
           </div>
           <span class="dt-lbl">Fabric redundancy</span>
           <div class="seg" id="rkRed" style="max-width:400px">
@@ -1527,6 +1531,9 @@ function renderId(){
    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
     <input type="text" id="cfgName" placeholder="Save this configuration as…" style="flex:1;min-width:200px;background:#0e1721;border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 9px;font-size:12.5px"/>
     <button class="rk-btn primary" id="cfgSave">Save</button>
+    <button class="rk-btn" id="cfgExport">⬇ Export configuration</button>
+    <button class="rk-btn" id="cfgImport">⬆ Import configuration</button>
+    <input type="file" id="cfgFile" accept=".json" style="display:none"/>
     ${names.length?`<select id="cfgPick" class="rk-btn" style="padding:6px 9px">${names.map(x=>`<option>${x}</option>`).join('')}</select>
       <button class="rk-btn" id="cfgLoad">Load</button><button class="rk-btn" id="cfgDel">Delete</button>`:''}
    </div>
@@ -1537,6 +1544,30 @@ function renderId(){
   const b=id=>el.querySelector('#'+id);
   if(b('cfgSave'))b('cfgSave').onclick=()=>{const nm=(b('cfgName').value||'').trim();
     if(!nm){alert('Give the configuration a name first.');return;} saveCfg(nm);};
+  if(b('cfgExport'))b('cfgExport').onclick=()=>{
+    const snap={format:'penguin-config/1',exported:new Date().toISOString(),
+      identity:{...ID},state:{}};
+    STATE_KEYS.forEach(k=>{const v=localStorage.getItem(k); if(v!=null)snap.state[k]=v;});
+    const blob=new Blob([JSON.stringify(snap,null,1)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download=`penguin-config-${(ID.customer||'build').replace(/[^a-z0-9]+/gi,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+  if(b('cfgImport'))b('cfgImport').onclick=()=>b('cfgFile').click();
+  if(b('cfgFile'))b('cfgFile').onchange=ev=>{const f=ev.target.files[0]; if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      let j; try{ j=JSON.parse(String(rd.result)); }
+      catch(err){ alert('That is not readable JSON.'); return; }
+      if(!j||j.format!=='penguin-config/1'){
+        alert('Unrecognised file.\n\nExpected format "penguin-config/1". Refusing rather than guessing at it — a best-effort parse of a build configuration is how a wrong rack count ends up in a workbook.');
+        return; }
+      if(!confirm(`Import this configuration?\n\nExported ${(j.exported||'').slice(0,10)}${j.identity&&j.identity.customer?' for '+j.identity.customer:''}.\n\nThis REPLACES the state of every tab.`))return;
+      ID={...(j.identity||{})}; localStorage.setItem(IDK,JSON.stringify(ID));
+      STATE_KEYS.forEach(k=>localStorage.removeItem(k));
+      Object.entries(j.state||{}).forEach(([k,v])=>{ if(typeof v==='string')localStorage.setItem(k,v); });
+      location.reload();
+    };
+    rd.readAsText(f);};
   if(b('cfgLoad'))b('cfgLoad').onclick=()=>loadCfg(b('cfgPick').value);
   if(b('cfgDel'))b('cfgDel').onclick=()=>delCfg(b('cfgPick').value);
 }
@@ -3357,6 +3388,53 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const gpKW=+(gi('gpKW')||0), gpLabel=A.gpLabel||'Dell general-purpose', gpNodes=Math.round(gi('gpNodes')||0);
   for(let n=0;n<gpRacks;n++) racks.push({kind:'gp',vendor:'dell',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(gpRacks/phases)))+1),idx:racks.length+1,key:'g'+(n+1)});
 
+  /* ROW-ALIGNED LAYOUT BY KIND, and A/B network at opposite ends.
+   *
+   * The rack list was a naive sequential fill: 64 compute, then 12 network, then
+   * storage, then memory, chopped into rows at racks-per-row. So network began
+   * wherever compute happened to stop — mid-row — and the tail row was half empty.
+   * "Networking all smooshed over at the end of blank rows" is exactly what that
+   * produces, and it also silently contradicted the A/B placement the model claims:
+   * plane A and plane B were adjacent instead of at opposite row ends.
+   *
+   * Now each kind starts on a row boundary, and network is split into its two planes
+   * and pushed to opposite ends of the network block. Padding to the boundary is
+   * REAL EMPTY SPACE, reported as such rather than back-filled — those gaps are where
+   * the next phase lands. */
+  const padToRow=(arr)=>{ const r=arr.length%perRow; if(r===0)return arr;
+    for(let i=0;i<perRow-r;i++)arr.push({kind:'empty',vendor:null,su:null,phase:1,key:'e'+arr.length});
+    return arr; };
+  {
+   const byKind=k=>racks.filter(r=>r.kind===k);
+   const comp=byKind('compute'), net=byKind('network'), sto=byKind('storage'),
+         mem=byKind('memory'), gp=byKind('gp');
+   let ordered=padToRow([...comp]);
+   if(net.length){
+    if(planes>1&&!torMode){
+     const half=Math.ceil(net.length/2);
+     const A_=net.slice(0,half).map(r=>({...r,plane:'A'}));
+     const B_=net.slice(half).map(r=>({...r,plane:'B'}));
+     /* A at the left of the network block, B at the right, with the row filled
+      * between them so one row-end event cannot reach both planes. */
+     /* If both planes fit one row, separate them with blanks so A sits at the left end
+      * and B at the right. If they do not fit, give each plane its OWN rows — which is
+      * better separation anyway, since a row-end event then cannot reach both. */
+     if(A_.length+B_.length<=perRow){
+      const gap=perRow-A_.length-B_.length;
+      const row=[...A_];
+      for(let i=0;i<gap;i++)row.push({kind:'empty',vendor:null,su:null,phase:1,key:'e'+(ordered.length+row.length)});
+      ordered=ordered.concat(row.concat(B_));
+     } else {
+      ordered=ordered.concat(padToRow([...A_])).concat(padToRow([...B_]));
+     }
+    } else ordered=ordered.concat(padToRow([...net]));
+   }
+   if(sto.length) ordered=ordered.concat(padToRow([...sto]));
+   if(mem.length) ordered=ordered.concat(padToRow([...mem]));
+   if(gp.length)  ordered=ordered.concat(padToRow([...gp]));
+   racks.length=0; ordered.forEach((r,i)=>{ r.idx=i+1; racks.push(r); });
+  }
+
   /* Custom floor layout. Keys are stable per rack CLASS and ordinal (c7, v2, n1), not
    * per position, so a saved layout survives a change in racks-per-row, floors or
    * phases. Racks that exist but are not in the saved order append at the end rather
@@ -3488,7 +3566,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    vc:vOff?0:vc, vd:vOff?0:vd, vCnodes:vOff?0:vCnodes, vAuto, manual, vModel,
    vU:vOff?0:vU, vRacks, vKw:vOff?0:vKw, vBE:vOff?0:vBE, vFE:vOff?0:vFE,
    vBMC:vOff?0:vBMC, vCON:vOff?0:vCON, vOff, vMode,
-   vastLabel:VAST[vModel]?VAST[vModel].label:'VAST', vCboxLabel:VAST.cbox.label,
+   vastLabel:(vModel&&vModel.label)||'VAST DBox', vCboxLabel:VAST.cbox.label,
    vCboxU:VAST.cbox.u, vCboxKw:VAST.cbox.kw, vBoxU:VAST[vModel]?VAST[vModel].u:2,
    vBoxKw:VAST[vModel]?VAST[vModel].kw:1.4,
    memLabel:MEMAI.label, memAppU:MEMAI.u, memAppKw:MEMAI.kw,
@@ -3498,6 +3576,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    netRed,planes,perPlane,netRacksPerSide,maintLoss,maintText,swUred,
    cols,rackW,rackD,coldA,hotA,serviceM,floorWidthM,floorDepthM,floorAreaM2,rowPitchM,m2PerRack,
    gridSlots,emptySlots,
+   computeArchU:(ARCH.find(x=>x.key===A.arch)||{}).u||null,
    gpRacks,gpKW,gpLabel,gpNodes,gpKWPerRack:gpRacks?+(gpKW/gpRacks).toFixed(1):0,
    computeVendor,computeLabel,
    gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
@@ -3624,11 +3703,38 @@ ${c.iso?`<h2>Multi-tenancy</h2>
 
  /* Reference elevation for a GB300 NVL72 rack. Tray ORDER varies by OEM integrator;
   * counts do not. Rendered as data so the caveat is honest and the drawing is checkable. */
- function elevation(kind){
+ /* Elevations MUST differ by what is actually in the rack. This handled only memory
+  * and network and let EVERYTHING ELSE fall through to a hardcoded GB300 NVL72 layout —
+  * so a VAST storage rack drew NVLink switch trays, a Dell general-purpose rack drew
+  * "4x B300 + 2x Grace", and every node architecture rendered identically. Three
+  * separate bug reports, one cause. */
+ function elevation(kind,d){
   if(kind==='memory') return [
    {u:1,n:1,t:'oob',label:'SN2201 OOB — rack management',dev:'OOB'},
    {u:1,n:1,t:'patch',label:'MPO-12/APC patch panel',dev:'PP'},
    {u:4,n:10,t:'memai',label:MEMAI.label+' — '+MEMAI.mem,dev:'MEM'},
+  ];
+  if(kind==='storage') return [
+   {u:1,n:1,t:'oob',label:'SN2201 OOB — rack management',dev:'OOB'},
+   {u:1,n:2,t:'patch',label:'MPO-12/APC patch panel',dev:'PP'},
+   {u:2,n:8,t:'ethleaf',label:((d&&d.vastLabel)||'VAST DBox')+' — NVMe enclosure',dev:'DBX'},
+   {u:2,n:4,t:'compute',label:((d&&d.vCboxLabel)||'VAST CBox')+' — 4 CNodes',dev:'CBX'},
+   {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
+  ];
+  if(kind==='gp') return [
+   {u:1,n:1,t:'oob',label:'iDRAC / OOB switch',dev:'OOB'},
+   {u:1,n:1,t:'patch',label:'Patch panel',dev:'PP'},
+   {u:1,n:2,t:'ethleaf',label:'PowerSwitch S5448F-ON — leaf',dev:'ETL'},
+   {u:2,n:16,t:'compute',label:((d&&d.gpLabel)||'Dell PowerEdge')+' — general purpose',dev:'PE'},
+   {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
+  ];
+  if(kind==='compute' && d && d.computeArchU && d.computeArchU>1) return [
+   {u:1,n:1,t:'manifold',label:'Coolant manifold / plumbing',dev:'MAN'},
+   {u:1,n:2,t:'ethleaf',label:'ToR leaf',dev:'ETL'},
+   {u:d.computeArchU,n:Math.max(1,Math.floor(40/d.computeArchU)),t:'compute',
+    label:(d.computeLabel||'Compute node')+' — '+d.computeArchU+'U node',dev:'ND'},
+   {u:1,n:1,t:'oob',label:'SN2201 OOB',dev:'OOB'},
+   {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
   ];
   if(kind==='network') return [
    {u:2,n:1,t:'manifold',label:'Blanking / plumbing'},
@@ -3682,6 +3788,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
 
  function renderArtOnce(){try{renderArt();}catch(e){}}
  function renderCtl(){
+  const memOnNow=(parseFloat(A.memPerSU)||0)>0 && (parseFloat(A.memAI)||0)>0;
+  document.querySelectorAll('#rkMem button').forEach(x=>x.classList.toggle('on',(x.dataset.m==='on')===memOnNow));
   const vmsel=$a('advVastMode');
   if(vmsel){vmsel.value=A.vastMode||'auto';
     vmsel.onchange=e=>{A.vastMode=e.target.value;save();paint();};}
@@ -3737,7 +3845,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  function assetRows(){
   const d=derive(), out=[];
   d.racks.forEach((r,i)=>{
-   const nm=rackName(i+1), rows=elevation(r.kind);
+   const nm=rackName(i+1), rows=elevation(r.kind,d);
    const perRow=Math.max(1,gi('racksPerRow'));
    const rowLetter=String.fromCharCode(A.row.charCodeAt(0)+Math.floor(i/perRow));
    out.push({rack:nm,row:rowLetter,su:r.su||'',u:'',asset_type:'rack',
@@ -3862,8 +3970,13 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    const on=SEL===i;
    return `<button class="rk-tile ${r.kind}${on?' on':''}" data-rk="${i}">
      <span class="tn">${nm}</span>
-     <span class="tt">${r.kind==='compute'?`SU${r.su} · ${d.computeVendor==='dell'?'Dell':d.computeVendor==='nvidia'?'NVIDIA':'Penguin'}`:r.kind==='gp'?'general-purpose':'network'}</span>
-     <span class="tb">${r.kind==='compute'?'72 GPU · 142 kW':r.kind==='gp'?`${d.gpLabel} · ${d.gpKWPerRack} kW`:`${FABRIC.sw.ibLeaf.model.split(' ')[0]} + SN5600D`}</span>
+     <span class="tt">${r.kind==='compute'?`SU${r.su} · ${d.computeVendor==='dell'?'Dell':d.computeVendor==='nvidia'?'NVIDIA':'Penguin'}`
+      :r.kind==='gp'?'general-purpose':r.kind==='storage'?'storage':r.kind==='memory'?'memory tier':'network'}</span>
+     <span class="tb">${r.kind==='compute'?'72 GPU · 142 kW'
+      :r.kind==='gp'?`${d.gpLabel} · ${d.gpKWPerRack} kW`
+      :r.kind==='storage'?`${d.vastLabel} · ${d.vKw} kW`
+      :r.kind==='memory'?`${d.memLabel} · ${d.memTB} TB`
+      :`${FABRIC.sw.ibLeaf.model.split(' ')[0]} + SN5600D`}</span>
    </button>`;}).join('');
   renderArtOnce();
   $a('advElev').innerHTML=`<div class="adv-key" style="margin-bottom:12px">
@@ -4304,6 +4417,50 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   ];
   return rows.filter(r=>r[2]>0).map(r=>({cat:r[0],item:r[1],qty:r[2],sp:sp(r[2]),basis:r[3]}));
  }
+ /* REAR VIEW. Was four hardcoded bands — manifold, busbar, cartridge, PDU — identical
+  * for every rack, with no NICs, no ports and no cabling. The back of a rack is where
+  * the install actually happens, so it has to show what plugs in and where. */
+ function rearBands(r,d){
+  const B=(cls,h,u,label)=>`<div class="rk-band ${cls}" style="height:${h}px"><span class="ru">${u}</span><span class="rl">${label}</span></div>`;
+  const dell=d.computeVendor==='dell';
+  if(r.kind==='network') return [
+   B('patch',54,'—','MPO-12/APC trunk terminations — '+d.portsPerRack+' positions per compute rack'),
+   B('ibleaf',96,'—',(d.swIb||'IB leaf')+' rear — '+(d.f.ibLeaf||0)+' leaf + '+(d.f.ibSpine||0)+' spine, OSFP cages'),
+   B('ethleaf',72,'—',(d.swEth||'Ethernet leaf')+' rear — QSFP112 cages, storage and in-band'),
+   B('oob',40,'—','SN2201 OOB uplinks — SFP28 DAC'),
+   B('pdu',54,'—','Rack PDU A / B — '+(d.netRed==='single'?'single feed':'A/B feeds, opposite row ends')),
+  ].join('');
+  if(r.kind==='storage') return [
+   B('manifold',40,'—','Blanking / airflow — VAST is air-cooled'),
+   B('ethleaf',110,'—','DBox rear — 4x back-end 100G per enclosure, 2x BMC, 2x console'),
+   B('compute',84,'—','CBox rear — 2x back-end + 2x front-end per CNode, 1x BMC, 1x console'),
+   B('patch',44,'—','Storage patch field — back-end fabric to the leaf'),
+   B('pdu',54,'—','Rack PDU A / B — IEC 60309'),
+  ].join('');
+  if(r.kind==='memory') return [
+   B('memai',110,'—','MemoryAI rear — 2x 400G front-end per appliance <b>(port topology ASSUMED, not vendor-published)</b>'),
+   B('oob',40,'—','1x mgmt + 1x BMC + 1x console per appliance'),
+   B('patch',44,'—','Patch field to the compute fabric'),
+   B('pdu',54,'—','Rack PDU A / B'),
+  ].join('');
+  if(r.kind==='gp') return [
+   B('compute',130,'—',(d.gpLabel||'PowerEdge')+' rear — per node: 2x fabric (OCP/LOM), 2x storage, 1x iDRAC, dual hot-swap PSU'),
+   B('ethleaf',60,'—','S5448F-ON rear — 48x SFP56-DD + 8x QSFP56-DD uplinks'),
+   B('oob',40,'—','iDRAC / OOB aggregation — Cat6A'),
+   B('pdu',60,'—','Rack PDU A / B — '+(d.gpKWPerRack||0)+' kW, C13/C19'),
+  ].join('');
+  const hgx = d.computeArchU && d.computeArchU>1;
+  return [
+   B('manifold',46,'—',hgx?'Coolant return manifold — direct-to-chip':'Coolant return manifold — NVL72 secondary loop'),
+   hgx
+     ? B('compute',150,'—',(d.computeLabel||'Node')+' rear — per node: 8x compute fabric (1 rail/GPU), 2x storage, 2x mgmt, 1x BMC, 1x SMC')
+     : B('compute',150,'—','Per compute tray: 4x ConnectX-8 (800G, 1 rail/GPU) + 2x BlueField-3 B3240 (storage/in-band) + BMC — x18 trays'),
+   hgx ? '' : B('cart',110,'—','NVLink copper cable cartridge — spine backplane, NOT a cable-BOM item'),
+   B('bus',80,'—',dell?'48 V DC busbar · rack power shelf — ORv3-style':(hgx?'A/B PDU feeds — node PSUs':'DC busbar · power shelf output')),
+   B('oob',40,'—','Tray BMC + switch-tray BMC aggregation — Cat6A to the OOB switch'),
+   B('pdu',54,'—',dell?'ORv3 blind-mate power':'Rack PDU A / B · busway tap-off'),
+  ].join('');
+ }
  function detailCard(r,i){
   const d=derive();   // vendor/label lookups below need the model; it was never passed in
   const nm=rackName(i+1), rows=elevation(r.kind);
@@ -4314,7 +4471,12 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   }
   const dl=bands.filter(b=>b.dev);
   return `<div class="rk-card">
-    <div class="rk-cardh"><div><h4>${nm}</h4><div class="s">${r.kind==='compute'?`Scalable Unit ${r.su} · ${d.computeLabel}`:r.kind==='gp'?`General-purpose · ${d.gpLabel} · ${d.gpKWPerRack} kW — power is OUR estimate, not a Dell figure`:'Network rack · leaf, spine and OOB'}</div></div>
+    <div class="rk-cardh"><div><h4>${nm}</h4><div class="s">${
+  r.kind==='compute'?`Scalable Unit ${r.su} · ${d.computeLabel}`
+ :r.kind==='gp'?`General-purpose · ${d.gpLabel} · ${d.gpKWPerRack} kW — power is OUR estimate, not a Dell figure`
+ :r.kind==='storage'?`Storage · ${d.vastLabel} + ${d.vCboxLabel} · ${d.vd} DBox / ${d.vc} CBox across ${d.vRacks} rack${d.vRacks===1?'':'s'}`
+ :r.kind==='memory'?`Memory tier · ${d.memLabel} · ${d.memUnits} appliance${d.memUnits===1?'':'s'} · ${d.memTB} TB — kW ESTIMATED, Penguin publishes no power figure`
+ :'Network rack · leaf, spine and OOB'}</div></div>
       <button class="rk-btn" data-close="1">close</button></div>
     <div class="rk-cardb">
       <div class="rk-elev">
@@ -4325,11 +4487,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       <div class="rk-elev">
         <div class="rk-elevh">REAR</div>
         <div class="rk-rackbox">
-          <div class="rk-band manifold" style="height:52px"><span class="ru">48</span><span class="rl">Coolant return manifold · quick-disconnects</span></div>
-          <div class="rk-band bus" style="height:${r.kind==='compute'?'160':'80'}px"><span class="ru">—</span><span class="rl">${r.kind!=='compute'?'A/B PDU feeds':d.computeVendor==='dell'?'48 V DC busbar · rack power shelf — ORv3-style':'DC busbar · power shelf output'}</span></div>
-          <div class="rk-band cart" style="height:${r.kind==='compute'?'190':'150'}px;background-image:url('${faceOfKind('cart')}');background-size:100% 100%;background-repeat:no-repeat"><span class="ru">—</span><span class="rl">${r.kind!=='compute'?'MPO-12/APC patch field · trunk terminations':d.computeVendor==='dell'?'ORv3-style blind-mate power (OCP ORv3 base spec is a 48 V DC busbar rated ~18 kW; Dell&rsquo;s 300 kW+ racks are ORv3-INSPIRED, not base-spec) + liquid manifold — not a cable-BOM item':'NVLink copper cable cartridge — spine backplane, NOT a cable-BOM item'}</span></div>
-          <div class="rk-band pdu" style="height:60px;background-image:url('${faceOfKind('pdu')}');background-size:100% 100%;background-repeat:no-repeat"><span class="ru">—</span><span class="rl">Rack PDU A / B · ${r.kind==='compute'?'busway tap-off':'IEC 60309'}</span></div>
-        </div>
+          ${rearBands(r,d)}
+</div>
       </div>
       <div class="rk-ports">
         <div class="rk-elevh">LABELLED DEVICES &amp; PORTS</div>
@@ -4343,6 +4502,12 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  }
 
  // ---- mode switching ---------------------------------------------------------------
+ document.querySelectorAll('#rkMem button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#rkMem button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  A.memPerSU = b.dataset.m==='on' ? (parseFloat(A.memPerSU)>0?A.memPerSU:1) : 0;
+  A.memAI = b.dataset.m==='on' ? 1 : 0;
+  save(); paint();
+ });
  document.querySelectorAll('#rkRed button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#rkRed button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
   A.netRed=b.dataset.r; save(); paint();
