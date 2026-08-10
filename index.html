@@ -679,6 +679,25 @@
             <label class="wd-t"><input type="checkbox" id="wdAisles" checked/> hot / cold aisles</label>
             <label class="wd-t">Trunks land
               <select id="wdSide"><option value="left">left of row</option><option value="right" selected>right of row</option><option value="both">both ends</option></select></label>
+            <label class="wd-t">Show
+              <select id="wdLayer">
+                <option value="all">everything</option>
+                <option value="compute">compute fabric only</option>
+                <option value="storage">storage fabric only</option>
+                <option value="mgmt">management + BMC only</option>
+                <option value="uplink">leaf → spine uplinks only</option>
+                <option value="none">racks only — no cabling</option>
+              </select></label>
+            <label class="wd-t">Racks
+              <select id="wdKind">
+                <option value="all">all kinds</option>
+                <option value="compute">compute</option>
+                <option value="network">network</option>
+                <option value="storage">storage</option>
+                <option value="memory">memory tier</option>
+                <option value="patch">patch fields</option>
+                <option value="gp">general purpose</option>
+              </select></label>
             <button class="rk-btn" id="wdReset" style="display:none">↺ reset layout</button>
             <span class="wd-hint" id="wdHint">click a rack for detail · drag to move it</span>
           </div>
@@ -4110,7 +4129,20 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     * never reserved. */
    const TOPB=aisles?Math.round(40*zoom):0;
    const RPOS=[];
-   const bundles=Object.entries(d.L.reduce((a,l)=>{a[l.cls]=(a[l.cls]||0)+l.n;return a;},{}))
+   /* LAYER FILTER. Drawing every cable class over every rack at once is unreadable at
+    * SuperPOD scale — the compute fabric alone is thousands of links and it buries the
+    * storage and management planes underneath it. An installer looks at ONE plane at a
+    * time, so the diagram should too. Filtering changes only what is DRAWN; every
+    * count, BOM line and export stays whole. */
+   const LAYER=(A.wdLayer||'all'), KIND=(A.wdKind||'all');
+   const inLayer=cls=>{
+    if(LAYER==='all')return true; if(LAYER==='none')return false;
+    if(LAYER==='mgmt')return cls==='mgmt'||cls==='bmc'||cls==='console'||cls==='oob';
+    if(LAYER==='compute')return cls==='compute'||cls==='ib'||cls==='ibleaf';
+    if(LAYER==='storage')return cls==='storage'||cls==='ethleaf';
+    return cls===LAYER;
+   };
+   const bundles=Object.entries(d.L.filter(l=>inLayer(l.cls)).reduce((a,l)=>{a[l.cls]=(a[l.cls]||0)+l.n;return a;},{}))
      .filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
    const maxN=Math.max(...bundles.map(b=>b[1]),1);
    const rowW=perRowW*(RW+GAP)+GAP;
@@ -4191,6 +4223,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     // ---- racks ----
     row.forEach((r,i)=>{
      const gi_=d.racks.indexOf(r), x=xOf(i), sel=SEL===gi_;
+     const dim=(A.wdKind&&A.wdKind!=='all'&&r.kind!==A.wdKind)?0.18:1;
+     const podIx=d.podOf?d.podOf(gi_):0;
+     const podFirst=!d.podOf||gi_===0||d.podOf(gi_-1)!==podIx;
+     const podTag=podFirst&&d.podLabel?d.podLabel(gi_):null;
      RPOS.push({i:gi_,cx:x+RW/2,cy:y+RH/2});
      /* Memory racks are Penguin gear too, so vendor alone cannot distinguish them from
       * compute — and where the KV cache sits is the one placement decision that changes
@@ -4201,7 +4237,12 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      const vtag=mem?'M':r.vendor==='dell'?'D':r.vendor==='penguin'?'P':r.vendor==='vast'?'V':'N';
      // the front (intake) face gets a pale strip — it is the edge that must see the cold aisle
      const fy = face>0 ? y+RH-Math.max(2,3*zoom) : y;
-     svg.push(`<g class="wd-rack${sel?' on':''}" data-wr="${gi_}" data-key="${r.key}" style="cursor:grab;touch-action:none">
+     if(podTag) svg.push(`<g pointer-events="none">
+       <line x1="${x-Math.max(2,3*zoom)}" y1="${y-Math.max(4,6*zoom)}" x2="${x-Math.max(2,3*zoom)}" y2="${y+RH+Math.max(4,6*zoom)}"
+             stroke="#f59e0b" stroke-width="${Math.max(1,1.5*zoom)}" stroke-dasharray="${3*zoom} ${3*zoom}" opacity=".75"/>
+       <text x="${x}" y="${y-Math.max(5,7*zoom)}" fill="#f59e0b" font-size="${Math.max(7,8.5*zoom)}"
+             font-family="ui-monospace,monospace" opacity=".95">${podTag}</text></g>`);
+     svg.push(`<g class="wd-rack${sel?' on':''}" data-wr="${gi_}" data-key="${r.key}" opacity="${dim}" style="cursor:grab;touch-action:none">
        <rect x="${x}" y="${y}" width="${RW}" height="${RH}" rx="${3*zoom}" fill="${fill}" stroke="${sel?'#fff':stroke}" stroke-width="${sel?2:1}"/>
        ${aisles?`<rect x="${x}" y="${fy}" width="${RW}" height="${Math.max(2,3*zoom)}" fill="#93c5fd" opacity=".85"/>`:''}
        <text x="${x+RW/2}" y="${y+RH/2+4*zoom}" fill="${stroke}" font-size="${Math.max(8,13*zoom)}" font-weight="700" font-family="ui-monospace,Menlo,monospace" text-anchor="middle" opacity=".9">${vtag}</text>
@@ -4574,6 +4615,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  ['wdZoom','wdLabels'].forEach(id=>{const el=$a(id); if(el) el.addEventListener('input',()=>paint());});
  {const el=$a('wdAisles'); if(el){el.checked=A.aisles!==0&&A.aisles!=='0';
    el.addEventListener('change',()=>{A.aisles=el.checked?1:0;save();paint();});}}
+ {const lz=$a('wdLayer'); if(lz){lz.value=A.wdLayer||'all';
+   lz.onchange=e=>{A.wdLayer=e.target.value;save();paint();};}
+  const kz=$a('wdKind'); if(kz){kz.value=A.wdKind||'all';
+   kz.onchange=e=>{A.wdKind=e.target.value;save();paint();};}}
  {const el=$a('wdSide'); if(el){el.value=A.trunkSide||'right';
    el.addEventListener('change',()=>{A.trunkSide=el.value;save();paint();});}}
  {const el=$a('wdReset'); if(el) el.addEventListener('click',()=>{A.rackOrder=null;SEL=null;save();paint();});}
@@ -4624,13 +4669,18 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  };
  window.__advClearPartner=()=>{A.gpRacks=0;A.gpKW=0;A.gpNodes=0;save();};
  window.__advImport=(gpus,arch)=>{
-  const g=Math.max(576,Math.min(9216,gpus));
+  /* Round to whole scalable units rather than clamping. A typed 1,096 is a real
+   * intent — it becomes 1,152 (2 SU) and the note says so, instead of silently
+   * becoming 576 and leaving the user to wonder where their number went. */
+  const SU=FABRIC.su.gpus;
+  const rounded=Math.max(SU,Math.ceil(gpus/SU)*SU);
+  const g=Math.max(576,Math.min(9216,rounded));
   A.gpus=g; if(arch)A.arch=arch; save();
   const b=document.querySelector('#rkMode button[data-m="advanced"]'); if(b)b.click();
   const n=$a('advImportNote');
   if(n){
    n.innerHTML=`Imported <b>${NUMF(gpus)} GPUs</b>${arch?` from ${arch}`:''}`
-    + (g!==gpus?` — clamped to <b>${NUMF(g)}</b>, the published two-layer fabric tops out at 9,216.`:'.')
+    + (g!==gpus?` — rounded up to <b>${NUMF(g)}</b> (${g/FABRIC.su.gpus} scalable unit${g/FABRIC.su.gpus===1?'':'s'} of ${NUMF(FABRIC.su.gpus)}).${gpus>9216?' The published two-layer fabric tops out at 9,216.':''}`:'.')
     + (arch&&arch!=='gb300-nvl72'?' <b>Note:</b> Advanced mode builds on the GB300 NVL72 scalable unit, so the rack layout below is NVL72 regardless of the architecture you sized with. Only the GPU target carries across.':'');
    n.className='adv-importnote '+(g!==gpus?'bad':'ok');
   }
