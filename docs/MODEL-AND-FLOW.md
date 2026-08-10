@@ -264,7 +264,7 @@ and paperwork.
 ```mermaid
 flowchart LR
   C["compute racks"] --> N["network<br/>plane A … gap … plane B"]
-  N --> P["patch"] --> S["storage"] --> M["memory"] --> G["general purpose"]
+  N --> P["patch"] --> M["memory"] --> G["general purpose"]
   G --> R["rows at racks-per-row<br/>ASHRAE TC9.9 front-to-front / back-to-back"]
   R --> D["drag any rack to reposition<br/>order persists by rack key"]
 ```

@@ -7,7 +7,7 @@
 
 Interactive capacity planner for **sovereign, compliant, on-prem AI factories** built on NVIDIA Blackwell.
 Size a GPU cluster across four architectures from any single target — GPUs, FP4 exaFLOPS, SuperPODs, or nodes —
-and derive **power (space- vs power-limited racks), cost/TCO, storage, and flagship-model workloads** live.
+and derive **power (space- vs power-limited racks), cost/TCO and flagship-model workloads** live.
 
 ## Documentation
 
@@ -70,7 +70,7 @@ to FAIL on purpose, because a rule that cannot fail is decoration. It has alread
 four real defects, including one rule that could never have fired.
 
 ## Provenance
-Anchored to public NVIDIA reference-architecture, Penguin, VAST and Dell datasheets (2026).
+Anchored to public NVIDIA reference-architecture, Penguin and Dell datasheets (2026).
 FP4 = dense (sparse ≈ 2×). Every figure is labelled **vendor** / **ours** / **not published** —
 see the References tab and **[NOTICE.md](NOTICE.md)**. Estimates, not a quote.
 

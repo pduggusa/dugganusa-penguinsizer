@@ -674,7 +674,7 @@
           <div class="adv-rules" id="advRules"></div>
           <div class="adv-out" id="advOut"></div>
           <h3 class="mem-h">Wiring diagram — rows, hub placement and cable runs</h3>
-          <p class="lede">Every rack in the build, laid out in rows at your <b style="color:var(--ink)">racks-per-row</b> setting, with the network hub drawn where your <b style="color:var(--ink)">placement</b> setting puts it. Cable bundles are drawn to scale — <b style="color:var(--ink)">thickness is link count, colour is the cable colour you set</b>. <b style="color:var(--ink)">Drag any rack</b> — including the VAST storage racks — to a different position and the layout, the naming sequence and every export follow it. Aisles are drawn <b style="color:var(--ink)">front-to-front and back-to-back</b> per ASHRAE TC9.9, so the cold aisle is where the intakes face each other. Click a rack to expand its labels and per-class link breakdown.</p>
+          <p class="lede">Every rack in the build, laid out in rows at your <b style="color:var(--ink)">racks-per-row</b> setting, with the network hub drawn where your <b style="color:var(--ink)">placement</b> setting puts it. Cable bundles are drawn to scale — <b style="color:var(--ink)">thickness is link count, colour is the cable colour you set</b>. <b style="color:var(--ink)">Drag any rack</b> to a different position and the layout, the naming sequence and every export follow it. Aisles are drawn <b style="color:var(--ink)">front-to-front and back-to-back</b> per ASHRAE TC9.9, so the cold aisle is where the intakes face each other. Click a rack to expand its labels and per-class link breakdown.</p>
           <div class="wd-tools">
             <label class="wd-t">Scale <input type="range" id="wdZoom" min="40" max="160" step="10" value="100"/></label>
             <label class="wd-t"><input type="checkbox" id="wdLabels"/> always show labels</label>
@@ -710,9 +710,6 @@
           <h3 class="mem-h">Rack elevations — reference layout</h3>
           <p class="lede" id="advElevNote">Drawn from published U-heights and tray counts, not from vendor stencil art. Tray <i>order</i> varies by OEM integrator, so treat the sequence as a reference elevation and confirm against the as-built drawing before it becomes a floor plan.</p>
           <div class="adv-elev" id="advElev"></div>
-          <h3 class="mem-h">Storage — VAST Data</h3>
-          <p class="lede">Derived from the <b style="color:var(--ink)">VAST + NVIDIA Enterprise reference architecture</b> tables so storage follows the GPU target automatically. Set either box count above to override. Storage: <select id="advVastMode" class="rk-btn" style="padding:5px 9px"><option value="auto">Auto — follow the RA</option><option value="manual">Manual — use my box counts</option><option value="none">None — no VAST in this build</option></select> Design profile: <select id="advVastDesign" class="rk-btn" style="padding:5px 9px"></select> <select id="advVastModel" class="rk-btn" style="padding:5px 9px"></select></p>
-          <div class="adv-storage" id="advStorage"></div>
           <h3 class="mem-h">🎨 Cable colours — each colour is a separate part number</h3>
           <p class="lede">Change a colour or its name and <b style="color:var(--ink)">the bill of materials below re-splits on it immediately</b>. Red Cat6A and grey Cat6A are different SKUs, ordered and stocked separately, so the BOM treats them that way. The right-hand column shows the exact line each choice produces.</p>
           <div class="colour-board" id="advColours"></div>
@@ -786,7 +783,7 @@
         <div class="pn-gpu" id="pnGpu"></div>
 
         <h3 class="mem-h">Reference architectures</h3>
-        <p class="lede">Dell&rsquo;s validated designs, as Dell describes them. Note the tie-in: the <b style="color:var(--ink)">2-8-5-200 Enterprise RA</b> is the same NVIDIA Enterprise RA family this tool already models as VAST design profile <b style="color:var(--ink)">2-8-5</b> — so a Dell 2-8-5-200 build and the published VAST storage table line up.</p>
+        <p class="lede">Dell&rsquo;s validated designs, as Dell describes them. Note the tie-in: the <b style="color:var(--ink)">2-8-5-200 Enterprise RA</b> is the same NVIDIA Enterprise RA family the <b style="color:var(--ink)">2-8-5</b> designation refers to (8 GPUs per node) — 2 CPUs, 8 GPUs per node, 5 nodes per scalable unit, 200 Gb/s fabric.</p>
         <div class="pn-ra" id="pnRa"></div>
 
         <h3 class="mem-h">Export</h3>
@@ -1426,7 +1423,7 @@
         <h3 class="mem-h">Phased buildout</h3>
         <p class="lede">Split the rollout to test wiring assumptions before the whole floor is committed. <b style="color:var(--ink)">Phase 1 carries the spine</b>, so its cable count is disproportionate — that is the point, and it is what a staged budget needs to show. Set the phase count on the Rack Planner.</p>
         <div class="mem-tbl-wrap"><table class="mem-tbl">
-          <thead><tr><th>Phase</th><th>Racks</th><th>Penguin</th><th>VAST</th><th>NVIDIA</th><th>GPUs</th><th>Load</th><th class="desc">Notes</th></tr></thead>
+          <thead><tr><th>Phase</th><th>Racks</th><th>Penguin</th><th>NVIDIA</th><th>GPUs</th><th>Load</th><th class="desc">Notes</th></tr></thead>
           <tbody id="bsPhases"></tbody></table></div>
 
         <h3 class="mem-h">Bill of materials</h3>
@@ -3060,8 +3057,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   'ib-uplink':{c:'#eab308',n:'yellow',why:'OS2 single-mode jacket — TIA-598 mandated'},
   storage:   {c:'#a855f7',n:'violet', why:'site convention — separates storage from compute fabric'},
   'eth-uplink':{c:'#a855f7',n:'violet',why:'site convention'},
-  vast_be:   {c:'#06b6d4',n:'aqua',   why:'site convention — VAST back-end fabric'},
-  vast_fe:   {c:'#3b82f6',n:'blue',   why:'site convention — VAST front-end / client'},
   bmc:       {c:'#ef4444',n:'red',    why:'OOB / BMC — red so nobody patches it into production'},
   'oob-uplink':{c:'#ef4444',n:'red',  why:'OOB aggregation'},
   console:   {c:'#9ca3af',n:'grey',   why:'serial console — grey by convention'},
@@ -3074,70 +3069,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const colName=k=>(CCOLOR[k]||{}).n||'unspecified';
  const CCOL=new Proxy({},{get:(_,k)=>colOf(String(k))});
 
- /* VAST Data storage. CBox/DBox/Ceres figures are from VAST's published material.
-  * Only models VAST actually documents are listed. An enclosure we cannot source specs
-  * for does not belong here at all — a placeholder port map is indistinguishable from a
-  * real one once it reaches a BOM, and the `verified` flag stays so any future addition
-  * has to declare itself. */
- /* VAST + NVIDIA Enterprise Reference Architecture, transcribed from the July 2025
-  * "VAST Data Storage Reference Architecture" tables 1-3. These are ENTERPRISE RAs built
-  * on FOUR-NODE scalable units and they top out at 32 nodes / 256 GPUs — a different and
-  * much smaller design point than the DGX SuperPOD GB300 RA (8-rack SU, 576 GPUs) used
-  * elsewhere in this tool. Do not confuse the two SU definitions.
-  *
-  * Above 256 GPUs the tables stop. We extrapolate on the published top-row ratio and
-  * LABEL IT as extrapolated, because a storage BOM invented past the end of a vendor
-  * table is exactly the kind of number that gets quoted back at you. */
- const VAST_RA={
-  '243':{label:'2-4-3-200 · 4 GPU/node',gpuPerNode:4,
-    rows:[{su:1,nodes:4,gpus:16,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
-          {su:2,nodes:8,gpus:32,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
-          {su:3,nodes:12,gpus:48,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
-          {su:4,nodes:16,gpus:64,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:4,sup:4},
-          {su:6,nodes:24,gpus:96,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:4,sup:4},
-          {su:8,nodes:32,gpus:128,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:8,sup:4}],
-    net:'4 servers x 4 B3140H SuperNICs = 16 x 400Gb/s E-W; 4 x B3220 DPU = 8 x 200Gb/s N-S'},
-  '285':{label:'2-8-5 · 8 GPU/node',gpuPerNode:8,
-    rows:[{su:1,nodes:4,gpus:32,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
-          {su:2,nodes:8,gpus:64,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
-          {su:3,nodes:12,gpus:96,cnodes:3,dbox:1,port800:2,storage:4,mgmtUp:4,cust:4,sup:4},
-          {su:4,nodes:16,gpus:128,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:8,sup:4},
-          {su:6,nodes:24,gpus:192,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:8,sup:4},
-          {su:8,nodes:32,gpus:256,cnodes:5,dbox:2,port800:3,storage:4,mgmtUp:4,cust:8,sup:4}],
-    net:'4 servers x 4 B3140H SuperNICs = 16 x 400Gb/s E-W; 4 x B3220 DPU = 8 x 200Gb/s N-S'},
-  '289':{label:'2-8-9 · 8 GPU/node, 8 NIC',gpuPerNode:8,
-    rows:[{su:1,nodes:4,gpus:32,cnodes:3,dbox:1,port800:4,storage:1,mgmtUp:4,cust:4,sup:4},
-          {su:2,nodes:8,gpus:64,cnodes:3,dbox:1,port800:4,storage:1,mgmtUp:4,cust:4,sup:4},
-          {su:3,nodes:12,gpus:96,cnodes:3,dbox:1,port800:4,storage:1,mgmtUp:8,cust:4,sup:4},
-          {su:4,nodes:16,gpus:128,cnodes:5,dbox:2,port800:4,storage:1,mgmtUp:4,cust:8,sup:4},
-          {su:6,nodes:24,gpus:192,cnodes:5,dbox:2,port800:8,storage:1,mgmtUp:4,cust:12,sup:4}],
-    net:'4 servers x 8 B3140H SuperNICs = 32 x 400Gb/s E-W; 4 x B3220 DPU = 8 x 200Gb/s N-S'},
- };
- /* Resolve a GPU count to a VAST storage configuration. Returns {exact, extrapolated}. */
- function vastFor(gpus,design){
-  const D=VAST_RA[design]||VAST_RA['285'];
-  const rows=D.rows;
-  const hit=rows.find(r=>r.gpus>=gpus);
-  if(hit) return {...hit,design:D,exact:true,
-    basis:`VAST/NVIDIA Enterprise RA table, ${hit.su}-SU row (${hit.gpus} GPUs)`};
-  // past the end of the table — scale on the published top row and say so
-  const top=rows[rows.length-1];
-  const k=gpus/top.gpus;
-  return {su:Math.ceil(top.su*k),nodes:Math.ceil(top.nodes*k),gpus,
-    cnodes:Math.ceil(top.cnodes*k),dbox:Math.ceil(top.dbox*k),
-    port800:Math.ceil(top.port800*k),storage:top.storage,mgmtUp:top.mgmtUp,
-    cust:top.cust,sup:top.sup,design:D,exact:false,
-    basis:`EXTRAPOLATED — the published table ends at ${top.gpus} GPUs. Scaled ${k.toFixed(1)}x on the top row. Confirm against a VAST quote.`};
- }
-
- const VAST={
-  cbox:  {label:'VAST CBox',      u:2, unit:'CBox',  cnodes:4, ports:{be:2,fe:2,bmc:1,console:1}, kw:1.6, verified:true,
-          note:'2U chassis, four dual-Xeon servers = 4 CNodes. Each CNode ships with one or two 2-port NICs.'},
-  dbox:  {label:'VAST DBox',      u:2, unit:'DBox',  dnodes:2, ports:{be:4,bmc:2,console:2}, kw:1.4, verified:true,
-          note:'NVMe-oF enclosure, two DNodes. Up to 1,350 TB raw with 30 TB SSDs.'},
-  ceres: {label:'VAST Ceres DBox',u:1, unit:'Ceres', dnodes:2, ports:{be:4,bmc:2,console:2}, kw:1.2, verified:true,
-          note:'1U NVMe JBOF, up to 675 TB raw — about 2 PB effective at 3:1 reduction.'},
- };
  /* Penguin Solutions MemoryAI KV cache server. The 11 TB / 3 TB DDR5 + 8x 1 TB CXL AIC
   * composition and the 4U form factor are VENDOR-PUBLISHED (GTC, March 2026) and are on
   * the References tab. Everything else here is OURS and is labelled as such:
@@ -3231,11 +3162,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:4608,arch:'gb300-nvl72',feed:'415-3-300',feedsPerRack:1,rackU:48,reserveU:4,
       floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
-      /* Storage OFF by default. It used to auto-derive from the GPU target, so three VAST
-       * racks appeared on every floor plan whether or not the build had bought any —
-       * furniture in a drawing that is supposed to be a plan. Switch it to Auto and the
-       * RA tables size it exactly as before; the tier is one selector away, not implied. */
-      vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',vastMode:'none',
       netPlacement:'eor',netRed:'ab50',rackPitchM:0.6,
       rackDepthM:1.2, coldAisleM:1.2, hotAisleM:0.9, serviceM:1.0,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
       trunkRacks:4,trunkPorts:24,trunkSide:'right',rackOrder:null,aisles:1,
@@ -3546,33 +3472,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const effHops=Math.ceil(worstHops/sideDiv);
   const rowRun = place==='tor' ? 2 : +(effHops*pitch + rise).toFixed(1);
 
-  // ---- VAST storage tier ----------------------------------------------------------
-  // Auto-derives from the GPU target using the VAST/NVIDIA Enterprise RA tables, so
-  // storage follows the SuperPOD target instead of being hand-guessed. Manual override
-  // wins if either box count is set non-zero.
-  const vAuto=vastFor(realGpus, A.vastDesign||'285');
-  const vMode=A.vastMode||'auto';
-  const manual=vMode==='manual'||(vMode==='auto'&&(gi('vastCbox')>0||gi('vastDbox')>0));
-  // RA counts CNODES; a CBox houses 4 of them.
-  const vc=manual?Math.max(0,gi('vastCbox')):Math.ceil(vAuto.cnodes/VAST.cbox.cnodes);
-  const vd=manual?Math.max(0,gi('vastDbox')):vAuto.dbox;
-  const vCnodes=manual?vc*VAST.cbox.cnodes:vAuto.cnodes;
-  const vModel=VAST[A.vastModel||'dbox']||VAST.dbox;
-  const vU=vc*VAST.cbox.u + vd*vModel.u;
-  const vRacks=(vMode==='none')?0:(vU?Math.ceil(vU/42):0);
-  const vOff=(vMode==='none');
-  const vKw=+(vc*VAST.cbox.kw + vd*vModel.kw).toFixed(1);
-  /* CNode back-end + front-end, DNode back-end, plus BMC and serial console per box.
-   *
-   * ZEROED WHEN STORAGE IS OFF, and that is not belt-and-braces. `vOff` used to be
-   * applied only in the return object, so selecting storage "None" removed the VAST
-   * boxes from the BOM and the racks from the floor — and left 504 VAST links in the
-   * cable plant, priced, coloured and counted. Exactly the defect
-   * assert-controls-move-the-model.mjs was written for ("storage set to none still
-   * ordered 23 CBoxes"), fixed on the parts side and missed on the cable side. */
-  const vBE = vOff?0: vCnodes*VAST.cbox.ports.be + vd*vModel.ports.be;
-  const vFE = vOff?0: vCnodes*VAST.cbox.ports.fe;
-  const vBMC= vOff?0: vc*VAST.cbox.ports.bmc + vd*vModel.ports.bmc;
   // ---- MemoryAI KV cache tier ----------------------------------------------------
   /* On by default because it is the thing this tool exists to argue for — but it is a
    * TOGGLE, because a build that will not be memory-bound should not be sold one. Count
@@ -3595,14 +3494,14 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * rows. When set it DRIVES the floor count rather than the other way round, because
    * "how many rows fit" is a survey fact and "how many floors" is the consequence. */
   const rowsPerFloorSet=Math.max(0,gi('rowsPerFloor'));
-  const totalRows=Math.ceil((computeRacks+netRacks+vRacks+mRacks)/Math.max(1,gi('racksPerRow')));
+  const totalRows=Math.ceil((computeRacks+netRacks+mRacks)/Math.max(1,gi('racksPerRow')));
   const floors=rowsPerFloorSet>0
     ? Math.max(1,Math.ceil(totalRows/rowsPerFloorSet))
     : Math.max(1,gi('floors'));
   const rowsPerFloor=rowsPerFloorSet>0?rowsPerFloorSet:Math.max(1,Math.ceil(totalRows/floors));
 
 
-  const perFloorRacks=Math.ceil((computeRacks+netRacks+vRacks+mRacks)/floors);
+  const perFloorRacks=Math.ceil((computeRacks+netRacks+mRacks)/floors);
   /* Only the floors that DO NOT hold the spine need a riser. The spine floor's leaf
    * traffic never leaves the floor. Charging every leaf-spine link to the riser — which
    * this did until it was checked against a 2-vs-4 floor comparison and produced the
@@ -3626,8 +3525,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
 
 
 
-  const vCON= vOff?0: vc*VAST.cbox.ports.console + vd*vModel.ports.console;
-
   const L=[
    {cls:'compute',n:ibDown,speed:'800G',media:'OSFP + MPO-12/APC SMF',reach:rowRun,
     desc:'Compute tray ConnectX-8 to IB leaf (1 rail per GPU)',opt:'MMS4X00-NM twin-port DR8 500m'},
@@ -3641,26 +3538,22 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     desc:'Compute-tray and switch-tray BMC to in-rack SN2201',opt:'RJ45'},
    {cls:'oob-uplink',n:oobUp,speed:'25G',media:'DAC / AOC',reach:rowRun,
     desc:'In-rack SN2201 OOB uplink to aggregation',opt:'SFP28'},
-   {cls:'vast_be',n:vBE,speed:'100G',media:'QSFP28 + MPO/SMF',reach:rowRun,
-    desc:'VAST back-end fabric — CNode/DNode NVMe over RDMA, internal to the cluster',opt:'100G QSFP28'},
-   {cls:'vast_fe',n:vFE,speed:'100G',media:'QSFP28 + MPO/SMF',reach:rowRun,
-    desc:'VAST front-end — CNode to client/compute network',opt:'100G QSFP28'},
    {cls:'memai',n:memFE,speed:MEMAI.feSpeed,media:'OSFP + MPO-12/APC SMF',reach:rowRun,
     desc:'MemoryAI KV cache server to Ethernet leaf — front-end path to the compute tier (port topology assumed, not vendor-published)',opt:'400G DR4'},
-   {cls:'console',n:vCON+memCON+computeRacks,speed:'serial',media:'Cat6 rollover',reach:3,
-    desc:'Serial console to terminal server — one per box plus one per compute rack',opt:'RJ45 rollover'},
+   {cls:'console',n:memCON+computeRacks,speed:'serial',media:'Cat6 rollover',reach:3,
+    desc:'Serial console to terminal server — one per appliance plus one per compute rack',opt:'RJ45 rollover'},
   ].filter(x=>x.n>0);
-  // VAST BMC folds into the existing bmc class rather than inventing a second one
-  const bmcRow=L.find(x=>x.cls==='bmc'); if(bmcRow) bmcRow.n+=vBMC+memBMC+memMGT;
+  // MemoryAI BMC/mgmt folds into the existing bmc class rather than inventing a second one
+  const bmcRow=L.find(x=>x.cls==='bmc'); if(bmcRow) bmcRow.n+=memBMC+memMGT;
 
   const totalLinks=L.reduce((a,x)=>a+x.n,0);
   const spares=Math.ceil(totalLinks*gi('spares')/100);
 
   // rack inventory for the elevation grid
   /* Vendor is carried on every rack so the drawings can say WHOSE gear sits where.
-   * Compute is Penguin-integrated NVIDIA silicon, storage is VAST, and the network racks
-   * hold NVIDIA switching — three different purchase orders, three different support
-   * contracts, and a floor plan is much less useful if it does not say which is which. */
+   * Compute is Penguin-integrated NVIDIA silicon and the network racks hold NVIDIA
+   * switching — different purchase orders, different support contracts, and a floor plan
+   * is much less useful if it does not say which is which. */
   const phases=Math.max(1,gi('phases')||1);
   /* Rack-scale builds phase by SCALABLE UNIT because that is the purchasable block.
    * Everything else has no SU — refusing to invent one is the whole provenance argument
@@ -3681,7 +3574,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     racks.push({kind:'compute',vendor:computeVendor,su:AS.rackScale?s+1:null,
       phase:Math.min(phases,Math.floor(s/blockPerPhase)+1),idx:racks.length+1,key:'c'+(racks.length+1)});
   for(let n=0;n<netRacks;n++) racks.push({kind:'network',vendor:'nvidia',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(netRacks/phases)))+1),idx:racks.length+1,key:'n'+(n+1)});
-  for(let n=0;n<vRacks;n++) racks.push({kind:'storage',vendor:'vast',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(vRacks/phases)))+1),idx:racks.length+1,key:'v'+(n+1)});
   for(let n=0;n<mRacks;n++) racks.push({kind:'memory',vendor:'penguin',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(mRacks/phases)))+1),idx:racks.length+1,key:'m'+(n+1)});
   /* General-purpose estate handed over from Partner Solutions. An AI factory almost
    * never lands on an empty floor — there is an OLTP estate, a virtualization estate
@@ -3708,7 +3600,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     return arr; };
   {
    const byKind=k=>racks.filter(r=>r.kind===k);
-   const comp=byKind('compute'), net=byKind('network'), sto=byKind('storage'),
+   const comp=byKind('compute'), net=byKind('network'),
          mem=byKind('memory'), gp=byKind('gp');
    let ordered=[...comp];
    if(net.length){
@@ -3745,7 +3637,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
      racks.push({kind:'patch',vendor:'passive',su:null,phase:1,idx:0,key:'p'+(i+1)});
     const pat=racks.filter(r=>r.kind==='patch');
    /* Packed, not padded. These tails were 17 of the 21 phantom racks. */
-   ordered=ordered.concat(pat).concat(sto).concat(mem).concat(gp);
+   ordered=ordered.concat(pat).concat(mem).concat(gp);
    racks.length=0; ordered.forEach((r,i)=>{ r.idx=i+1; racks.push(r); });
   }
 
@@ -3877,12 +3769,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    memReachM,memHops,memCrossFloor,memNs,
    fibrePerRack,portsPerRack,sideDiv,effHops,aislesOn,faceOf,aisleAt,
    rowRun,place,pitch,rise,worstHops,hubF,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
-   vc:vOff?0:vc, vd:vOff?0:vd, vCnodes:vOff?0:vCnodes, vAuto, manual, vModel,
-   vU:vOff?0:vU, vRacks, vKw:vOff?0:vKw, vBE:vOff?0:vBE, vFE:vOff?0:vFE,
-   vBMC:vOff?0:vBMC, vCON:vOff?0:vCON, vOff, vMode,
-   vastLabel:(vModel&&vModel.label)||'VAST DBox', vCboxLabel:VAST.cbox.label,
-   vCboxU:VAST.cbox.u, vCboxKw:VAST.cbox.kw, vBoxU:VAST[vModel]?VAST[vModel].u:2,
-   vBoxKw:VAST[vModel]?VAST[vModel].kw:1.4,
    memLabel:MEMAI.label, memAppU:MEMAI.u, memAppKw:MEMAI.kw,
    swIb:FABRIC.sw.ibLeaf.model, swIbU:FABRIC.sw.ibLeaf.u,
    swEth:FABRIC.sw.ethLeaf.model, swEthU:FABRIC.sw.ethLeaf.u,
@@ -4125,8 +4011,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   cart    :{u:2,badge:'NVLink cable cartridge',bg:'#161327',ink:'#a78bfa',bus:1},
   pdu     :{u:1,badge:'Rack PDU',bg:'#141a21',ink:'#94a3b8',bays:12},
   memai   :{u:4,badge:'MemoryAI KV cache  11 TB',bg:'#24101a',ink:'#f472b6',ports:[[2,'sq','400G FE'],[1,'rj','MGT'],[1,'rj','BMC']],bays:8},
-  cbox    :{u:2,badge:'VAST CBox  4x CNode',bg:'#1b1026',ink:'#a855f7',bays:4},
-  dbox    :{u:2,badge:'VAST DBox',bg:'#1b1026',ink:'#a855f7',bays:22},
  };
  function faceSvg(kind){
   let f=FACE[kind]; if(!f) return '';
@@ -4236,7 +4120,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   * counts do not. Rendered as data so the caveat is honest and the drawing is checkable. */
  /* Elevations MUST differ by what is actually in the rack. This handled only memory
   * and network and let EVERYTHING ELSE fall through to a hardcoded GB300 NVL72 layout —
-  * so a VAST storage rack drew NVLink switch trays, a Dell general-purpose rack drew
+  * so a Dell general-purpose rack drew
   * "4x B300 + 2x Grace", and every node architecture rendered identically. Three
   * separate bug reports, one cause. */
  function elevation(kind,d){
@@ -4248,13 +4132,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   if(kind==='patch') return [
    {u:1,n:1,t:'oob',label:'Rack management',dev:'OOB'},
    {u:1,n:40,t:'patch',label:'MPO-12/APC patch panel — 24 positions',dev:'PP'},
-   {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
-  ];
-  if(kind==='storage') return [
-   {u:1,n:1,t:'oob',label:'SN2201 OOB — rack management',dev:'OOB'},
-   {u:1,n:2,t:'patch',label:'MPO-12/APC patch panel',dev:'PP'},
-   {u:2,n:8,t:'ethleaf',label:((d&&d.vastLabel)||'VAST DBox')+' — NVMe enclosure',dev:'DBX'},
-   {u:2,n:4,t:'compute',label:((d&&d.vCboxLabel)||'VAST CBox')+' — 4 CNodes',dev:'CBX'},
    {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
   ];
   if(kind==='gp') return [
@@ -4345,8 +4222,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'rowsPerFloor',l:'Rows per floor',step:1,hint:'0 = auto/even'},
   {k:'phases',l:'Build phases',step:1,hint:'staged rollout'},
   {k:'spares',l:'Spares %',step:1,hint:'on all links'},
-  {k:'vastCbox',l:'VAST CBox',step:1,hint:'compute boxes'},
-  {k:'vastDbox',l:'VAST DBox',step:1,hint:'storage enclosures'},
  ];
  const NF=[{k:'site',l:'Site'},{k:'room',l:'Room'},{k:'row',l:'First row'},
   {k:'patRack',l:'Rack pattern',wide:1},{k:'patDev',l:'Device pattern',wide:1},{k:'patPort',l:'Port pattern',wide:1}];
@@ -4355,14 +4230,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  function renderCtl(){
   const memOnNow=(parseFloat(A.memPerSU)||0)>0 && (parseFloat(A.memAI)||0)>0;
   document.querySelectorAll('#rkMem button').forEach(x=>x.classList.toggle('on',(x.dataset.m==='on')===memOnNow));
-  const vmsel=$a('advVastMode');
-  if(vmsel){vmsel.value=A.vastMode||'auto';
-    vmsel.onchange=e=>{A.vastMode=e.target.value;save();paint();};}
-  const dsel=$a('advVastDesign'), msel=$a('advVastModel');
-  if(dsel){dsel.innerHTML=Object.entries(VAST_RA).map(([k,v])=>`<option value="${k}"${(A.vastDesign||'285')===k?' selected':''}>${v.label}</option>`).join('');
-    dsel.onchange=e=>{A.vastDesign=e.target.value;save();paint();};}
-  if(msel){msel.innerHTML=Object.entries(VAST).map(([k,v])=>`<option value="${k}"${(A.vastModel||'dbox')===k?' selected':''}>${v.label}${v.verified?'':' (unverified)'}</option>`).join('');
-    msel.onchange=e=>{A.vastModel=e.target.value;save();paint();};}
   /* ARCHITECTURE PICKER. Advanced used to have none — arch arrived only via the Size It
    * import and was used for a label. Now it drives the whole composition, so it has to
    * be reachable here, and the note under it says what the pick actually changed. */
@@ -4593,7 +4460,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       :r.kind==='gp'?'general-purpose':r.kind==='storage'?'storage':r.kind==='memory'?'memory tier':'network'}</span>
      <span class="tb">${r.kind==='compute'?`${d.arch.gpusPerRack} GPU · ${d.arch.rackKw} kW`
       :r.kind==='gp'?`${d.gpLabel} · ${d.gpKWPerRack} kW`
-      :r.kind==='storage'?`${d.vastLabel} · ${d.vKw} kW`
       :r.kind==='memory'?`${d.memLabel} · ${d.memTB} TB`
       :`${FABRIC.sw.ibLeaf.model.split(' ')[0]} + SN5600D`}</span>
    </button>`;}).join('');
@@ -4800,9 +4666,9 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       * compute — and where the KV cache sits is the one placement decision that changes
       * a latency number. It gets its own mark. */
      const mem=r.kind==='memory';
-     const fill=mem?'#2b1220':r.vendor==='dell'?'#12303f':r.vendor==='penguin'?'#0e3a44':r.vendor==='vast'?'#3b1d4a':'#1e2a38';
-     const stroke=mem?'#f472b6':r.vendor==='dell'?'#0ea5e9':r.vendor==='penguin'?'#22d3ee':r.vendor==='vast'?'#a855f7':'#64748b';
-     const vtag=mem?'M':r.vendor==='dell'?'D':r.vendor==='penguin'?'P':r.vendor==='vast'?'V':'N';
+     const fill=mem?'#2b1220':r.vendor==='dell'?'#12303f':r.vendor==='penguin'?'#0e3a44':'#1e2a38';
+     const stroke=mem?'#f472b6':r.vendor==='dell'?'#0ea5e9':r.vendor==='penguin'?'#22d3ee':'#64748b';
+     const vtag=mem?'M':r.vendor==='dell'?'D':r.vendor==='penguin'?'P':'N';
      // the front (intake) face gets a pale strip — it is the edge that must see the cold aisle
      const fy = face>0 ? y+RH-Math.max(2,3*zoom) : y;
      if(r.kind==='empty'){
@@ -4865,7 +4731,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
     });
    });
-   /* Rack drag-to-reposition. Any rack moves — the VAST storage racks included, which is
+   /* Rack drag-to-reposition. Any rack moves, which is
     * the case that matters, because storage placement relative to the compute rows is a
     * real floor-plan decision and not something a naive fill should be deciding.
     * A click and a drag start identically, so a 6px movement threshold separates them:
@@ -4916,7 +4782,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    // vendor + phase legend
    const vl=document.createElement('div'); vl.className='wd-legend';
    vl.innerHTML=`<span><i style="background:#0e3a44;border-color:#22d3ee"></i><b>P</b> Penguin Solutions — compute (${d.computeRacks} racks)</span>
-     <span><i style="background:#3b1d4a;border-color:#a855f7"></i><b>V</b> VAST Data — storage (${d.vRacks} rack${d.vRacks===1?'':'s'})</span>
      ${d.mRacks?`<span><i style="background:#2b1220;border-color:#f472b6"></i><b>M</b> Penguin MemoryAI — KV cache (${d.mRacks} rack${d.mRacks===1?'':'s'}, ${d.memUnits} appliances)</span>`:''}
      <span><i style="background:#1e2a38;border-color:#64748b"></i><b>N</b> NVIDIA switching — network (${d.netRacks} racks)</span>
      <span><i style="background:url(#hubg);background:#7c3aed;border-color:#c4b5fd"></i>hub / leaf position</span>
@@ -4964,24 +4829,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   $a('advCable').querySelectorAll('[data-cn]').forEach(el=>el.addEventListener('change',e=>{
    const k=e.target.dataset.cn; CCOLOR[k]={...(CCOLOR[k]||{}),n:e.target.value}; saveColours(); paint();}));
 
-  // ---- storage panel ----------------------------------------------------------------
-  const sp=$a('advStorage');
-  if(sp) sp.innerHTML=`
-   ${d.vOff?'<p class="note">Storage set to <b>None</b> — no VAST in this build. No storage racks, no boxes in the BOM, no storage links in the cabling.</p>':''}
-   <div class="callout" style="display:${d.vOff?'none':'block'};border-left-color:${d.vAuto.exact?'var(--ok)':'var(--warn)'}">
-     <div class="callout-h" style="color:${d.vAuto.exact?'var(--ok)':'var(--warn)'}">${d.manual?'Manual override in effect':'Basis: '+d.vAuto.basis}</div>
-     <p>VAST and NVIDIA's Enterprise reference architecture is built on <b>four-node scalable units</b> and its published tables stop at <b>32 nodes / 256 GPUs</b>. That is a different and much smaller SU than the DGX SuperPOD GB300 SU used above, which is 8 racks and 576 GPUs. <b>The two SU definitions are not interchangeable</b> and this tool keeps them apart deliberately.</p>
-     ${d.vModel.verified?'':`<p style="color:var(--hot)"><b>${d.vModel.label} specs are unverified.</b> ${d.vModel.note}</p>`}
-   </div>
-   <div class="mem-tbl-wrap"><table class="mem-tbl">
-     <thead><tr><th>Item</th><th>Qty</th><th>U</th><th>Ports</th><th class="desc">Basis</th></tr></thead><tbody>
-     <tr><td><b>${VAST.cbox.label}</b></td><td>${d.vc}</td><td>${d.vc*VAST.cbox.u}U</td><td>${d.vCnodes} CNodes</td><td class="desc">${VAST.cbox.note}</td></tr>
-     <tr><td><b>${d.vModel.label}</b></td><td>${d.vd}</td><td>${d.vd*d.vModel.u}U</td><td>${d.vd*d.vModel.ports.be} back-end</td><td class="desc">${d.vModel.note}</td></tr>
-     <tr><td>Back-end fabric links</td><td>${NUMF(d.vBE)}</td><td>—</td><td>100G</td><td class="desc">CNode/DNode NVMe over RDMA, internal to the cluster</td></tr>
-     <tr><td>Front-end links</td><td>${NUMF(d.vFE)}</td><td>—</td><td>100G</td><td class="desc">CNode to client / compute network</td></tr>
-     <tr><td>Storage rack load</td><td>${d.vKw} kW</td><td>${d.vU}U in ${d.vRacks} rack${d.vRacks===1?'':'s'}</td><td>—</td><td class="desc">derived from per-box figures</td></tr>
-     </tbody></table></div>
-   <div class="kn" style="margin-top:9px">Connectivity per the RA: ${d.vAuto.design.net}. The document's own OOB figures are internally inconsistent for the 2-4-3 design (states six 1Gb/s per server across four servers yet totals 48), so OOB is taken from the per-rack topology above rather than from that line.</div>`;
 
   // ---- naming preview -------------------------------------------------------------
   /* The naming scheme has to label the devices this build ACTUALLY has. An HGX rack has
@@ -5099,8 +4946,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Copper',`Cat6A patch 3m — ${colName('bmc')}`,d.bmc,`BMC / OOB. Colour ${colName('bmc')} is a SEPARATE part number — derived`],
    ['Copper',`Cat6 rollover console — ${colName('console')}`,(d.L.find(x=>x.cls==='console')||{n:0}).n,`Serial console. Colour ${colName('console')} is a separate SKU — derived`],
    ['Copper','SFP28 DAC/AOC',d.oobUp,'SN2201 uplinks — derived'],
-   ...(d.vOff?[]:[['Storage',VAST.cbox.label,d.vc,`${d.manual?'manual override':'auto from '+(d.vAuto.exact?'RA table':'EXTRAPOLATED RA')} — ${d.vCnodes} CNodes`],
-   ['Storage',d.vModel.label,d.vd,(d.vModel.verified?'':'SPECS UNVERIFIED — ')+(d.manual?'manual override':d.vAuto.basis)]]),
    ['Passive','MPO-12/APC patch panel (12-port)',Math.ceil((d.ibDown+d.ibUp+d.ethDown+d.ethUp)/12),'structured field, 12 links per panel — derived'],
    ['Passive','Cable manager (1U)',(d.computeRacks+d.netRacks)*2,'2 per rack — convention'],
   ];
@@ -5135,8 +4980,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   'sn5600d'    :{vendor:'NVIDIA',  mpn:'SN5600D',     uom:'ea', u:2, desc:'Spectrum-X 64x800G Ethernet switch'},
   'sn2201'     :{vendor:'NVIDIA',  mpn:'SN2201',      uom:'ea', u:1, desc:'48x1G + 4x SFP28 OOB management switch'},
   'mms4x00-nm' :{vendor:'NVIDIA',  mpn:'MMS4X00-NM',  uom:'ea',      desc:'800G OSFP twin-port DR8 transceiver, 500 m'},
-  'vast-cbox'  :{vendor:'VAST Data',mpn:null,         uom:'ea', u:2, desc:'CBox — 4x CNode'},
-  'vast-dbox'  :{vendor:'VAST Data',mpn:null,         uom:'ea', u:2, desc:'DBox NVMe enclosure'},
   'memai'      :{vendor:'Penguin Solutions',mpn:null, uom:'ea', u:4, desc:'MemoryAI KV cache server, 11 TB'},
  };
  const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48);
@@ -5155,8 +4998,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    if(t.includes('sn5600'))return 'sn5600d';
    if(t.includes('sn2201'))return 'sn2201';
    if(t.includes('mms4x00'))return 'mms4x00-nm';
-   if(t.includes('cbox'))return 'vast-cbox';
-   if(t.includes('dbox'))return 'vast-dbox';
    if(t.includes('memoryai'))return 'memai';
    return null;
   };
@@ -5166,7 +5007,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    if(/penguin|relion|altus/.test(t))return 'Penguin Solutions';
    if(/dell|poweredge|powerswitch|powerstore/.test(t))return 'Dell Technologies';
    if(/nvidia|gb300|gb200|dgx|nvlink/.test(t))return 'NVIDIA';
-   if(/vast/.test(t))return 'VAST Data';
    if(/trunk|patch panel|jumper|dac|aoc|cat6|mpo|cable manager/.test(t))return 'structured cabling — multi-source';
    return 'to be sourced';
   };
@@ -5218,13 +5058,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    B('patch',200,'—','Rear of the patch field — trunk assemblies land here, node and leaf jumpers leave from the front'),
    B('oob',40,'—','Rack management — Cat6A'),
    B('pdu',40,'—','Rack PDU A / B — passive field, minimal load'),
-  ].join('');
-  if(r.kind==='storage') return [
-   B('manifold',40,'—','Blanking / airflow — VAST is air-cooled'),
-   B('ethleaf',110,'—','DBox rear — 4x back-end 100G per enclosure, 2x BMC, 2x console'),
-   B('compute',84,'—','CBox rear — 2x back-end + 2x front-end per CNode, 1x BMC, 1x console'),
-   B('patch',44,'—','Storage patch field — back-end fabric to the leaf'),
-   B('pdu',54,'—','Rack PDU A / B — IEC 60309'),
   ].join('');
   if(r.kind==='memory') return [
    B('memai',110,'—','MemoryAI rear — 2x 400G front-end per appliance <b>(port topology ASSUMED, not vendor-published)</b>'),
@@ -5300,7 +5133,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   r.kind==='compute'?(r.su?`Scalable Unit ${r.su} · ${d.computeLabel}`
     :`${d.computeLabel} · ${d.arch.nodesPerRack} x ${d.arch.nodeU}U nodes · ${d.arch.gpusPerRack} GPU · ${d.arch.rackKw} kW (${d.arch.bound}) — sized on racks`)
  :r.kind==='gp'?`General-purpose · ${d.gpLabel} · ${d.gpKWPerRack} kW — power is OUR estimate, not a Dell figure`
- :r.kind==='storage'?`Storage · ${d.vastLabel} + ${d.vCboxLabel} · ${d.vd} DBox / ${d.vc} CBox across ${d.vRacks} rack${d.vRacks===1?'':'s'}`
  :r.kind==='patch'?`Patch field · MPO-12/APC · ${d.trunkPanels} panels total, ${d.portsPerRack} MPO positions per compute rack`
  :r.kind==='memory'?`Memory tier · ${d.memLabel} · ${d.memUnits} appliance${d.memUnits===1?'':'s'} · ${d.memTB} TB — kW ESTIMATED, Penguin publishes no power figure`
  :'Network rack · leaf, spine and OOB'}</div></div>
@@ -5557,11 +5389,11 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   const pb=$s('bsPhases');
   if(pb){
    const ph={};
-   d.racks.forEach(r=>{const k=r.phase||1;(ph[k]=ph[k]||{n:0,penguin:0,vast:0,nvidia:0,gpus:0,kw:0});
+   d.racks.forEach(r=>{const k=r.phase||1;(ph[k]=ph[k]||{n:0,penguin:0,nvidia:0,gpus:0,kw:0});
      ph[k].n++; ph[k][r.vendor]++;
-     if(r.kind==='compute'){ph[k].gpus+=d.arch.gpusPerRack;ph[k].kw+=d.arch.rackKw;} else if(r.kind==='storage'){ph[k].kw+=Math.round((d.vKw||0)/Math.max(1,d.vRacks));} else ph[k].kw+=8;});
+     if(r.kind==='compute'){ph[k].gpus+=d.arch.gpusPerRack;ph[k].kw+=d.arch.rackKw;} else ph[k].kw+=8;});
    pb.innerHTML=Object.entries(ph).map(([k,v])=>`<tr><td><b>Phase ${k}</b></td><td>${N(v.n)}</td>
-     <td style="color:#22d3ee">${v.penguin||0}</td><td style="color:#a855f7">${v.vast||0}</td><td style="color:#94a3b8">${v.nvidia||0}</td>
+     <td style="color:#22d3ee">${v.penguin||0}</td><td style="color:#94a3b8">${v.nvidia||0}</td>
      <td>${N(v.gpus)}</td><td>${N(v.kw)} kW</td>
      <td class="desc">${k==='1'?'carries the spine layer — highest cable count per rack':'leaf only, trunks up to phase 1'}</td></tr>`).join('');
   }
@@ -5899,7 +5731,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       :d.blockGpus+' GPUs per rack — DERIVED (OURS), no vendor SU exists for this architecture'],
    ['Compute racks',d.computeRacks,'racks','8 per SU — NVIDIA RA'],
    ['Network racks',d.netRacks,'racks','derived from switch U at 42U/rack'],
-   ['VAST storage racks',d.vRacks,'racks','VAST/NVIDIA RA, extrapolated past 256 GPUs'],
    ['MemoryAI racks',d.mRacks,'racks',d.memOn?d.memUnits+' appliances at 4U':'tier excluded'],
    ['MemoryAI round trip to compute',d.memNs,'ns',d.memUnits?d.memHops+' switch hop(s), '+d.memReachM+' m — derived':'n/a'],
    ['Total racks',d.racks.length,'racks','sum'],
@@ -5930,7 +5761,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    * THIS rack" — which is the question the installer standing in front of it has, and
    * the one a receiving dock needs to check a pallet against. Composition is derived
    * from the rack kind, so a Dell general-purpose rack does not get NVLink trays and a
-   * VAST rack does not get power shelves. */
+   * an HGX node rack does not get power shelves. */
   const perRackRows=[['Rack','Kind','Vendor','Phase','SU','Item','Qty','U ea','kW ea','Basis']];
   d.racks.forEach((r,i)=>{
    const nm=d.name(i+1), L=[];
@@ -5960,10 +5791,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     L.push([d.swIb+' (InfiniBand leaf/spine)',Math.ceil((d.f.ibLeaf+d.f.ibSpine)/Math.max(1,d.netRacks)),d.swIbU,'','RA Table 3, packed across '+d.netRacks+' network rack(s)']);
     L.push([d.swEth+' (Ethernet)',Math.ceil((d.f.ethComputeLeaf+d.f.ethStorageLeaf+d.f.ethSpine)/Math.max(1,d.netRacks)),d.swEthU,'','RA Table 4']);
     L.push(['MPO-12/APC patch field',1,'','','trunk terminations']);
-    L.push(['Rack PDU A / B',2,'','','IEC 60309']);
-   }else if(r.kind==='storage'){
-    L.push([d.vastLabel,Math.ceil((d.vd||0)/Math.max(1,d.vRacks)),d.vBoxU,d.vBoxKw,'VAST/NVIDIA RA — '+(d.vAuto&&d.vAuto.exact?'published row':'EXTRAPOLATED past the published table')]);
-    L.push([d.vCboxLabel,Math.ceil((d.vc||0)/Math.max(1,d.vRacks)),d.vCboxU,d.vCboxKw,'VAST/NVIDIA RA']);
     L.push(['Rack PDU A / B',2,'','','IEC 60309']);
    }else if(r.kind==='memory'){
     L.push([d.memLabel,Math.ceil((d.memUnits||0)/Math.max(1,d.mRacks)),d.memAppU,d.memAppKw,'11 TB per appliance vendor-published; kW ESTIMATED — Penguin publishes no power figure']);
@@ -6103,8 +5930,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
        worst_case_distance_to_compute_m:d.memReachM,switch_hops:d.memHops,
        crosses_floor:d.memCrossFloor,round_trip_ns:d.memNs,
        ns_basis:'4.9 ns/m single-mode + 450 ns per switch hop, both directions — derived, not measured'}},
-   storage:{cbox:d.vc,enclosures:d.vd,cnodes:d.vCnodes,model:d.vModel&&d.vModel.label,
-     basis:d.vAuto&&d.vAuto.basis,extrapolated:!(d.vAuto&&d.vAuto.exact)},
    phases:{count:d.phases,su_per_phase:d.suPerPhase,
      note:'Phase 1 carries the spine layer, so its per-rack cable count is disproportionate by design.'},
    cable_colours:Object.fromEntries(Object.keys(d.colourMap||{}).map(k=>[k,d.colourMap[k]])),
@@ -6716,12 +6541,11 @@ window.__MATH=(function(){
 
  /* ---- DELL AI FACTORY WITH NVIDIA — reference architectures ---------------------
   * Dell's validated designs, as Dell describes them. The 2-8-5-200 Enterprise RA is
-  * the SAME NVIDIA Enterprise RA family this tool already models on the VAST tab as
-  * design '285' — so a Dell 2-8-5-200 build and the VAST storage table line up. */
+  * the SAME NVIDIA Enterprise RA family the 2-8-5-200 designation refers to. */
  const DELLRA=[
   {label:'2-8-5-200 Enterprise RA', servers:'PowerEdge XE7740 / XE7745 (NVIDIA-Certified)',
    fabric:'NVIDIA Spectrum-X Ethernet',
-   note:'Dell states the XE7740/XE7745 align with the 2-8-5-200 Enterprise RA configuration for validated enterprise AI scalability. This is the same RA family as the VAST design profile "2-8-5" on the Rack Planner’s storage section — 8 GPUs per node, so the published VAST storage table applies.'},
+   note:'Dell states the XE7740/XE7745 align with the 2-8-5-200 Enterprise RA configuration for validated enterprise AI scalability. 2-8-5-200 is NVIDIA Enterprise RA shorthand: 2 CPUs, 8 GPUs per node, 5 nodes per scalable unit, 200 Gb/s fabric.'},
   {label:'Spectrum-X fabric', servers:'PowerEdge XE7745 in Spectrum-X solution IDs',
    fabric:'Non-blocking, rail-optimized spine-leaf',
    note:'Dell describes deterministic GPU paths with RDMA/RoCEv2, PFC, adaptive routing and congestion control for LLM training. Rail-optimized means the rail count drives the leaf count — the Rack Planner’s rails-per-GPU field is the lever.'},
@@ -7556,7 +7380,7 @@ window.__MATH=(function(){
    {name:'Dell AI Factory RA',rows:[['Reference architecture','Servers','Fabric','What Dell states'],
     ...DELLRA.map(a=>[a.label,a.servers,a.fabric,a.note]),
     ['','','',''],
-    ['TIE-IN','The 2-8-5-200 Enterprise RA is the same NVIDIA Enterprise RA family this tool models as VAST design profile "2-8-5" (8 GPUs per node), so the published VAST storage table applies to a Dell 2-8-5-200 build.','','']]},
+    ['TIE-IN','The 2-8-5-200 designation is NVIDIA Enterprise RA shorthand: 2 CPUs, 8 GPUs per node, 5 nodes per scalable unit, 200 Gb/s fabric.','','']]},
    {name:'Ingest resources',rows:[['Resource','Kind','What it is','Why it matters for this sizing','URL'],
     ...RES.map(x=>[x.k,x.kind,x.what,x.use,x.url]),
     ['','','','',''],
