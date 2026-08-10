@@ -1435,6 +1435,10 @@
           <thead><tr><th>Category</th><th>Item</th><th>Qty</th><th>+Spares</th><th>Order</th><th class="desc">Basis</th></tr></thead>
           <tbody id="bsBom"></tbody></table></div>
 
+        <h4 class="mem-h" style="margin-top:14px">BOM summary</h4>
+        <p class="lede">What the list above adds up to, cut the three ways a buyer actually asks: <b style="color:var(--ink)">who do I raise the PO with</b>, <b style="color:var(--ink)">what class of thing is it</b>, and <b style="color:var(--ink)">how much of this can I actually order today</b>. A line with no published part number is not blocked — it is a vendor lookup, and it is counted here rather than discovered at quote time.</p>
+        <div id="bsBomSummary"></div>
+
         <h3 class="mem-h">Asset tagging — sovereign adaptation</h3>
         <p class="lede">Microsoft's Cloud Adoption Framework and AWS's tagging guidance both assume a <b style="color:var(--ink)">hyperscaler owns the substrate</b>. The provider asserts jurisdiction, vets the staff, controls physical custody and attests to it. A sovereign on-prem AI factory inverts that: <b style="color:var(--ink)">you are the substrate</b>, so the guarantees a cloud provider would have made on your behalf have to become properties you carry yourself. That is the whole adaptation — the four commercial categories below are lifted straight from CAF and AWS, and the fifth is the one their frameworks have no reason to include.</p>
         <div class="bs-tags" id="bsTags"></div>
@@ -5516,7 +5520,69 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
        <td style="color:var(--faint)">${b.sp?'+'+N(b.sp):'—'}</td><td class="ok">${N(b.total)} <small style="color:var(--faint)">${b.uom}</small></td>
        <td class="desc"><span class="pn-b ${b.prov==='vendor'?'v':'e'}">${b.prov}</span> ${b.basis}</td></tr>`).join('')
    : '<tr><td colspan="6" class="desc">Configure Advanced mode on the Rack Planner tab.</td></tr>';
+  renderBomSummary(d);
   renderTags();
+ }
+ /* ---- BOM SUMMARY ------------------------------------------------------------------
+  * The line list answers "what do I order". It does not answer the questions asked in
+  * the ten minutes AFTER someone reads it: how many POs is this, who are they with, and
+  * how much of it is actually orderable today.
+  *
+  * Three roll-ups, from the SAME rationalized lines the table renders — never a second
+  * computation, because a summary that is derived independently is a summary that can
+  * disagree with the thing it summarises. Totals are of ORDER quantity (qty + spares),
+  * because that is the number that goes on the purchase order. */
+ function renderBomSummary(d){
+  const el=$s('bsBomSummary'); if(!el) return;
+  const lines=d.bom||[];
+  if(!lines.length){ el.innerHTML='<p class="note">No BOM yet — configure Advanced mode on the Rack Planner tab.</p>'; return; }
+  const sum=(rows,key)=>{
+   const m={};
+   rows.forEach(l=>{const k=l[key]||'—';
+     (m[k]=m[k]||{lines:0,qty:0,order:0,unquotable:0})&&0;
+     m[k].lines++; m[k].qty+=l.qty; m[k].order+=l.total; if(!l.mpn)m[k].unquotable++;});
+   return Object.entries(m).sort((a,b)=>b[1].order-a[1].order);
+  };
+  const N2=n=>Math.round(n).toLocaleString();
+  const totalOrder=lines.reduce((a,l)=>a+l.total,0);
+  const totalQty=lines.reduce((a,l)=>a+l.qty,0);
+  const unq=lines.filter(l=>!l.mpn);
+  const merged=lines.filter(l=>l.merged>1);
+  const prov=sum(lines,'prov');
+  const R=d.rules||[];
+  const fails=R.filter(r=>r.v==='FAIL').length;
+
+  const tbl=(title,rows,note)=>`<div class="mem-tbl-wrap" style="margin-bottom:10px"><table class="mem-tbl">
+    <thead><tr><th>${title}</th><th>Lines</th><th>Qty</th><th>Order qty</th><th class="desc">${note}</th></tr></thead>
+    <tbody>${rows.map(([k,v])=>`<tr><td><b>${k}</b></td><td>${N2(v.lines)}</td><td>${N2(v.qty)}</td><td class="ok">${N2(v.order)}</td>
+      <td class="desc">${v.unquotable?`<span class="pn-b e">${v.unquotable} need a part number</span>`:'all lines carry a part number'}</td></tr>`).join('')}
+    </tbody></table></div>`;
+
+  el.innerHTML=`
+   <div class="mem-hero" style="margin-bottom:10px">
+     <div class="mem-k" style="--e:var(--cool)"><div class="n" style="color:var(--cool)">${N2(lines.length)}</div>
+       <div class="l">order lines</div><div class="s">${merged.length?`${merged.length} merged from duplicates`:'no duplicates to merge'}</div></div>
+     <div class="mem-k" style="--e:var(--ok)"><div class="n" style="color:var(--ok)">${N2(totalOrder)}</div>
+       <div class="l">total order quantity</div><div class="s">${N2(totalQty)} + ${N2(totalOrder-totalQty)} spares</div></div>
+     <div class="mem-k" style="--e:${unq.length?'var(--warn)':'var(--ok)'}"><div class="n" style="color:${unq.length?'var(--warn)':'var(--ok)'}">${N2(unq.length)}</div>
+       <div class="l">lines needing a vendor lookup</div><div class="s">no published part number — not blocked, but not orderable as-is</div></div>
+     <div class="mem-k" style="--e:${fails?'var(--hot)':'var(--ok)'}"><div class="n" style="color:${fails?'var(--hot)':'var(--ok)'}">${fails?N2(fails):'0'}</div>
+       <div class="l">consistency failures</div><div class="s">${fails?'this build is NOT quotable — see the Rack Planner':'nothing blocks a quote'}</div></div>
+   </div>
+   ${tbl('By vendor — one PO each',sum(lines,'vendor'),'orderability')}
+   ${tbl('By category',sum(lines,'cat'),'orderability')}
+   <div class="mem-tbl-wrap"><table class="mem-tbl">
+     <thead><tr><th>Provenance</th><th>Lines</th><th>Order qty</th><th class="desc">What it means for a quote</th></tr></thead>
+     <tbody>${prov.map(([k,v])=>`<tr><td><span class="pn-b ${k==='vendor'?'v':'e'}">${k}</span></td><td>${N2(v.lines)}</td><td>${N2(v.order)}</td>
+       <td class="desc">${k==='vendor'?'read from a vendor-published figure — quote against it directly'
+         :k==='derived'?'computed by us from published inputs. Defensible, and not a vendor commitment — confirm against the validated configuration before it becomes a quote.'
+         :'assumed or extrapolated past a published table. Treat as a placeholder and replace with a measured or quoted figure.'}</td></tr>`).join('')}
+     </tbody></table></div>
+   ${unq.length?`<div class="callout" style="border-left-color:var(--warn);margin-top:10px">
+     <div class="callout-h" style="color:var(--warn)">${unq.length} line${unq.length===1?'':'s'} with no published part number</div>
+     <p>${unq.slice(0,8).map(l=>`<b>${l.item}</b> <span style="color:var(--faint)">(${l.vendor})</span>`).join(' · ')}${unq.length>8?` · and ${unq.length-8} more`:''}</p>
+     <p class="callout-x">Deliberately <b>null</b>, not guessed. An invented part number looks orderable and is not, which is the most expensive kind of wrong in this file — these need a vendor lookup, and now you know that before you send the PO rather than after.</p>
+   </div>`:''}`;
  }
  function renderTags(){
   $s('bsTags').innerHTML=TAGS.map(t=>`<div class="bs-tcat" style="--e:${t.col}">

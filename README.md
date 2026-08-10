@@ -9,11 +9,29 @@ Interactive capacity planner for **sovereign, compliant, on-prem AI factories** 
 Size a GPU cluster across four architectures from any single target — GPUs, FP4 exaFLOPS, SuperPODs, or nodes —
 and derive **power (space- vs power-limited racks), cost/TCO, storage, and flagship-model workloads** live.
 
+## Documentation
+
+| | |
+|---|---|
+| **[docs/USING-THE-SIZER.md](docs/USING-THE-SIZER.md)** | How to drive it, tab by tab |
+| **[docs/MODEL-AND-FLOW.md](docs/MODEL-AND-FLOW.md)** | How a GPU target becomes a floor plan |
+| **[docs/BUSINESS-RULES.md](docs/BUSINESS-RULES.md)** | All 21 consistency rules and what they refuse |
+| **[docs/BOM-AND-ORDERING.md](docs/BOM-AND-ORDERING.md)** | The BOM, its summary, and the `penguin-bom/1` order seam |
+
 ## Architectures
-- **NVIDIA GB300 NVL72** — rack-scale, SuperPOD building block (72 B300 + 36 Grace / rack)
-- **NVIDIA DGX B300** — HGX 8-GPU node (10U)
 - **Penguin Solutions Relion XE4418GT** — Intel Xeon 6 + B300 HGX (4U, direct-to-chip liquid)
 - **Penguin Solutions Altus XE4318GTS** — AMD EPYC Turin + B200 HGX (4U, direct-to-chip liquid)
+- **NVIDIA GB300 NVL72** — rack-scale, SuperPOD building block (72 B300 + 36 Grace / rack)
+- **NVIDIA DGX B300** — HGX 8-GPU node (10U)
+- **Dell PowerEdge XE9680L** — Intel Xeon 6 + B200 HGX (4U DTC) · **XE9712** — GB200 NVL72
+
+Each is laid out **as itself**. Rack composition — nodes per rack, GPUs per rack, kW per
+rack, port topology, rails — is read from the architecture and bounded by the rack feed you
+select, so nodes per rack is `min(space, power)` and which one bound it is reported.
+
+Architectures NVIDIA publishes no reference architecture for get **no scalable unit** — we
+refuse to invent one — and are sized directly on racks, with every derived figure badged as
+ours. See [MODEL-AND-FLOW.md](docs/MODEL-AND-FLOW.md).
 
 ## Partner Solutions — the rest of the floor
 A real estate is not only an AI factory. The **Partner Solutions** tab sizes general-purpose
@@ -31,13 +49,31 @@ Open `index.html`, or the hosted page at **[penguinai.dugganusa.com](https://pen
 All economic/workload constants are editable — drop real per-GPU capex and $/kWh to move from
 sizing-grade to procurement-grade.
 
-Exports: multi-sheet XLSX workbooks, CSV and JSON, with a provenance block naming what is
-vendor-published, what we derived, and what nobody has published.
+Exports: multi-sheet XLSX workbooks, CSV and JSON, plus a **`penguin-bom/1`** BOM with
+stable part ids, vendor, MPN, unit of measure and provenance — the shape an ordering system
+consumes. See [BOM-AND-ORDERING.md](docs/BOM-AND-ORDERING.md).
+
+## Consistency
+21 rules run on every change and travel with the model into every export — rack load against
+the feed at an 80% derate, leaf capacity and rail optimisation, optical and copper reach,
+rack U, ASHRAE aisle minimums, and provenance. They report **PASS / WARN / FAIL**, and a
+FAIL means the build is not quotable.
+
+`scripts/assert-model-consistency.mjs` sweeps 48 configurations and then drives every rule
+to FAIL on purpose, because a rule that cannot fail is decoration. It has already caught
+four real defects, including one rule that could never have fired.
 
 ## Provenance
 Anchored to public NVIDIA reference-architecture, Penguin, VAST and Dell datasheets (2026).
 FP4 = dense (sparse ≈ 2×). Every figure is labelled **vendor** / **ours** / **not published** —
 see the References tab and **[NOTICE.md](NOTICE.md)**. Estimates, not a quote.
+
+NVIDIA publishes the GB300 NVL72 scalable unit and RA Tables 3/4, and publishes nothing
+equivalent for a Penguin Relion or an Altus. Anything computed for those is ours and says
+so — rule **V1** fails the build if any BOM line cites an NVIDIA RA table on a fabric we
+derived, and rule **V2** states on the face of every derived build that our arithmetic is
+**not a vendor-blessed validated configuration**. Penguin and Dell publish those; this tool
+does not have that list. Confirm before it becomes a quote.
 
 ## Licensing at a glance
 | You are | You pay |
