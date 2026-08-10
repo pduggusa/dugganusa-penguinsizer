@@ -680,7 +680,7 @@
           <p class="lede" id="advElevNote">Drawn from published U-heights and tray counts, not from vendor stencil art. Tray <i>order</i> varies by OEM integrator, so treat the sequence as a reference elevation and confirm against the as-built drawing before it becomes a floor plan.</p>
           <div class="adv-elev" id="advElev"></div>
           <h3 class="mem-h">Storage — VAST Data</h3>
-          <p class="lede">Derived from the <b style="color:var(--ink)">VAST + NVIDIA Enterprise reference architecture</b> tables so storage follows the GPU target automatically. Set either box count above to override. Design profile: <select id="advVastDesign" class="rk-btn" style="padding:5px 9px"></select> <select id="advVastModel" class="rk-btn" style="padding:5px 9px"></select></p>
+          <p class="lede">Derived from the <b style="color:var(--ink)">VAST + NVIDIA Enterprise reference architecture</b> tables so storage follows the GPU target automatically. Set either box count above to override. Storage: <select id="advVastMode" class="rk-btn" style="padding:5px 9px"><option value="auto">Auto — follow the RA</option><option value="manual">Manual — use my box counts</option><option value="none">None — no VAST in this build</option></select> Design profile: <select id="advVastDesign" class="rk-btn" style="padding:5px 9px"></select> <select id="advVastModel" class="rk-btn" style="padding:5px 9px"></select></p>
           <div class="adv-storage" id="advStorage"></div>
           <h3 class="mem-h">🎨 Cable colours — each colour is a separate part number</h3>
           <p class="lede">Change a colour or its name and <b style="color:var(--ink)">the bill of materials below re-splits on it immediately</b>. Red Cat6A and grey Cat6A are different SKUs, ordered and stocked separately, so the BOM treats them that way. The right-hand column shows the exact line each choice produces.</p>
@@ -799,14 +799,6 @@
         <h3 class="mem-h">Bill of materials</h3>
         <p class="lede">Every orderable line the sizing implies — compute, storage, fabric, cabling, racks and power — with quantity, rack units, load and <b style="color:var(--ink)">the basis of each number</b>. Lines derived from an assumption are marked, so a line you have not verified never reaches a purchase order looking like one you have.</p>
         <div class="pn-bom" id="pnBom"></div>
-
-        <h3 class="mem-h">Dell GPU platforms — XE8xxx / XE9xxx</h3>
-        <p class="lede">Dell's accelerated line. Form factors, GPU counts and accelerator options are <b style="color:var(--ink)">vendor-published</b>; node power is <b style="color:var(--ink)">derived</b> as (GPU count × published accelerator TDP) + host overhead, and says so. Rack-scale and roadmap parts return no wattage at all. Full GPU cluster sizing lives on <b style="color:var(--ink)">Size It</b> — this is the Dell column of that comparison.</p>
-        <div class="pn-gpu" id="pnGpu"></div>
-
-        <h3 class="mem-h">Dell AI Factory with NVIDIA — reference architectures</h3>
-        <p class="lede">Dell's validated designs, as Dell describes them. Note the tie-in: the <b style="color:var(--ink)">2-8-5-200 Enterprise RA</b> is the same NVIDIA Enterprise RA family this tool already models as VAST design profile <b style="color:var(--ink)">2-8-5</b> — so a Dell 2-8-5-200 build and the published VAST storage table line up.</p>
-        <div class="pn-ra" id="pnRa"></div>
 
         <h3 class="mem-h">Storage sizing</h3>
         <p class="lede">Sized on its own terms — capacity, IOPS and throughput — so an <b style="color:var(--ink)">array refresh</b> can be sized without inventing a compute estate to justify it. Set it to follow the compute workload, or drive it independently from your own numbers.</p>
@@ -1464,14 +1456,7 @@ const ARCH=[
  {key:"dell-xe9680l",label:"Dell PowerEdge XE9680L",who:"Intel Xeon 6 + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"Xeon 5th Gen",cpuper:2,nvl:8,pkw:10,cool:"liquid DTC",edge:"var(--cool)",
   grain:{gpu:8,cpu:2,per:1,label:"node",pkw:10,fixedKw:0},derivedKw:true},
  {key:"dell-xe9712",label:"Dell PowerEdge XE9712",who:"GB200 NVL72 · rack-scale liquid",gpu:"B200",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:120,cool:"liquid DTC",su:8,edge:"var(--grace)",
-  grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:5,fixedKw:30},sku:"rack",derivedKw:true},
- {key:"dell-xe9680",label:"Dell PowerEdge XE9680",who:"8× H200 SXM5 · 6U air-cooled",gpu:"H200",per:8,unit:"node 6U",u:6,cpu:"Xeon 4th/5th Gen",cpuper:2,nvl:8,pkw:7.6,cool:"air",edge:"var(--warn)",
-  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:7.6,fixedKw:0},derivedKw:true,hopper:true},
- /* Dell publishes 144 GPUs and 300 kW+ per ORv3 rack, 100% direct-liquid-cooled.
-  * 144/4 = 36 NVL4 nodes per rack; 300/36 = 8.3 kW per node. Rack figures are Dell's,
-  * the per-node split is arithmetic on them. Available early 2027. */
- {key:"dell-xe8812",label:"Dell PowerEdge XE8812",who:"Vera Rubin NVL4 · ORv3 fanless liquid · 2027",gpu:"VR200",per:144,unit:"rack",u:48,cpu:"Vera",cpuper:36,nvl:4,pkw:300,cool:"liquid DTC",su:8,edge:"var(--grace)",
-  grain:{gpu:4,cpu:1,per:36,label:"NVL4 node",pkw:8.3,fixedKw:0},sku:"rack",derivedKw:true,roadmap:true}
+  grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:5,fixedKw:30},sku:"rack",derivedKw:true}
 ];
 const MODELS=[
  {n:"Llama 3.1 405B",p:405,t:15},{n:"DeepSeek-V3 671B",p:671,t:14.8},{n:"Mistral Large 2",p:123,t:12},
@@ -3043,7 +3028,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const LS='penguin-adv-planner-v1';
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:4608,floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
-      vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',
+      vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',vastMode:'auto',
       netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
       trunkRacks:4,trunkPorts:24,trunkSide:'right',rackOrder:null,aisles:1,
       memAI:1,memPerSU:1,loadCap:80,
@@ -3113,14 +3098,15 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   // storage follows the SuperPOD target instead of being hand-guessed. Manual override
   // wins if either box count is set non-zero.
   const vAuto=vastFor(realGpus, A.vastDesign||'285');
-  const manual=(gi('vastCbox')>0||gi('vastDbox')>0);
+  const vMode=A.vastMode||'auto';
+  const manual=vMode==='manual'||(vMode==='auto'&&(gi('vastCbox')>0||gi('vastDbox')>0));
   // RA counts CNODES; a CBox houses 4 of them.
   const vc=manual?Math.max(0,gi('vastCbox')):Math.ceil(vAuto.cnodes/VAST.cbox.cnodes);
   const vd=manual?Math.max(0,gi('vastDbox')):vAuto.dbox;
   const vCnodes=manual?vc*VAST.cbox.cnodes:vAuto.cnodes;
   const vModel=VAST[A.vastModel||'dbox']||VAST.dbox;
   const vU=vc*VAST.cbox.u + vd*vModel.u;
-  const vRacks=vU?Math.ceil(vU/42):0;
+  const vRacks=(vMode==='none')?0:(vU?Math.ceil(vU/42):0);
   const vKw=+(vc*VAST.cbox.kw + vd*vModel.kw).toFixed(1);
   // CNode back-end + front-end, DNode back-end, plus BMC and serial console per box.
   const vBE = vCnodes*VAST.cbox.ports.be + vd*vModel.ports.be;
@@ -3132,7 +3118,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * defaults to one appliance per scalable unit; that ratio is OUR default, not a
    * Penguin-published rule, and the right number is a function of KV working-set size
    * and concurrency, which this tool does not know. */
-  const memOn=A.memAI!==0&&A.memAI!=='0';
+  const memOn=(parseFloat(A.memAI)||0)>0;   // '' and NaN are OFF, not ON
   const memPerSU=Math.max(0,gi('memPerSU'));
   const memUnits=memOn?Math.ceil(Math.ceil(suNeeded)*memPerSU):0;
   const memU=memUnits*MEMAI.u;
@@ -3517,6 +3503,9 @@ ${c.iso?`<h2>Multi-tenancy</h2>
 
  function renderArtOnce(){try{renderArt();}catch(e){}}
  function renderCtl(){
+  const vmsel=$a('advVastMode');
+  if(vmsel){vmsel.value=A.vastMode||'auto';
+    vmsel.onchange=e=>{A.vastMode=e.target.value;save();paint();};}
   const dsel=$a('advVastDesign'), msel=$a('advVastModel');
   if(dsel){dsel.innerHTML=Object.entries(VAST_RA).map(([k,v])=>`<option value="${k}"${(A.vastDesign||'285')===k?' selected':''}>${v.label}</option>`).join('');
     dsel.onchange=e=>{A.vastDesign=e.target.value;save();paint();};}
@@ -4123,6 +4112,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   return rows.filter(r=>r[2]>0).map(r=>({cat:r[0],item:r[1],qty:r[2],sp:sp(r[2]),basis:r[3]}));
  }
  function detailCard(r,i){
+  const d=derive();   // vendor/label lookups below need the model; it was never passed in
   const nm=rackName(i+1), rows=elevation(r.kind);
   let u=48, bands=[];
   for(const b of rows) for(let k=0;k<b.n;k++){
