@@ -146,18 +146,47 @@ answer, not a bug. Turning the feed down is what makes power bite.
 
 ---
 
-## The scalable unit, and why most builds do not get one
+## The scalable unit — why we size on racks, and what that does *not* claim
 
 NVIDIA publishes the GB300 NVL72 scalable unit, the 8-racks-per-SU figure, and RA Tables 3
 and 4. They publish **none of that** for a Relion or an Altus.
 
-Two options existed. Derive an SU from the fabric and keep the vocabulary everywhere, or
-drop the concept for architectures that have none.
+Two options existed. Derive an NVL72-shaped SU from the fabric and keep the vocabulary
+everywhere, or size those builds on racks.
 
-**We drop it.** A number we invented, sitting in a slot NVIDIA owns, reads as NVIDIA's
-however it is badged. Non-rack-scale builds size directly on **racks**, and every surface
-says so — the UI, the BOM basis strings, the CSV, the workbook and the JSON, where
+**We size on racks.** A number we invented, sitting in a slot NVIDIA owns, reads as
+NVIDIA's however it is badged. Non-rack-scale builds size directly on **racks**, and every
+surface says so — the UI, the BOM basis strings, the CSV, the workbook and the JSON, where
 `scalable_units` is `null` and `compute_racks` carries the answer instead.
+
+### A correction worth keeping visible
+
+The first version of this document said those architectures have **no scalable unit**. That
+was wrong, and it was wrong about the hero product.
+
+**Penguin publishes one: the OriginAI pod.** Checked 2026-08-10, and two figures are live
+on penguinsolutions.com at different dates:
+
+| Source | Figure |
+|---|---|
+| OriginAI product page (current) | a **1/4-pod entry configuration of 64 GPUs**, scaling to **90+ pods and over 24,000 GPUs** |
+| 2024 OriginAI expansion release | pre-validated **1-pod, 4-pod and 16-pod** configurations spanning **256 to more than 16,000 GPUs** |
+
+They do not reconcile to a fixed GPUs-per-pod — 16 pods at 256 GPUs is 4,096, not 16,000 —
+which says a pod is a **modular rack building block** whose GPU count depends on what is in
+the racks, not a constant. Both are recorded with their dates rather than resolved by
+picking one, because picking one silently is how a superseded figure outlives its
+generation.
+
+Neither is modelled yet. So the honest claim is: *this tool sizes on racks and does not snap
+to Penguin's pod boundaries*, which means a build here can land **between** pre-validated
+configurations. Rule **V2** says exactly that, by name, on every Penguin build.
+
+The general lesson, since it caused the error: **"we do not model X" and "the vendor does
+not publish X" are different claims**, and the second one needs more than one page of a
+vendor site before you make it. `VENDOR_SU` in the source records what each vendor
+publishes, with where it is stated — and an absent entry means *we have not checked*, not
+*nothing exists*.
 
 ```mermaid
 flowchart LR

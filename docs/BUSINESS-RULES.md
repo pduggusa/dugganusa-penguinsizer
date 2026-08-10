@@ -145,7 +145,7 @@ the counts were read from one.**
 Raised on every derived build, and worded differently by shape because the derived part
 differs:
 
-- **Node builds** — *"11 × Penguin Relion XE4418GT per rack at 154 kW is OUR arithmetic on
+- **Node builds** — *"11 × Penguin Relion XE4418GTS-DTC per rack at 154 kW is OUR arithmetic on
   published datasheet figures — 4U per node, 14 kW per node, 8 GPU per node — bounded by
   the 415 V 3φ 300 A feed you selected."*
 - **Rack-scale** — the cabinet is the vendor's and fixed; what is ours is the multi-rack

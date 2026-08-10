@@ -111,9 +111,9 @@ use — one convention to learn, and a version field to branch on when it change
 
   "build": {
     "architecture": "relion-xe4418",
-    "label": "Penguin Relion XE4418GT",
+    "label": "Penguin Relion XE4418GTS-DTC",
     "provenance": "derived",
-    "basis": "DERIVED — no vendor reference architecture is published for …",
+    "basis": "DERIVED — rack composition is OURS, sized on racks from published node figures. NOTE: Penguin Solutions publishes a scalable unit …",
     "gpus": 4664, "computeRacks": 53, "totalRacks": …,
     "nodesPerRack": 11, "gpusPerRack": 88, "rackKw": 154,
     "boundBy": "space-limited",

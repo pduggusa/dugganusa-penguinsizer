@@ -19,8 +19,8 @@ and derive **power (space- vs power-limited racks), cost/TCO, storage, and flags
 | **[docs/BOM-AND-ORDERING.md](docs/BOM-AND-ORDERING.md)** | The BOM, its summary, and the `penguin-bom/1` order seam |
 
 ## Architectures
-- **Penguin Solutions Relion XE4418GT** — Intel Xeon 6 + B300 HGX (4U, direct-to-chip liquid)
-- **Penguin Solutions Altus XE4318GTS** — AMD EPYC Turin + B200 HGX (4U, direct-to-chip liquid)
+- **Penguin Solutions Relion XE4418GTS-DTC** — Intel Xeon 6 + B300 HGX (4U, direct-to-chip liquid)
+- **Penguin Solutions Altus XE4318GTS-DTC** — AMD EPYC Turin + B200 HGX (4U, direct-to-chip liquid)
 - **NVIDIA GB300 NVL72** — rack-scale, SuperPOD building block (72 B300 + 36 Grace / rack)
 - **NVIDIA DGX B300** — HGX 8-GPU node (10U)
 - **Dell PowerEdge XE9680L** — Intel Xeon 6 + B200 HGX (4U DTC) · **XE9712** — GB200 NVL72
@@ -29,9 +29,15 @@ Each is laid out **as itself**. Rack composition — nodes per rack, GPUs per ra
 rack, port topology, rails — is read from the architecture and bounded by the rack feed you
 select, so nodes per rack is `min(space, power)` and which one bound it is reported.
 
-Architectures NVIDIA publishes no reference architecture for get **no scalable unit** — we
-refuse to invent one — and are sized directly on racks, with every derived figure badged as
-ours. See [MODEL-AND-FLOW.md](docs/MODEL-AND-FLOW.md).
+Architectures NVIDIA publishes no NVL72-style reference architecture for are **sized on
+racks** rather than on an invented scalable unit, with every derived figure badged as ours.
+
+That is a statement about our method, not about the vendor. **Penguin publishes the OriginAI
+pod** — a 1/4-pod entry at 64 GPUs, pre-validated 1-pod / 4-pod / 16-pod configurations from
+256 to 16,000+ GPUs, and a stated ceiling of 90+ pods and 24,000+ GPUs. This tool does not
+model those boundaries yet, so a Penguin build here can land *between* pre-validated
+configurations — rule **V2** says so on screen, by name. See
+[MODEL-AND-FLOW.md](docs/MODEL-AND-FLOW.md).
 
 ## Partner Solutions — the rest of the floor
 A real estate is not only an AI factory. The **Partner Solutions** tab sizes general-purpose

@@ -1480,9 +1480,9 @@ const GPU={B300:{name:"B300 Blackwell Ultra",hbm:288,fp4:15.3,tdp:1.4,capexId:"c
  * physically exists inside it — the GB300 NVL72's 18 compute trays (4× B300 + 2× Grace each),
  * or simply the node for HGX builds. NVIDIA's own sizers quantize to `per`; we size to `grain`. */
 const ARCH=[
- {key:"relion-xe4418",label:"Penguin Relion XE4418GT",who:"Intel Xeon 6 + B300 HGX · 4U DTC",gpu:"B300",per:8,unit:"node 4U",u:4,cpu:"Xeon 6",cpuper:2,nvl:8,pkw:14,cool:"liquid DTC",edge:"var(--ok)",hero:1,
+ {key:"relion-xe4418",label:"Penguin Relion XE4418GTS-DTC",who:"Intel Xeon 6 (6700/6500) + B300 HGX · 4U DTC",gpu:"B300",per:8,unit:"node 4U",u:4,cpu:"Xeon 6 6700/6500",cpuper:2,nvl:8,pkw:14,cool:"liquid DTC",edge:"var(--ok)",hero:1,
   grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14,fixedKw:0}},
- {key:"altus-xe4318",label:"Penguin Altus XE4318GTS",who:"AMD EPYC Turin + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"EPYC Turin",cpuper:2,nvl:8,pkw:10.5,cool:"liquid DTC",edge:"var(--warn)",
+ {key:"altus-xe4318",label:"Penguin Altus XE4318GTS-DTC",who:"AMD EPYC 9005/9004 + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"EPYC 9005/9004",cpuper:2,nvl:8,pkw:10.5,cool:"liquid DTC",edge:"var(--warn)",
   grain:{gpu:8,cpu:2,per:1,label:"node",pkw:10.5,fixedKw:0}},
  /* Dell's NVIDIA architectures, so the comparison is honest about who else builds this.
   * Form factor, GPU count and cooling are VENDOR-PUBLISHED. Node power is DERIVED —
@@ -1758,9 +1758,9 @@ sync();
   * 9 NVLink switch trays, 6–8× 33 kW power shelves, 2 in-rack SN2201 OOB switches.
   * NVLink5 GPU↔GPU rides the copper cable-cartridge backplane — deliberately NOT a cable-BOM line. */
  const SPEC={
-  "relion-xe4418":{label:"Penguin Relion XE4418GT",unit:"node", nodeU:4, gpuPer:8, pkw:14,  weight:100,
+  "relion-xe4418":{label:"Penguin Relion XE4418GTS-DTC",unit:"node", nodeU:4, gpuPer:8, pkw:14,  weight:100,
     ports:{compute:8,storage:2,mgmt:2,bmc:1}},
-  "altus-xe4318": {label:"Penguin Altus XE4318GTS",unit:"node", nodeU:4, gpuPer:8, pkw:10.5,weight:100,
+  "altus-xe4318": {label:"Penguin Altus XE4318GTS-DTC",unit:"node", nodeU:4, gpuPer:8, pkw:10.5,weight:100,
     ports:{compute:8,storage:2,mgmt:2,bmc:1}},
   "dgx-b300":     {label:"NVIDIA DGX B300",        unit:"node", nodeU:10,gpuPer:8, pkw:14,  weight:130,
     ports:{compute:8,storage:2,mgmt:2,bmc:1}},
@@ -3184,10 +3184,14 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    basis:exact?`RA Table 3/4, exact ${su}-SU row`:`rounded up to the published ${key}-SU design (no interpolation)`,
    ...(exact||FABRIC.table[key])};
  }
- /* ---- FABRIC FOR ARCHITECTURES NVIDIA NEVER PUBLISHED A TABLE FOR -------------------
-  * Tables 3 and 4 are keyed on the NVL72 scalable unit. A Relion build has no SU — we
-  * refuse to invent one — so there is no row to read and the counts have to be computed
-  * from switch radix and the link count the racks actually present.
+ /* ---- FABRIC WHERE THERE IS NO RA ROW TO READ --------------------------------------
+  * Tables 3 and 4 are keyed on the NVL72 scalable unit, and we refuse to invent an NVL72
+  * SU for something that is not one — so for a Relion build there is no row to read, and
+  * the counts have to be computed from switch radix and the links the racks present.
+  *
+  * That is a statement about OUR method. It is NOT a claim that the platform's vendor
+  * publishes no scalable unit of their own — Penguin publishes the OriginAI pod, and this
+  * tool does not model it yet. See VENDOR_SU.
   *
   * This arithmetic is OURS. It returns derived:true and every basis string it produces
   * says DERIVED, so nothing downstream can render it next to an "RA Table 3" badge and
@@ -3218,7 +3222,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    gpus:computeRacks*AS.gpusPerRack,
    ibLeaf,ibSpine,ethComputeLeaf,ethStorageLeaf,ethSpine,
    storageBW:storageLinks+'x'+FABRIC.sw.ethLeaf.speed,mgmtOob:'2+2',
-   basis:`DERIVED (OURS) — NVIDIA publishes no reference architecture for ${AS.label}, so these counts are computed from switch radix and the ${computeLinks.toLocaleString()} compute links this build presents, NOT read from RA Table 3/4`,
+   basis:`DERIVED (OURS) — these counts are NOT read from NVIDIA RA Table 3/4, which is keyed on the NVL72 scalable unit. They are computed from published switch radix and the ${computeLinks.toLocaleString()} compute links this ${AS.label} build presents`,
    note:ibSpine===0?'One leaf layer carries this build — no spine is required, and buying one would be cost with no topology behind it.':null};
  }
 
@@ -3297,6 +3301,40 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   * NON-REGRESSION: for gb300-nvl72 this MUST reproduce the constants it replaces —
   * 18 trays, 72 GPU, 142 kW, 8 racks/SU, 4 rails, {72,36,27,18}. scripts/adv-fingerprint.mjs
   * is the diff that proves it. */
+ /* ---- VENDOR SCALABLE UNITS WE DO NOT MODEL --------------------------------------
+  * "This tool sizes on racks" and "the vendor publishes no scalable unit" are DIFFERENT
+  * CLAIMS, and the first cut of this said the second one. It was wrong, and it was wrong
+  * about the hero product: Penguin publishes a pre-validated pod ladder for OriginAI.
+  * The mistake came from reading one page of a vendor site and calling the absence
+  * evidence — a vendor's marketing site is not one document.
+  *
+  * So: name what the vendor publishes where we know it, cite where it is stated, and say
+  * plainly that we do not model it yet. Absence of an entry here means WE HAVE NOT
+  * CHECKED — it does not mean the vendor publishes nothing. */
+ /* CATALOGUE FRESHNESS. Vendor pages carry figures from different dates and the newer one
+  * is not always the one a search surfaces. Checked 2026-08-10:
+  *   product page (current)  1/4-pod entry at 64 GPUs · 90+ pods · 24,000+ GPUs
+  *   2024 expansion release  1-pod / 4-pod / 16-pod · 256 to 16,000+ GPUs
+  * Both are Penguin's. They do NOT reconcile to a fixed GPUs-per-pod — 16 pods at 256 is
+  * 4,096, not 16,000 — which says a pod is a modular RACK block whose GPU count depends on
+  * what is in the racks, not a constant. Recorded with dates rather than resolved by
+  * picking one, because picking one silently is how a superseded figure outlives its
+  * generation. Neither is modelled yet.
+  *
+  * ALSO NOT MODELLED, and newer than what this tool carries: Altus XE4318GTSv2-DTC pairs
+  * EPYC 9005/9004 with HGX B300, a generation up from the B200 in the XE4318GTS-DTC below. */
+ const VENDOR_SU={
+  'relion-xe4418':{
+   name:'OriginAI pod', vendor:'Penguin Solutions', asOf:'2026-08-10',
+   published:'a 1/4-pod entry configuration of 64 GPUs and a ceiling of 90+ pods / 24,000+ GPUs (product page, current), and pre-validated 1-pod, 4-pod and 16-pod configurations spanning 256 to more than 16,000 GPUs (2024 expansion release)',
+   where:'penguinsolutions.com — OriginAI Infrastructure Solution product page, the data-center AI infrastructure expertise page, and the 2024 OriginAI expansion release'},
+  'altus-xe4318':{
+   name:'OriginAI pod', vendor:'Penguin Solutions', asOf:'2026-08-10',
+   published:'a 1/4-pod entry configuration of 64 GPUs and a ceiling of 90+ pods / 24,000+ GPUs (product page, current), and pre-validated 1-pod, 4-pod and 16-pod configurations spanning 256 to more than 16,000 GPUs (2024 expansion release)',
+   where:'penguinsolutions.com — OriginAI Infrastructure Solution product page, the data-center AI infrastructure expertise page, and the 2024 OriginAI expansion release'}
+ };
+ const vendorSU=k=>VENDOR_SU[k]||null;
+
  function archSpec(){
   const key=A.arch||'gb300-nvl72';
   const a=ARCH.find(x=>x.key===key)||ARCH.find(x=>x.key==='gb300-nvl72');
@@ -3373,12 +3411,18 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    ceilingBasis: rackScale
      ? 'NVIDIA RA — published two-layer fabric tops out at 16 SU / 9,216 GPU'
      : 'DERIVED (OURS) — two-layer fat tree of 144-radix switches, 144²/2 endpoints',
+   vendorSU: vendorSU(a.key),
    provenance: (a.key==='gb300-nvl72')?'vendor':'derived',
    basis: (a.key==='gb300-nvl72')
      ? 'NVIDIA DGX SuperPOD GB300 reference architecture'
      : (rackScale
-        ? 'DERIVED — NVIDIA’s NVL72 scalable unit applied to '+a.label+'; NVIDIA publishes no RA for this vendor’s implementation'
-        : 'DERIVED — no vendor reference architecture is published for '+a.label+'; rack composition is OURS')
+        ? 'DERIVED — NVIDIA’s NVL72 scalable unit applied to '+a.label+'; not read from a reference architecture covering this vendor’s implementation'
+        /* States what WE did, not what a vendor did or did not publish. */
+        : 'DERIVED — rack composition is OURS, sized on racks from published node figures'
+          +(vendorSU(a.key)
+             ? '. NOTE: '+vendorSU(a.key).vendor+' publishes a scalable unit for this platform — the '
+               +vendorSU(a.key).name+' — which this tool DOES NOT MODEL yet ('+vendorSU(a.key).published+')'
+             : '. Whether this vendor publishes a scalable unit has not been checked here'))
   };
  }
 
@@ -4041,10 +4085,19 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     * node build we computed the rack composition itself. On a rack-scale SKU the
     * composition is the vendor's and fixed — only the multi-rack grouping is ours.
     * Claiming we derived a vendor-fixed cabinet would be its own small fiction. */
-   out.push(R('V2','Provenance', null, `Not a vendor-blessed configuration`,
+   const su=A_.vendorSU;
+   out.push(R('V2','Provenance', null,
+    su?`Sized on racks — ${su.vendor} publishes the ${su.name} this tool does not model`
+      :`Not a vendor-blessed configuration`,
     A_.rackScale
-     ? `The rack itself is ${oem}'s: ${A_.nodesPerRack} trays, ${A_.gpusPerRack} GPU, ${N1_(A_.rackKw)} kW are VENDOR-PUBLISHED and are not ours to recompute. What is OURS is the grouping around it — ${A_.racksPerSU} racks to a scalable unit is NVIDIA's SuperPOD figure applied to ${oem}'s cabinet, and NVIDIA publishes no reference architecture for this vendor's implementation. ${oem} publishes validated configurations; this tool does not have that list. Confirm the multi-rack design with ${oem} before it becomes a quote.`
-     : `${A_.nodesPerRack} x ${A_.label} per rack at ${N1_(A_.rackKw)} kW is OUR arithmetic on published datasheet figures — ${A_.nodeU}U per node, ${A_.nodeKw} kW per node, ${A_.nodeGpus} GPU per node — bounded by the ${A_.feed.label} feed you selected. ${oem} publishes VALIDATED configurations: specific node counts, cooling loops and fabric layouts they will support. This tool does not have that list. Sizing-grade only — confirm the composition against ${oem}'s blessed configuration before it becomes a quote.`));
+     ? `The rack itself is ${oem}'s: ${A_.nodesPerRack} trays, ${A_.gpusPerRack} GPU, ${N1_(A_.rackKw)} kW are VENDOR-PUBLISHED and are not ours to recompute. What is OURS is the grouping around it — ${A_.racksPerSU} racks to a scalable unit is NVIDIA's SuperPOD figure applied to ${oem}'s cabinet, not read from a reference architecture covering it. ${oem} publishes validated configurations; this tool does not have that list. Confirm the multi-rack design with ${oem} before it becomes a quote.`
+     /* Name the ladder where we know it. "The vendor publishes validated configurations"
+      * is a shrug; "the vendor publishes a 1/4-pod entry at 64 GPUs and pre-validated
+      * 1/4/16-pod configurations" is something a reader can go and check. */
+     : `${A_.nodesPerRack} x ${A_.label} per rack at ${N1_(A_.rackKw)} kW is OUR arithmetic on published datasheet figures — ${A_.nodeU}U per node, ${A_.nodeKw} kW per node, ${A_.nodeGpus} GPU per node — bounded by the ${A_.feed.label} feed you selected.`
+       +(su
+          ? ` <b>${su.vendor} publishes the ${su.name}</b>: ${su.published} (${su.where}). This tool sizes on racks and does <b>not</b> snap to those boundaries, so a build here can land BETWEEN pre-validated configurations. Check the pod boundary with ${oem} before it becomes a quote.`
+          : ` ${oem} publishes VALIDATED configurations — specific node counts, cooling loops and fabric layouts they will support — and this tool does not have that list. Sizing-grade only; confirm before it becomes a quote.`)));
   }
 
   return out;
@@ -4473,10 +4526,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   const mn=$a('rkModeNote');
   if(mn) mn.textContent=AS.rackScale
    ? `Built on NVIDIA’s published SuperPOD reference architecture — up to ${AS.ceiling.toLocaleString()} GPUs across 16 scalable units. Click any rack to expand its elevation and port labels.`
-   : `Built as ${AS.label} — ${AS.nodesPerRack} nodes a rack on a ${AS.feed.label} feed, sized on RACKS because no vendor scalable unit is published for it. Composition and switch counts are ours and badged as such. Click any rack to expand its elevation and port labels.`;
+   : `Built as ${AS.label} — ${AS.nodesPerRack} nodes a rack on a ${AS.feed.label} feed, sized on RACKS. Composition and switch counts are ours and badged as such.${AS.vendorSU?` ${AS.vendorSU.vendor} publishes the ${AS.vendorSU.name} this tool does not model yet.`:''} Click any rack to expand its elevation and port labels.`;
   if(an) an.innerHTML=AS.rackScale
    ? `<b style="color:var(--ok)">${AS.nodesPerRack} ${AS.grainLabel||'tray'}s · ${AS.gpusPerRack} GPU · ${AS.rackKw} kW</b> per rack, ${AS.racksPerSU} racks per scalable unit — <span class="pn-b v">vendor</span>`
-   : `<b style="color:var(--warn)">${AS.nodesPerRack} node${AS.nodesPerRack===1?'':'s'} · ${AS.gpusPerRack} GPU · ${AS.rackKw} kW</b> per rack (${AS.bound} — ${AS.spaceMax} by ${AS.usableU}U usable, ${AS.powerMax} by the feed) · <b>no published scalable unit</b>, sized on racks — <span class="pn-b e">derived</span>`;
+   : `<b style="color:var(--warn)">${AS.nodesPerRack} node${AS.nodesPerRack===1?'':'s'} · ${AS.gpusPerRack} GPU · ${AS.rackKw} kW</b> per rack (${AS.bound} — ${AS.spaceMax} by ${AS.usableU}U usable, ${AS.powerMax} by the feed) · sized on <b>racks</b>${AS.vendorSU?`, not on the <b>${AS.vendorSU.name}</b> that ${AS.vendorSU.vendor} publishes — that is not modelled here yet`:''} — <span class="pn-b e">derived</span>`;
 
   /* ---- CONSISTENCY PANEL. Rendered ABOVE the numbers, not buried under them: a build
    * that cannot be energised or cabled should be the first thing you read, not a
@@ -4983,7 +5036,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    * NVIDIA's design applied to somebody else's cabinet, and that part is DERIVED. */
   const RS=how=>d.arch.provenance==='vendor'
     ? `${how} — NVIDIA RA`
-    : `${how} — VENDOR-PUBLISHED rack composition for ${d.arch.label}. The scalable-unit grouping around it is DERIVED (OURS): it is NVIDIA's SU applied to this vendor's implementation, and NVIDIA publishes no reference architecture for it.`;
+    : `${how} — VENDOR-PUBLISHED rack composition for ${d.arch.label}. The scalable-unit grouping around it is DERIVED (OURS): NVIDIA's SU figure applied to this vendor's cabinet, not read from a reference architecture covering it.`;
   const STD=[1,2,3,5,7,10,15,20,30,50,75,100,150,200,300,500];
   const stock=m=>STD.find(x=>x>=m)||500;
   const opt=d.L.filter(l=>l.media.includes('SMF'));
@@ -4991,7 +5044,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   const rows=[
    ['Rack',d.arch.label+' compute rack',d.computeRacks,
      d.arch.rackScale?`${d.blockTotal} SU x ${d.arch.racksPerSU} racks — NVIDIA RA`
-       :`${d.computeRacks} racks at ${d.arch.gpusPerRack} GPU each — DERIVED (OURS), no published SU for this architecture`],
+       :`${d.computeRacks} racks at ${d.arch.gpusPerRack} GPU each — DERIVED (OURS), sized on racks${d.arch.vendorSU?`. ${d.arch.vendorSU.vendor} publishes the ${d.arch.vendorSU.name} that is NOT MODELLED here`:''}`],
    ...(d.planes>1&&!d.torMode?[['Rack','Network rack — side A (left of row)',d.netRacksPerSide,
      `plane A of ${d.planes} · ${d.netRed==='ab100'?'sized for the FULL load':'sized for half the load'}`],
     ['Rack','Network rack — side B (right of row)',d.netRacksPerSide,
@@ -5245,7 +5298,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   /* r.su is null for architectures with no published scalable unit — we refuse to invent
    * one — so this printed the literal "Scalable Unit null". Say what the rack IS. */
   r.kind==='compute'?(r.su?`Scalable Unit ${r.su} · ${d.computeLabel}`
-    :`${d.computeLabel} · ${d.arch.nodesPerRack} x ${d.arch.nodeU}U nodes · ${d.arch.gpusPerRack} GPU · ${d.arch.rackKw} kW (${d.arch.bound}) — no published scalable unit`)
+    :`${d.computeLabel} · ${d.arch.nodesPerRack} x ${d.arch.nodeU}U nodes · ${d.arch.gpusPerRack} GPU · ${d.arch.rackKw} kW (${d.arch.bound}) — sized on racks`)
  :r.kind==='gp'?`General-purpose · ${d.gpLabel} · ${d.gpKWPerRack} kW — power is OUR estimate, not a Dell figure`
  :r.kind==='storage'?`Storage · ${d.vastLabel} + ${d.vCboxLabel} · ${d.vd} DBox / ${d.vc} CBox across ${d.vRacks} rack${d.vRacks===1?'':'s'}`
  :r.kind==='patch'?`Patch field · MPO-12/APC · ${d.trunkPanels} panels total, ${d.portsPerRack} MPO positions per compute rack`
@@ -5392,7 +5445,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     + (rounded>AS.ceiling?` Capped at ${NUMF(AS.ceiling)} — ${AS.ceilingBasis}.`:'')
     + (AS.rackScale
         ? ` Laid out as ${AS.nodesPerRack} ${AS.grainLabel||'tray'}s per rack at ${AS.rackKw} kW, ${AS.racksPerSU} racks per SU.`
-        : ` Laid out AS ITSELF: ${AS.nodesPerRack} node${AS.nodesPerRack===1?'':'s'} per rack (${AS.bound}) at ${AS.rackKw} kW on a ${AS.feed.label} feed. <b>No scalable unit</b> — NVIDIA publishes none for this architecture, so this is sized on racks and every derived figure is badged as ours.`);
+        : ` Laid out AS ITSELF: ${AS.nodesPerRack} node${AS.nodesPerRack===1?'':'s'} per rack (${AS.bound}) at ${AS.rackKw} kW on a ${AS.feed.label} feed. <b>Sized on racks</b>, and every derived figure is badged as ours.${AS.vendorSU?` <b>Note:</b> ${AS.vendorSU.vendor} publishes the ${AS.vendorSU.name} — ${AS.vendorSU.published} — which this tool does not model yet, so this will not land on a pre-validated boundary by accident.`:''}`);
    n.className='adv-importnote '+(g!==gpus?'bad':'ok');
   }
  };

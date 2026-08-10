@@ -53,8 +53,8 @@ tile is the honest answer — NVIDIA does not list a partially populated NVL72 r
 treat tray counts as a planning and BOM figure and confirm partial population with your
 rep before it becomes a quote.
 
-Six architecture cards recalculate live. **Penguin Relion XE4418GT** and **Altus
-XE4318GTS** lead; Relion carries the *best $/GPU density* badge.
+Six architecture cards recalculate live. **Penguin Relion XE4418GTS-DTC** and **Altus
+XE4318GTS-DTC** lead; Relion carries the *best $/GPU density* badge.
 
 Every economic constant on the left is editable — per-GPU capex, $/kWh, PUE, maintenance,
 cloud rate, utilization, TCO years. Drop real numbers in and you move from sizing-grade to
@@ -102,7 +102,8 @@ capacity from a real breaker at a real voltage with an 80% continuous derate:
 
 The line under the selectors tells you what your pick actually did — for example
 *11 nodes · 88 GPU · 154 kW per rack (space-limited — 11 by 44U usable, 12 by the feed) ·
-no published scalable unit, sized on racks — `derived`*.
+sized on racks, not on the OriginAI pod Penguin Solutions publishes — that is not modelled
+here yet — `derived`*.
 
 Below that, the **consistency panel** — 21 rules across electrical, fabric, cable reach,
 space and provenance, of which 18 apply to every build and three only when relevant. It
