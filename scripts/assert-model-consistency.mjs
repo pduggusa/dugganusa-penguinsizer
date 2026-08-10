@@ -87,6 +87,8 @@ async function configure(state) {
       rackKw: d.arch.rackKw, feedKw: d.arch.feedKw, bound: d.arch.bound,
       racks: d.computeRacks, totalRacks: d.racks.length, links: d.totalLinks,
       derived: !!d.f.derived,
+      gpus: d.realGpus, rackScale: d.arch.rackScale,
+      gpusPerSU: d.arch.gpusPerSU, nodeGpus: d.arch.nodeGpus,
       bomLines: d.bom.length, unquotable: d.bom.filter(x => !x.mpn).length };
   });
 }
@@ -106,6 +108,16 @@ for (const arch of ARCHES) {
     if (!m) { bad.push(`${arch}/${feed}: no model`); line.push('  ERR'); continue; }
     const nums = [m.nodesPerRack, m.gpusPerRack, m.rackKw, m.racks, m.links];
     if (nums.some(n => !Number.isFinite(n) || n <= 0)) bad.push(`${arch}/${feed}: non-finite ${JSON.stringify(nums)}`);
+    /* YOU GET WHAT YOU ASKED FOR, ROUNDED TO THE PURCHASABLE BLOCK AND NO FURTHER.
+     * Every harness was green while the planner turned a 512-GPU target into 560, because
+     * nothing checked the delivered count against the requested one. A rack-scale SKU may
+     * round up to a whole scalable unit — that rounding is real and E3 quantifies it. A
+     * node build may only round up to a whole NODE. Anything beyond that is silicon
+     * nobody ordered. */
+    const block = m.rackScale ? m.gpusPerSU : m.nodeGpus;
+    const owed = Math.max(block, Math.ceil(1152 / block) * block);
+    if (m.gpus !== owed)
+      bad.push(`${arch}/${feed}: asked 1152, delivered ${m.gpus}, should be ${owed} (block ${block})`);
     if (m.rules.some(r => !['PASS', 'WARN', 'FAIL'].includes(r.v))) bad.push(`${arch}/${feed}: bad verdict`);
     const f = m.rules.filter(r => r.v === 'FAIL').length;
     line.push(String(m.nodesPerRack).padStart(3) + (f ? `!${f}` : '  '));

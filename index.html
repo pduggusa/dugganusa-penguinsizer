@@ -669,7 +669,7 @@
             <button class="rk-btn primary" id="advImportBtn">↙ Import target from Size It</button>
             <span class="adv-importnote" id="advImportNote">Pulls the GPU count currently set on the Size It tab and rebuilds the whole design against it.</span>
           </div>
-          <p class="lede" style="margin-top:10px">Architecture: <select id="advArch" class="rk-btn" style="padding:5px 9px"></select> Rack feed: <select id="advFeed" class="rk-btn" style="padding:5px 9px"></select> PDU: <select id="advPdu" class="rk-btn" style="padding:5px 9px"><option value="vertical">0U vertical (rear channel)</option><option value="horizontal">1U horizontal (costs rack U)</option></select> <span id="advArchNote"></span></p>
+          <p class="lede" style="margin-top:10px">Architecture: <select id="advArch" class="rk-btn" style="padding:5px 9px"></select> Rack feed: <select id="advFeed" class="rk-btn" style="padding:5px 9px"></select> PDU: <select id="advPdu" class="rk-btn" style="padding:5px 9px"><option value="vertical">0U vertical (rear channel)</option><option value="horizontal">1U horizontal (costs rack U)</option></select> Fabric: <select id="advTiers" class="rk-btn" style="padding:5px 9px"><option value="leaf-only">Leaf only (pod scale)</option><option value="leaf-spine">Leaf + spine</option></select> <span id="advArchNote"></span></p>
           <div class="adv-ctl" id="advCtl"></div>
           <div class="adv-rules" id="advRules"></div>
           <div class="adv-out" id="advOut"></div>
@@ -712,12 +712,11 @@
           <div class="adv-elev" id="advElev"></div>
           <h3 class="mem-h">🎨 Cable colours — each colour is a separate part number</h3>
           <p class="lede">Change a colour or its name and <b style="color:var(--ink)">the bill of materials below re-splits on it immediately</b>. Red Cat6A and grey Cat6A are different SKUs, ordered and stocked separately, so the BOM treats them that way. The right-hand column shows the exact line each choice produces.</p>
-          <div class="colour-board" id="advColours"></div>
           <h3 class="mem-h">Fibre plant — trunking and inter-floor runs</h3>
           <div class="adv-cable" id="advCable"></div>
           <h3 class="mem-h">Naming convention</h3>
           <p class="lede">TIA-606-C shaped: every cable carries a unique identifier at both ends, and the identifier encodes location, device and port. The pattern below is editable — <b style="color:var(--ink)">and it covers management and BMC ports, not just fabric</b>, because those are the ones that get labelled last and traced most often at 3am.</p>
-          <div class="adv-name" id="advName"></div>
+
           <footer style="margin-top:18px">
             <span class="note">⚠ <b>Provenance.</b> Switch counts come from NVIDIA's <b>DGX SuperPOD GB300 Reference Architecture, Tables 3 and 4</b>, transcribed rather than derived. Those tables define 2, 4, 8 and 16 SU; any other SU count is <b>rounded up to the next published design</b> and labelled as such — we do not interpolate a spine count, because topology is not a linear function. Single-SU counts are inferred from the RA narrative and flagged separately. Optics reach and connector types are NVIDIA's published transceiver specs. Fibre lengths, trunk sizing and floor runs are <b>your inputs</b> — this tool arranges them, it does not survey your building. Sizing-grade, not an installation drawing. 95% cap.</span>
           </footer>
@@ -3053,23 +3052,16 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   * user-settable per link class AND the BOM splits on it. Defaults follow common DC
   * convention: OOB red, console grey, and OS2 single-mode yellow because TIA-598 makes
   * that one mandatory rather than optional. */
- const CDEF={
-  memai:{d:'MemoryAI front-end',def:'#f472b6',why:'function colour — no TIA-598 mandate; pink chosen to separate the KV cache path from storage on sight'},
-  compute:   {c:'#eab308',n:'yellow', why:'OS2 single-mode jacket — TIA-598 mandated'},
-  'ib-uplink':{c:'#eab308',n:'yellow',why:'OS2 single-mode jacket — TIA-598 mandated'},
-  storage:   {c:'#a855f7',n:'violet', why:'site convention — separates storage from compute fabric'},
-  'eth-uplink':{c:'#a855f7',n:'violet',why:'site convention'},
-  bmc:       {c:'#ef4444',n:'red',    why:'OOB / BMC — red so nobody patches it into production'},
-  'oob-uplink':{c:'#ef4444',n:'red',  why:'OOB aggregation'},
-  console:   {c:'#9ca3af',n:'grey',   why:'serial console — grey by convention'},
-  mgmt:      {c:'#22c55e',n:'green',  why:'in-band management'},
- };
- let CCOLOR=(()=>{try{const j=JSON.parse(localStorage.getItem('penguin-cable-colours'));if(j)return j;}catch(e){}
-   return Object.fromEntries(Object.entries(CDEF).map(([k,v])=>[k,{c:v.c,n:v.n}]));})();
- const saveColours=()=>{try{localStorage.setItem('penguin-cable-colours',JSON.stringify(CCOLOR));}catch(e){}};
- const colOf=k=>(CCOLOR[k]||{}).c||'#888';
- const colName=k=>(CCOLOR[k]||{}).n||'unspecified';
- const CCOL=new Proxy({},{get:(_,k)=>colOf(String(k))});
+ /* ---- CABLE COLOURS ARE NOT A FEATURE ----------------------------------------------
+  * There was a whole board here: a user-settable colour and name per link class, stored
+  * in localStorage, split into its own BOM line, exported in the workbook and the JSON,
+  * with a paragraph of TIA-598 reasoning attached to each one.
+  *
+  * It is a fixed palette now, used only to tint the wiring drawing so classes are
+  * distinguishable. Colour is a site convention and an argument to have with the people
+  * pulling the cable, not a thing a sizer should be litigating. */
+ const CCOL={compute:'#eab308','ib-uplink':'#eab308',storage:'#a855f7','eth-uplink':'#a855f7',
+   bmc:'#ef4444','oob-uplink':'#ef4444',console:'#9ca3af',mgmt:'#22c55e',memai:'#f472b6'};
 
  /* Penguin Solutions MemoryAI KV cache server. The 11 TB / 3 TB DDR5 + 8x 1 TB CXL AIC
   * composition and the 4U form factor are VENDOR-PUBLISHED (GTC, March 2026) and are on
@@ -3148,31 +3140,43 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const rails=Math.max(1,AS.rails);
   let ibLeaf=Math.ceil(computeLinks/IBDOWN);
   ibLeaf=Math.ceil(ibLeaf/rails)*rails;                 // keep rails whole
-  const ibSpine=ibLeaf<=rails?0:Math.ceil(ibLeaf*upPerLeaf/IBRADIX);
+  /* ---- LEAF ONLY AT POD SCALE ------------------------------------------------------
+   * A single scalable unit needs no spine: in a rail-optimised fabric every rail is one
+   * hop inside the unit, and NVIDIA's own RA narrative says so for the 1-SU case. The IB
+   * side already knew this. The Ethernet side did not — it emitted a spine for every
+   * three leaves, so a 576-GPU pod was quoted three SN5600D spines it cannot use.
+   *
+   * Leaf-only is the default because that is the shape of the builds this tool is for.
+   * Leaf+spine stays one selector away for when a design genuinely spans pods, and rule
+   * N5 says which one you are on and whether the topology can carry it. */
+  const leafOnly=(A.fabricTiers||'leaf-only')==='leaf-only';
+  const ibSpine=(leafOnly||ibLeaf<=rails)?0:Math.ceil(ibLeaf*upPerLeaf/IBRADIX);
   const storageLinks=nodesTotal*(ppn.storage||0);
   const ethComputeLeaf=Math.max(1,Math.ceil(storageLinks/ETH));
   const ethStorageLeaf=Math.max(1,Math.ceil(storageLinks/ETH));
-  const ethSpine=ethComputeLeaf<=1?0:Math.ceil((ethComputeLeaf+ethStorageLeaf)*FABRIC.uplink.ethComputeLeafLinks/ETH);
+  const ethSpine=(leafOnly||ethComputeLeaf<=1)?0:Math.ceil((ethComputeLeaf+ethStorageLeaf)*FABRIC.uplink.ethComputeLeafLinks/ETH);
   return {su:null,exact:false,single:ibSpine===0,derived:true,basisSU:null,
    gpus:nodesTotal*AS.nodeGpus,
    ibLeaf,ibSpine,ethComputeLeaf,ethStorageLeaf,ethSpine,
    storageBW:storageLinks+'x'+FABRIC.sw.ethLeaf.speed,mgmtOob:'2+2',
    basis:`DERIVED (OURS) — these counts are NOT read from NVIDIA RA Table 3/4, which is keyed on the NVL72 scalable unit. They are computed from published switch radix and the ${computeLinks.toLocaleString()} compute links this ${AS.label} build presents`,
-   note:ibSpine===0?'One leaf layer carries this build — no spine is required, and buying one would be cost with no topology behind it.':null};
+   leafOnly,
+   note:ibSpine===0?(leafOnly
+     ?'Leaf only. Every rail is one hop inside the unit, so no spine layer is bought — and none is cabled, so the uplink optics disappear with it.'
+     :'One leaf layer carries this build — no spine is required, and buying one would be cost with no topology behind it.'):null};
  }
 
  // ---- state ----------------------------------------------------------------------
  const LS='penguin-adv-planner-v1';
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:4608,arch:'gb300-nvl72',feed:'415-3-300',feedsPerRack:1,rackU:48,reserveU:4,
-      siteKw:1200,pduOrient:'vertical',pduPerRack:2,
+      siteKw:1200,pduOrient:'vertical',pduPerRack:2,fabricTiers:'leaf-only',
       floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       netPlacement:'eor',netRed:'ab50',rackPitchM:0.6,
       rackDepthM:1.2, coldAisleM:1.2, hotAisleM:0.9, serviceM:1.0,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
       trunkRacks:4,trunkPorts:24,trunkSide:'right',rackOrder:null,aisles:1,
       memAI:1,memPerSU:1,loadCap:80,
-      site:'DC1',room:'R01',row:'A',patRack:'{site}{room}{row}{rack}',
-      patDev:'{rack}U{u}{dev}',patPort:'{dev}{port}'};
+      row:'A'};
  let SEL=null;
  const save=()=>{try{localStorage.setItem(LS,JSON.stringify(A));}catch(e){}};
  const gi=k=>{const n=parseFloat(A[k]);return isNaN(n)?0:n;};
@@ -3633,9 +3637,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * rather than a tidy edge: the two network planes. A and B are pushed to opposite ends
    * so a shared rack, a shared patch field or a shared PDU pair cannot take both — that
    * is the difference between redundancy and paperwork. Everything else packs. */
-  const padToRow=(arr)=>{ const r=arr.length%perRow; if(r===0)return arr;
-    for(let i=0;i<perRow-r;i++)arr.push({kind:'empty',vendor:null,su:null,phase:1,key:'e'+arr.length});
-    return arr; };
   {
    const byKind=k=>racks.filter(r=>r.kind===k);
    const comp=byKind('compute'), net=byKind('network'),
@@ -3651,15 +3652,12 @@ ${c.iso?`<h2>Multi-tenancy</h2>
      /* If both planes fit one row, separate them with blanks so A sits at the left end
       * and B at the right. If they do not fit, give each plane its OWN rows — which is
       * better separation anyway, since a row-end event then cannot reach both. */
-     if(A_.length+B_.length<=perRow){
-      const gap=perRow-A_.length-B_.length;
-      const row=[...A_];
-      for(let i=0;i<gap;i++)row.push({kind:'empty',vendor:null,su:null,phase:1,key:'e'+(ordered.length+row.length)});
-      ordered=ordered.concat(row.concat(B_));
-     } else {
-      ordered=ordered.concat(padToRow([...A_])).concat(padToRow([...B_]));
-     }
-    } else ordered=ordered.concat(padToRow([...net]));
+     /* A then B, adjacent. The separation that matters is that they are DIFFERENT racks
+      * on different feeds — which the BOM and the elevations already say. Padding the gap
+      * with blank floor positions put phantom cabinets in the tile grid, in the rack
+      * count and, until this commit, in the PDU quantity. Not worth it. */
+     ordered=ordered.concat(A_).concat(B_);
+    } else ordered=ordered.concat(net);
    }
    /* Patch panels occupy real U. Network racks absorb some; anything beyond that gets
     * its own patch rack rather than being a BOM line with no home. */
@@ -3954,10 +3952,20 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    `Fabric ceiling — ${d.realGpus.toLocaleString()} of ${A_.ceiling.toLocaleString()} endpoints`,
    A_.ceilingBasis));
 
-  out.push(R('N5','Network', true,
-   `Spine layer — ${(f.ibSpine||0)?'present ('+f.ibSpine+')':'not required'}`,
-   (f.ibSpine||0)?`Leaf-spine-leaf for anything crossing a leaf.`
-    :`One leaf layer carries this build. Buying a spine here would be cost with no topology behind it.`));
+  /* Leaf-only is a DESIGN CHOICE, so the rule has to be able to say when the choice is
+   * wrong — a build whose leaf count exceeds the rail grouping has cross-leaf traffic
+   * with nowhere to go. Reporting "no spine required" in that case would be the rule
+   * agreeing with the setting instead of checking it. */
+  const tiers=f.leafOnly?'leaf only':'leaf + spine';
+  const needsSpine=!A_.rackScale && (f.ibLeaf||0)>A_.rails;
+  out.push(R('N5','Network', f.leafOnly&&needsSpine?false:true,
+   `Fabric tiers — ${tiers}${(f.ibSpine||0)?` (${f.ibSpine} IB spine)`:''}`,
+   f.leafOnly
+    ? (needsSpine
+       ? `${f.ibLeaf} IB leaf against ${A_.rails} rails means traffic has to cross leaves, and leaf-only gives it nowhere to go. This build needs a spine layer — switch Fabric to leaf + spine.`
+       : `${f.ibLeaf} leaf, no spine. Every rail is one hop inside the unit, so no spine is bought and no uplink optics are cabled. This is the pod-scale shape.`)
+    : ((f.ibSpine||0)?`Leaf-spine-leaf for anything crossing a leaf.`
+       :`Leaf + spine selected, but this build fits one leaf layer, so no spine is emitted.`)));
 
   const oobPorts=d.oobCount*FABRIC.sw.oob.ports;
   out.push(R('N6','Network', oobPorts>=d.bmc,
@@ -4175,115 +4183,21 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   el.querySelectorAll('[data-artx]').forEach(b=>b.onclick=()=>{delete ART[b.dataset.artx];saveArt();renderArt();paint();});
  }
 
- // ---- naming ----------------------------------------------------------------------
+ // ---- rack labels -------------------------------------------------------------------
+ /* A fixed, boring scheme: row letter and a two-digit position. The configurable naming
+  * system that used to live here — rack/device/port patterns, a local validator, an LLM
+  * that proposed schemes, a field-limit checker against DNS labels and printed flag
+  * widths, and a full identifier export — was a second product bolted to the side of a
+  * sizer. A rack needs a label so the BOM and the drawings agree on which one it is.
+  * Anything past that belongs in the DCIM that owns the estate. */
  const pad=(n,w)=>String(n).padStart(w,'0');
  function rackName(i){
   const perRow=Math.max(1,gi('racksPerRow'));
-  const rowIdx=Math.floor((i-1)/perRow);
-  const rowLetter=String.fromCharCode(String(A.row||'A').charCodeAt(0)+rowIdx);
-  const pos=((i-1)%perRow)+1;
-  return (A.patRack||'{site}{room}{row}{rack}')
-   .replace('{site}',A.site).replace('{room}',A.room)
-   .replace('{row}',rowLetter).replace('{rack}',pad(pos,2));
+  return String.fromCharCode(65+Math.floor((i-1)/perRow))+pad(((i-1)%perRow)+1,2);
  }
- const devName=(rack,u,dev)=>(A.patDev||'{rack}U{u}{dev}')
-   .replace('{rack}',rack).replace('{u}',pad(u,2)).replace('{dev}',dev);
- const portName=(dev,port)=>(A.patPort||'{dev}{port}').replace('{dev}',dev).replace('{port}',port);
- /* Identifiers must survive DNS labels, DCIM imports and shell globbing. Dashes read as
-  * minus in parsers and are illegal at label boundaries, so they are rejected outright.
-  * Fixed-width numeric fields make a concatenated identifier parseable by POSITION. */
- const BAD=/[-\s/\\:,;'"|]/;
- function validatePattern(pat){
-  const errs=[];
-  if(BAD.test(pat.replace(/\{[a-z]+\}/g,''))) errs.push('contains a dash, space or delimiter — identifiers must be dash-free and DNS-safe');
-  const toks=(pat.match(/\{[a-z]+\}/g)||[]);
-  if(!toks.length) errs.push('no tokens — the pattern would be a constant');
-  return errs;
- }
+ const devName=(rack,u,dev)=>rack+'-'+dev;
+ const portName=(dev,port)=>dev+'.'+port;
 
- /* Reference elevation for a GB300 NVL72 rack. Tray ORDER varies by OEM integrator;
-  * counts do not. Rendered as data so the caveat is honest and the drawing is checkable. */
- /* Elevations MUST differ by what is actually in the rack. This handled only memory
-  * and network and let EVERYTHING ELSE fall through to a hardcoded GB300 NVL72 layout —
-  * so a Dell general-purpose rack drew
-  * "4x B300 + 2x Grace", and every node architecture rendered identically. Three
-  * separate bug reports, one cause. */
- function elevation(kind,d){
-  if(kind==='memory') return [
-   {u:1,n:1,t:'oob',label:'SN2201 OOB — rack management',dev:'OOB'},
-   {u:1,n:1,t:'patch',label:'MPO-12/APC patch panel',dev:'PP'},
-   {u:4,n:10,t:'memai',label:MEMAI.label+' — '+MEMAI.mem,dev:'MEM'},
-  ];
-  if(kind==='patch') return [
-   {u:1,n:1,t:'oob',label:'Rack management',dev:'OOB'},
-   {u:1,n:40,t:'patch',label:'MPO-12/APC patch panel — 24 positions',dev:'PP'},
-   {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
-  ];
-  if(kind==='gp') return [
-   {u:1,n:1,t:'oob',label:'iDRAC / OOB switch',dev:'OOB'},
-   {u:1,n:1,t:'patch',label:'Patch panel',dev:'PP'},
-   {u:1,n:2,t:'ethleaf',label:'PowerSwitch S5448F-ON — leaf',dev:'ETL'},
-   {u:2,n:16,t:'compute',label:((d&&d.gpLabel)||'Dell PowerEdge')+' — general purpose',dev:'PE'},
-   {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
-  ];
-  /* HGX / node builds stack as NODES. The node count is now the MODEL's — the number the
-   * rack was actually sized to, space-vs-power — not floor(40/U), which drew a rack fuller
-   * than the feed can energise. A drawing that disagrees with the power budget is how a
-   * floor plan passes review and fails commissioning. */
-  if(kind==='compute' && d && d.computeArchU && d.computeArchU>1) return [
-   {u:1,n:1,t:'manifold',label:'Coolant manifold / plumbing',dev:'MAN'},
-   {u:1,n:2,t:'ethleaf',label:'ToR leaf',dev:'ETL'},
-   {u:d.computeArchU,n:Math.max(1,(d.arch&&d.arch.nodesPerRack)||Math.floor(40/d.computeArchU)),t:'compute',
-    label:(d.computeLabel||'Compute node')+' — '+d.computeArchU+'U node'
-      +(d.arch?` · ${d.arch.nodeKw} kW (${d.arch.bound})`:''),dev:'ND'},
-   {u:1,n:1,t:'oob',label:'SN2201 OOB',dev:'OOB'},
-   {u:1,n:2,t:'power',label:'Rack PDU A / B'+(d.arch?' — '+d.arch.feed.connector:''),dev:'PDU'},
-  ];
-  if(kind==='network') return [
-   {u:2,n:1,t:'manifold',label:'Blanking / plumbing'},
-   {u:4,n:4,t:'ibleaf',label:'Q3400-RD IB leaf',dev:'IBL'},
-   {u:2,n:4,t:'ethleaf',label:'SN5600D Ethernet leaf',dev:'ETL'},
-   {u:1,n:2,t:'oob',label:'SN2201 OOB',dev:'OOB'},
-   {u:1,n:8,t:'patch',label:'MPO-12/APC patch panel',dev:'PP'},
-  ];
-  return [
-   {u:1,n:2,t:'manifold',label:'Coolant manifold',dev:'MAN'},
-   {u:1,n:4,t:'power',label:'Power shelf 33 kW',dev:'PS'},
-   {u:1,n:10,t:'compute',label:'Compute tray — 4x B300 + 2x Grace',dev:'CT'},
-   {u:1,n:9,t:'nvswitch',label:'NVLink switch tray',dev:'NVS'},
-   {u:1,n:8,t:'compute',label:'Compute tray — 4x B300 + 2x Grace',dev:'CT'},
-   {u:1,n:4,t:'power',label:'Power shelf 33 kW',dev:'PS'},
-   {u:1,n:2,t:'manifold',label:'Coolant manifold',dev:'MAN'},
-  ];
- }
- const PORTS={CT:[['IB1..IB4','4x ConnectX-8 800G compute fabric'],['ST1..ST2','2x BlueField-3 B3240 storage / in-band'],['BMC','out-of-band BMC'],['MGT','1GbE debug / NVOS']],
-              NVS:[['BMC','switch-tray BMC'],['COM1..COM2','2x COMe RJ45 for NVOS']],
-              PS:[['AC','busway tap-off']],MAN:[],
-              IBL:[['P01..P144','144x 800G OSFP']],ETL:[['P01..P64','64x 400G']],
-              OOB:[['P01..P48','48x 1GbE']],PP:[['F01..F12','MPO-12/APC']],
-              MEM:[['FE1..FE2','2x 400G front-end to Ethernet leaf — assumed topology'],['MGT','1GbE management'],['BMC','out-of-band BMC'],['CON','serial console']]};
- /* PORTS is a fixed table keyed on device abbreviation, and it has no 'ND' row because
-  * HGX node builds did not exist in the advanced planner until now — so every node in a
-  * Relion rack reported "no cabled ports" while the BOM billed 88 of them per rack.
-  *
-  * The node row is GENERATED, not written by hand, and generated from the SAME port
-  * topology the BOM bills (SPEC[arch].ports via archSpec). Nothing here is invented: if
-  * the parts list says 8 OSFP and 2 QSFP a node, this labels 8 and 2. A hand-authored
-  * row would be a second source of truth, which is how a picture starts disagreeing with
-  * the parts list. */
- function portsFor(dev,d){
-  if(dev!=='ND') return PORTS[dev]||[];
-  const A_=(d&&d.arch)||archSpec(), n=Math.max(1,A_.nodesPerRack);
-  const q=k=>Math.round((A_.perRack[k]||0)/n);
-  const rng=(p,c)=>c<=0?null:c===1?[p,null]:[`${p}1..${p}${c}`,null];
-  const out=[];
-  const c=q('compute'); if(c) out.push([c===1?'IB1':`IB1..IB${c}`,`${c}x 800G compute fabric — 1 rail per GPU`]);
-  const s=q('storage'); if(s) out.push([s===1?'ST1':`ST1..ST${s}`,`${s}x 400G storage / in-band`]);
-  const m=q('mgmt');    if(m) out.push([m===1?'MGT':`MGT1..MGT${m}`,`${m}x 1GbE in-band management`]);
-  const bm=q('bmc');    if(bm) out.push([bm===1?'BMC':`BMC1..BMC${bm}`,`${bm}x out-of-band BMC`]);
-  return out;
- }
- // ---- controls --------------------------------------------------------------------
  const F=[
   {k:'gpus',l:'Target GPUs',step:576,hint:'rounds up to whole racks of the architecture'},
   {k:'siteKw',l:'Site power budget (kW)',step:50,hint:'what the room can actually deliver'},
@@ -4310,9 +4224,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'phases',l:'Build phases',step:1,hint:'staged rollout'},
   {k:'spares',l:'Spares %',step:1,hint:'on all links'},
  ];
- const NF=[{k:'site',l:'Site'},{k:'room',l:'Room'},{k:'row',l:'First row'},
-  {k:'patRack',l:'Rack pattern',wide:1},{k:'patDev',l:'Device pattern',wide:1},{k:'patPort',l:'Port pattern',wide:1}];
-
  function renderArtOnce(){try{renderArt();}catch(e){}}
  function renderCtl(){
   const memOnNow=(parseFloat(A.memPerSU)||0)>0 && (parseFloat(A.memAI)||0)>0;
@@ -4325,6 +4236,9 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     asel.onchange=e=>{A.arch=e.target.value;save();paint();};}
   /* FEED PICKER, not a kW box. See FEEDS — capacity is a breaker, a voltage and a
    * derate, and letting someone type 137 kW produces a rack nobody can energise. */
+  const tsel=$a('advTiers');
+  if(tsel){tsel.value=A.fabricTiers||'leaf-only';
+    tsel.onchange=e=>{A.fabricTiers=e.target.value;save();paint();};}
   const psel=$a('advPdu');
   if(psel){psel.value=A.pduOrient||'vertical';
     psel.onchange=e=>{A.pduOrient=e.target.value;save();paint();};}
@@ -4336,136 +4250,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   $a('advCtl').querySelectorAll('[data-ak]').forEach(el=>el.addEventListener('input',e=>{
    A[e.target.dataset.ak]=e.target.value;save();paint();}));
  }
- /* Real limits an identifier has to survive. Exceeding the physical label width is the
-  * one nobody checks at design time and everybody discovers at install. */
- const LIMITS=[
-  {k:'flag',   n:'Cable flag label',    max:24, why:'practical print width on a wrap-around flag'},
-  {k:'panel',  n:'Patch panel port',    max:12, why:'printed strip above a 24-port field'},
-  {k:'netbios',n:'NetBIOS / short host',max:15, why:'hard truncation, still used by AD tooling'},
-  {k:'dns',    n:'DNS label',           max:63, why:'RFC 1035 per-label limit'},
-  {k:'dcim',   n:'DCIM device name',    max:64, why:'NetBox and most DCIM device-name column'},
-  {k:'ifdesc', n:'Interface description',max:240,why:'switch CLI description field'},
- ];
- function renderNameCtl(){
-  $a('advName').innerHTML=`<div class="adv-namectl">${NF.map(f=>`<div class="mem-f${f.wide?' wide':''}"><label>${f.l}</label>
-    <input type="text" data-nk="${f.k}" value="${A[f.k]}"/></div>`).join('')}</div>
-   <div class="adv-aibar">
-     <input type="text" id="advAiAsk" placeholder="Describe the convention you want — e.g. 'site code, then row letter and two-digit rack, then U position, all uppercase, no separators'"/>
-     <button class="rk-btn primary" id="advAiGo">✨ Ask the assistant</button>
-     <span class="adv-aistat" id="advAiStat"></span>
-   </div>
-   <div class="adv-tokens">tokens — <b>{site} {room} {row} {rack}</b> for racks · <b>{rack} {u} {dev}</b> for devices · <b>{dev} {port}</b> for ports · dashes and delimiters are rejected</div>
-   <div id="advNameErr"></div>
-   <div class="mem-tbl-wrap" style="margin-bottom:12px"><table class="mem-tbl"><thead><tr><th>Class</th><th>Example identifier</th><th>Len</th><th class="desc">Applies to</th></tr></thead><tbody id="advNameTbl"></tbody></table></div>
-   <div class="adv-limits" id="advLimits"></div>
-   <div class="bs-tools">
-     <button class="rk-btn primary" id="advNameCsv">⬇ Every identifier (CSV)</button>
-     <button class="rk-btn" id="advNameJson">⬇ Every identifier (JSON)</button>
-     <span class="adv-aistat" id="advNameCount"></span>
-     <span class="mem-local">🔒 generated in your browser · nothing uploaded</span>
-   </div>`;
-  $a('advName').querySelectorAll('[data-nk]').forEach(el=>el.addEventListener('input',e=>{
-   A[e.target.dataset.nk]=e.target.value;save();paint();}));
-  $a('advAiGo').onclick=aiNaming;
-  $a('advAiAsk').addEventListener('keydown',e=>{if(e.key==='Enter')aiNaming();});
-  $a('advNameCsv').onclick=()=>exportNames('csv');
-  $a('advNameJson').onclick=()=>exportNames('json');
- }
-
- /* Walk every rack, every device, every port and emit the full identifier list.
-  * This is the artifact the cable contractor and the DCIM import both need, and it is
-  * the only way to prove the scheme survives contact with the real device count. */
- function assetRows(){
-  const d=derive(), out=[];
-  d.racks.forEach((r,i)=>{
-   const nm=rackName(i+1), rows=elevation(r.kind,d);
-   const perRow=Math.max(1,gi('racksPerRow'));
-   const rowLetter=String.fromCharCode(String(A.row||'A').charCodeAt(0)+Math.floor(i/perRow));
-   out.push({rack:nm,row:rowLetter,su:r.su||'',u:'',asset_type:'rack',
-     device:nm,port:'',identifier:nm,length:nm.length,description:r.kind==='compute'?'GB300 NVL72 compute rack':r.kind==='gp'?'General-purpose rack (Dell)':'Network rack'});
-   let u=48;
-   for(const b of rows) for(let k=0;k<b.n;k++){
-    u-=b.u; const uPos=u+1;
-    if(!b.dev) continue;
-    const dev=`${b.dev}${pad(k+1,2)}`, dn=devName(nm,uPos,dev);
-    out.push({rack:nm,row:rowLetter,su:r.su||'',u:uPos,asset_type:b.t,
-      device:dn,port:'',identifier:dn,length:dn.length,description:b.label});
-    (PORTS[b.dev]||[]).forEach(pt=>{
-     // expand P01..P144 style ranges into a count rather than literal rows
-     const m=pt[0].match(/^([A-Z]+)(\d+)\.\.[A-Z]*(\d+)$/);
-     if(m){const a=+m[2],z=+m[3],w=m[2].length;
-      for(let n=a;n<=z;n++){const pn=portName(dn,`${m[1]}${pad(n,w)}`);
-       out.push({rack:nm,row:rowLetter,su:r.su||'',u:uPos,asset_type:'port',
-         device:dn,port:`${m[1]}${pad(n,w)}`,identifier:pn,length:pn.length,description:pt[1]});}}
-     else{const pn=portName(dn,pt[0]);
-      out.push({rack:nm,row:rowLetter,su:r.su||'',u:uPos,asset_type:'port',
-        device:dn,port:pt[0],identifier:pn,length:pn.length,description:pt[1]});}
-    });
-   }
-  });
-  return out;
- }
- function exportNames(fmt){
-  const rows=assetRows();
-  const st=$a('advNameCount'); if(st) st.textContent=`${NUMF(rows.length)} identifiers`;
-  const stamp=new Date().toISOString().slice(0,10);
-  const blob=(n,c,t)=>{const b=new Blob([c],{type:t});const a=document.createElement('a');
-   a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
-  if(fmt==='csv'){
-   const cols=['rack','row','su','u','asset_type','device','port','identifier','length','description'];
-   const esc=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-   blob(`asset-identifiers-${stamp}.csv`,
-     [cols.join(','),...rows.map(r=>cols.map(c=>esc(r[c])).join(','))].join('\n'),'text/csv');
-  }else{
-   const longest=rows.reduce((m,r)=>Math.max(m,r.length),0);
-   blob(`asset-identifiers-${stamp}.json`,JSON.stringify({
-     tool:'penguin-asset-identifiers-v1',generated:new Date().toISOString(),
-     patterns:{rack:A.patRack,device:A.patDev,port:A.patPort},
-     site:A.site,room:A.room,first_row:A.row,racks_per_row:gi('racksPerRow'),
-     count:rows.length,longest_identifier:longest,
-     limits_checked:LIMITS.map(L=>({field:L.n,max:L.max,fits:longest<=L.max})),
-     note:'Identifiers are dash-free and fixed-width so they parse by position. Verify the longest against your physical label width before printing.',
-     assets:rows},null,2),'application/json');
-  }
- }
-
- /* Natural-language naming via the existing Mistral worker. The model PROPOSES; this
-  * function is what decides. Anything with a dash, a delimiter or an unknown token is
-  * rejected locally and never reaches the config — an LLM is not permitted to hand us
-  * an identifier scheme that breaks DNS. */
- const OK_TOKENS=['{site}','{room}','{row}','{rack}','{u}','{dev}','{port}'];
- async function aiNaming(){
-  const q=$a('advAiAsk').value.trim(); if(!q)return;
-  const st=$a('advAiStat'); st.textContent='thinking…'; st.className='adv-aistat busy';
-  const ask=`You are proposing data-centre identifier patterns for a rack build. Reply with ONLY three lines, no prose, no markdown:
-RACK=<pattern>
-DEVICE=<pattern>
-PORT=<pattern>
-Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} {u} {dev} for DEVICE; {dev} {port} for PORT. Literal text between tokens is allowed but MUST NOT contain dashes, spaces, slashes, colons or any punctuation. The user's request: ${q}`;
-  try{
-   const r=await fetch(CHAT_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-     body:JSON.stringify({messages:[{role:'user',content:ask}]})});
-   const d=await r.json();
-   if(!r.ok||!d.reply){st.textContent='⚠ '+(d.error||'assistant unavailable');st.className='adv-aistat bad';return;}
-   const get=k=>{const m=d.reply.match(new RegExp('^'+k+'\\s*=\\s*(.+)$','mi'));return m?m[1].trim():null;};
-   const prop={patRack:get('RACK'),patDev:get('DEVICE'),patPort:get('PORT')};
-   const errs=[];
-   for(const [k,v] of Object.entries(prop)){
-    if(!v){errs.push(`${k}: no pattern returned`);continue;}
-    validatePattern(v).forEach(e=>errs.push(`${k}: ${e}`));
-    (v.match(/\{[a-z]+\}/g)||[]).forEach(t=>{if(!OK_TOKENS.includes(t))errs.push(`${k}: unknown token ${t}`);});
-   }
-   if(errs.length){st.innerHTML='⚠ rejected — '+errs[0];st.className='adv-aistat bad';
-    $a('advNameErr').innerHTML=`<div class="callout hot"><div class="callout-h">Proposal rejected locally</div>
-      <p>The assistant returned a scheme this tool will not apply:</p>${errs.map(e=>`<p style="font-family:var(--mono);font-size:11.5px">${e}</p>`).join('')}
-      <p class="callout-x">The model proposes, the validator decides. An identifier that breaks a DNS label or a parser costs more to unpick than it saves to generate.</p></div>`;
-    return;}
-   Object.assign(A,prop);save();$a('advNameErr').innerHTML='';
-   st.textContent='✓ validated and applied';st.className='adv-aistat ok';
-   renderNameCtl();paint();$a('advAiStat').textContent='✓ validated and applied';
-  }catch(e){st.textContent='⚠ cannot reach the assistant';st.className='adv-aistat bad';}
- }
-
  function paint(){
   const d=derive();
   const f=d.f;
@@ -4541,24 +4325,47 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      </tbody></table></div>`;
 
   // ---- elevation overview: tiles, click to expand ---------------------------------
+  /* KIND IS EXPLICIT, AND EMPTIES ARE NOT RACKS.
+   * This fell through to "network · Q3400-RD + SN5600D" for anything that was not compute,
+   * gp, storage or memory — so patch fields advertised switches they do not contain, and
+   * the blank floor positions that separate the A and B network planes were drawn as
+   * thirteen network racks on an eight-rack build. Empties are FLOOR, not hardware: they
+   * are counted and reported, never tiled.
+   *
+   * The compute subtitle also printed the literal "SUnull" on every node build, because
+   * r.su is null for architectures with no published scalable unit — which is most of them,
+   * deliberately. It says what the rack holds instead, and a part-filled last rack says so
+   * rather than claiming the full-rack figure. */
+  const KINDNAME={compute:'compute',network:'network',patch:'patch field',
+    memory:'memory tier',gp:'general-purpose'};
+  const lastComputeIdx=d.racks.map((r,i)=>r.kind==='compute'?i:-1).filter(x=>x>=0).pop();
+  const emptyPositions=d.racks.filter(r=>r.kind==='empty').length;
   const tiles=d.racks.map((r,i)=>{
+   if(r.kind==='empty') return '';
    const nm=rackName(i+1);
    const on=SEL===i;
+   const partial=d.partialRack && i===lastComputeIdx;
+   const nodes=partial?d.lastRackNodes:d.arch.nodesPerRack;
    return `<button class="rk-tile ${r.kind}${on?' on':''}" data-rk="${i}">
      <span class="tn">${nm}</span>
-     <span class="tt">${r.kind==='compute'?`SU${r.su} · ${d.computeVendor==='dell'?'Dell':d.computeVendor==='nvidia'?'NVIDIA':'Penguin'}`
-      :r.kind==='gp'?'general-purpose':r.kind==='storage'?'storage':r.kind==='memory'?'memory tier':'network'}</span>
-     <span class="tb">${r.kind==='compute'?`${d.arch.gpusPerRack} GPU · ${d.arch.rackKw} kW`
+     <span class="tt">${r.kind==='compute'
+        ?`${r.su?'SU'+r.su+' · ':''}${d.computeVendor==='dell'?'Dell':d.computeVendor==='nvidia'?'NVIDIA':'Penguin'}${partial?' · part-filled':''}`
+        :(KINDNAME[r.kind]||r.kind)}</span>
+     <span class="tb">${r.kind==='compute'
+        ?`${nodes*d.arch.nodeGpus} GPU · ${+(nodes*d.arch.nodeKw+d.arch.fixedKw).toFixed(1)} kW`
       :r.kind==='gp'?`${d.gpLabel} · ${d.gpKWPerRack} kW`
       :r.kind==='memory'?`${d.memLabel} · ${d.memTB} TB`
+      :r.kind==='patch'?'MPO-12/APC patch field'
       :`${FABRIC.sw.ibLeaf.model.split(' ')[0]} + SN5600D`}</span>
-   </button>`;}).join('');
+   </button>`;}).filter(Boolean).join('');
   renderArtOnce();
   $a('advElev').innerHTML=`<div class="adv-key" style="margin-bottom:12px">
      <div class="kh">Rack key — click any rack to expand its elevation and every labelled port</div>
      <div class="kg">${[['compute','Compute tray'],['nvswitch','NVLink switch tray'],['power','Power shelf'],['manifold','Coolant manifold'],['ibleaf','IB leaf'],['ethleaf','Ethernet leaf'],['oob','OOB switch'],['patch','Patch panel'],['cart','NVLink cartridge'],['pdu','PDU']]
        .map(([k,l])=>`<span class="ki"><i style="background:${ECOL[k]}"></i>${l}</span>`).join('')}</div>
-   </div><div class="rk-grid">${tiles}</div><div id="rkDetail"></div>`;
+   </div><div class="rk-grid">${tiles}</div>
+    ${emptyPositions?`<p class="note" style="margin-top:8px">Plus <b>${emptyPositions}</b> empty floor position${emptyPositions===1?'':'s'} separating the A and B network planes — real space, deliberately not back-filled, and not racks.</p>`:''}
+    <div id="rkDetail"></div>`;
   $a('advElev').querySelectorAll('[data-rk]').forEach(b=>b.onclick=()=>{
    const i=+b.dataset.rk; SEL=(SEL===i?null:i); paint();
    if(SEL!==null){const el=$a('rkDetail'); if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});}});
@@ -4575,7 +4382,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     </tbody></table></div>
    <div class="adv-key">
      <div class="kh">Cable key — set the colours in the <b>Cable colours</b> panel above</div>
-     <div class="kg">${Object.keys(CDEF).map(k=>`<span class="ki"><i style="background:${colOf(k)}"></i>${k} · ${colName(k)}</span>`).join('')}</div>
+     <div class="kg">${Object.keys(CCOL).map(k=>`<span class="ki"><i style="background:${CCOL[k]}"></i>${k}</span>`).join('')}</div>
      <div class="kn">Per <b>TIA-598</b>: an OS2 single-mode jacket is <b style="color:#eab308">yellow</b> and an <b>APC</b> connector body is <b style="color:#22c55e">green</b> — never mixed with blue UPC. Those two are not yours to choose. Function colour is applied with boots, labels or velcro on top of a compliant jacket, and it is the layer you standardise per site.</div>
    </div>
    ${d.memOn&&d.memUnits?`<div class="adv-key" id="advMemPanel" style="margin-bottom:12px;border-color:#f472b6">
@@ -4716,7 +4523,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      if(place==='tor'){
       bundles.forEach(([cls,n],bi)=>{
        const w=Math.max(1,Math.round((n/maxN)*5*zoom));
-       svg.push(`<line x1="${x-8+bi*3}" y1="${y}" x2="${x-8+bi*3}" y2="${y-10*zoom}" stroke="${colOf(cls)}" stroke-width="${w}" opacity=".85"/>`);
+       svg.push(`<line x1="${x-8+bi*3}" y1="${y}" x2="${x-8+bi*3}" y2="${y-10*zoom}" stroke="${(CCOL[cls]||'#888')}" stroke-width="${w}" opacity=".85"/>`);
       });
       return;
      }
@@ -4724,7 +4531,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      bundles.forEach(([cls,n],bi)=>{
       const w=Math.max(0.8,(n/maxN)*5.5*zoom);
       const yy = rear<0 ? edge-6*zoom-bi*(3.2*zoom) : edge+6*zoom+bi*(3.2*zoom);
-      svg.push(`<path d="M${x} ${edge} L${x} ${yy} L${hx} ${yy} L${hx} ${edge}" fill="none" stroke="${colOf(cls)}" stroke-width="${w}" opacity=".75" stroke-linejoin="round"/>`);
+      svg.push(`<path d="M${x} ${edge} L${x} ${yy} L${hx} ${yy} L${hx} ${edge}" fill="none" stroke="${(CCOL[cls]||'#888')}" stroke-width="${w}" opacity=".75" stroke-linejoin="round"/>`);
      });
     });
 
@@ -4886,77 +4693,9 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    if(hint) hint.innerHTML=`${d.racks.length} racks · ${rows.length} row${rows.length===1?'':'s'} of ${perRowW} · ${d.floors>1?`<b>${d.floors} floors</b> · `:''}hub <b>${place==='tor'?'top of rack':Math.round(d.hubF*100)+'% along the row'}</b><span style="color:#c4b5fd"> · drag it</span> · trunks <b>${d.trunkSide==='both'?'both ends':d.trunkSide+' of row'}</b>, ${d.trunkRacks} racks each · ${bundles.length} cable classes${Array.isArray(A.rackOrder)&&A.rackOrder.length?' · <span style="color:#fbbf24">custom layout</span>':''}`;
   }
 
-  // ---- cable colour board — deliberately large and obviously interactive ------------
-  const cb=$a('advColours');
-  if(cb){
-   const counts={}; d.L.forEach(l=>counts[l.cls]=(counts[l.cls]||0)+l.n);
-   cb.innerHTML=Object.keys(CDEF).map(k=>{
-    const n=counts[k]||0, mand=/TIA-598/.test(CDEF[k].why);
-    return `<div class="cbrow${n?'':' unused'}">
-      <label class="cbswatch" style="background:${colOf(k)}">
-        <input type="color" data-col="${k}" value="${colOf(k)}"/>
-        <span class="cbpen">✎</span>
-      </label>
-      <div class="cbmeta">
-        <div class="cbcls">${k}${mand?' <em class="cbmand">standards-set</em>':''}</div>
-        <div class="cbwhy">${CDEF[k].why}</div>
-      </div>
-      <input type="text" class="cbname" data-cn="${k}" value="${colName(k)}" placeholder="colour name"/>
-      <div class="cbqty">${n?NUMF(n)+' links':'not used'}</div>
-      <div class="cbsku">${n?`&rarr; <b>${colName(k)}</b> ${k} — its own BOM line`:'—'}</div>
-    </div>`;}).join('');
-   cb.querySelectorAll('[data-col]').forEach(el=>el.addEventListener('input',e=>{
-    CCOLOR[e.target.dataset.col]={...(CCOLOR[e.target.dataset.col]||{}),c:e.target.value};saveColours();paint();}));
-   cb.querySelectorAll('[data-cn]').forEach(el=>{
-    const commit=e=>{CCOLOR[e.target.dataset.cn]={...(CCOLOR[e.target.dataset.cn]||{}),n:e.target.value};saveColours();paint();};
-    el.addEventListener('change',commit);
-    el.addEventListener('blur',commit);
-   });
-  }
-
-  $a('advCable').querySelectorAll('[data-col]').forEach(el=>el.addEventListener('input',e=>{
-   const k=e.target.dataset.col; CCOLOR[k]={...(CCOLOR[k]||{}),c:e.target.value}; saveColours(); paint();}));
-  $a('advCable').querySelectorAll('[data-cn]').forEach(el=>el.addEventListener('change',e=>{
-   const k=e.target.dataset.cn; CCOLOR[k]={...(CCOLOR[k]||{}),n:e.target.value}; saveColours(); paint();}));
 
 
-  // ---- naming preview -------------------------------------------------------------
-  /* The naming scheme has to label the devices this build ACTUALLY has. An HGX rack has
-   * no NVLink switch tray, so previewing an identifier for one — and then exporting it
-   * in the identifier CSV — invents a device the installer will go looking for. */
-  const RS=d.arch.rackScale;
-  const cLbl=RS?(d.arch.grainLabel||'Compute tray'):(d.arch.nodeU+'U compute node');
-  const cAbbr=RS?'CT01':'ND01';
-  const r0=rackName(1), ct=devName(r0,8,cAbbr), nvs=devName(r0,20,'NVS01');
-  const nb=$a('advNameTbl');
-  if(nb) nb.innerHTML=[
-   ['Rack',r0,'cabinet label, both faces'],
-   [cLbl,ct,'device label at the '+(RS?'tray ear':'node ear')],
-   ['Compute fabric port',portName(ct,'IB1'),`each of ${d.arch.perRack.compute/d.arch.nodesPerRack} ports per ${RS?'tray':'node'} — 1 rail per GPU`],
-   ['Storage / in-band port',portName(ct,'ST1'),`each of ${d.arch.perRack.storage/d.arch.nodesPerRack} storage ports per ${RS?'tray':'node'}`],
-   ['<b>'+(RS?'Tray':'Node')+' BMC</b>',`<b>${portName(ct,'BMC')}</b>`,'<b>out-of-band — one per '+(RS?'compute tray':'node')+'</b>'],
-   ['<b>'+(RS?'Tray':'Node')+' management</b>',`<b>${portName(ct,'MGT')}</b>`,'<b>1GbE debug / NVOS</b>'],
-   ...(RS?[
-    ['NVLink switch tray',nvs,'9 per NVL72 rack'],
-    ['<b>Switch-tray BMC</b>',`<b>${portName(nvs,'BMC')}</b>`,'<b>often unlabelled in practice — the 3am problem</b>'],
-   ]:[]),
-   ['IB leaf switch',devName(rackName(d.computeRacks+1),12,'IBL01'),'in the network rack'],
-   ['IB leaf port',portName(devName(rackName(d.computeRacks+1),12,'IBL01'),'P001'),'144 per leaf'],
-   ['Patch panel port',portName(devName(rackName(d.computeRacks+1),40,'PP01'),'F01'),'MPO-12/APC'],
-   ['Cable, both ends',`${portName(ct,'IB1')} :: ${portName(devName(rackName(d.computeRacks+1),12,'IBL01'),'P001')}`,'TIA-606-C: unique ID within 300 mm of each termination'],
-  ].map(r=>{const raw=String(r[1]).replace(/<[^>]+>/g,'');
-    return `<tr><td>${r[0]}</td><td style="font-family:var(--mono);color:var(--cool)">${r[1]}</td><td style="font-family:var(--mono);color:var(--faint)">${raw.length}</td><td class="desc">${r[2]}</td></tr>`;}).join('');
-  // ---- field-limit check: the one nobody runs until install day ---------------------
-  const longest=Math.max(...[r0,ct,portName(ct,'BMC'),portName(ct,'IB1'),
-    portName(devName(rackName(d.computeRacks+1),12,'IBL01'),'P001')].map(x=>x.length));
-  const lp=$a('advLimits');
-  if(lp) lp.innerHTML=`<div class="kh" style="margin-bottom:8px">Field limits — longest identifier in this scheme is <b style="color:var(--cool)">${longest} characters</b></div>
-   <div class="lim-g">${LIMITS.map(L=>{
-     const ok=longest<=L.max, near=!ok?false:longest>L.max*0.85;
-     return `<div class="lim ${ok?(near?'near':'ok'):'bad'}"><div class="ln">${L.n}</div>
-       <div class="lv">${longest} / ${L.max}</div><div class="lw">${L.why}</div>
-       <div class="ls">${ok?(near?'tight':'fits'):'OVER by '+(longest-L.max)}</div></div>`;}).join('')}</div>
-   <div class="kn">The two that bite are physical. A cable flag has a printable width measured in millimetres, and a patch-panel strip has less. An identifier that fits DNS comfortably can still be unreadable on the label that a technician is actually holding at 3am, which is the moment the whole scheme is for. Shorten the site and room fields before you shorten the device or port fields, because the device and port are what disambiguate.</div>`;
+
  }
 
  /* Full BOM across every asset class the build actually needs, not just cables.
@@ -5013,7 +4752,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      +(d.gpRacks?` + ${d.gpRacks} general-purpose`:'')
      +`. ${d.arch.rackU}U at ${d.arch.reserveU}U reserved${d.arch.pduU?` and ${d.arch.pduU}U of horizontal PDU`:''} = ${d.arch.usableU}U usable per cabinet. Specification DERIVED from your floor settings; part number NOT PUBLISHED — vendor lookup required`],
    ['Power',`Rack PDU — ${d.arch.pduOrient==='horizontal'?'1U horizontal':'0U vertical'} · ${d.arch.feed.label} · ${d.arch.feed.connector}`,
-     d.racks.length*d.arch.pduPerRack,
+     d.racks.filter(r=>r.kind!=='empty').length*d.arch.pduPerRack,
      `${d.arch.pduPerRack} per rack (${d.arch.pduPerRack===2?'A/B feed paths':'single path'}), inlet follows the ${d.arch.feed.label} feed you selected. ${d.arch.pduOrient==='horizontal'?`Horizontal costs ${d.arch.pduU}U of the rack.`:'0U vertical costs no rack units.'} Part number NOT PUBLISHED — vendor lookup required`],
    /* WHAT IS ACTUALLY IN THE RACK. A rack-scale NVL72 is trays, NVLink switch trays and
     * power shelves. An HGX node build is NODES — it has no NVLink switch tray and no
@@ -5059,8 +4798,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      `${d.trunkGroups} per row x ${d.totalRows} rows — one per ${d.trunkRacks}-rack group`],
    ['Fibre',d.trunkPorts+'-port MPO patch panel',d.trunkPanels,
      `${d.panelsPerTrunk} per pod x ${d.trunkPods} pods — ${d.portsPerRack} MPO positions/rack x ${d.trunkRacks} racks, ${d.trunkPorts} per panel`],
-   ['Copper',`Cat6A patch 3m — ${colName('bmc')}`,d.bmc,`BMC / OOB. Colour ${colName('bmc')} is a SEPARATE part number — derived`],
-   ['Copper',`Cat6 rollover console — ${colName('console')}`,(d.L.find(x=>x.cls==='console')||{n:0}).n,`Serial console. Colour ${colName('console')} is a separate SKU — derived`],
+   ['Copper','Cat6A patch 3m',d.bmc,'BMC / OOB — derived'],
+   ['Copper','Cat6 rollover console',(d.L.find(x=>x.cls==='console')||{n:0}).n,'Serial console — derived'],
    ['Copper','SFP28 DAC/AOC',d.oobUp,'SN2201 uplinks — derived'],
    ['Passive','MPO-12/APC patch panel (12-port)',Math.ceil((d.ibDown+d.ibUp+d.ethDown+d.ethUp)/12),'structured field, 12 links per panel — derived'],
    ['Passive','Cable manager (1U)',(d.computeRacks+d.netRacks)*2,'2 per rack — convention'],
@@ -5216,8 +4955,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   const dev=hgx?'ND':'CT';
   const card=(cls,cnt,nic,speed,note)=>{
    if(!cnt) return '';
-   const col=d.colourMap&&d.colourMap[cls]?d.colourMap[cls]:null;
-   const swatch=col?`<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${col.hex};margin-right:5px;vertical-align:middle"></span>`:'';
+   const swatch='';
    return B(cls==='bmc'||cls==='mgmt'?'oob':cls==='storage'?'ethleaf':'compute',
      Math.max(34,26+cnt*3),`${cnt}x`,
      `${swatch}<b>${nic}</b> — ${cnt} x ${speed} per ${hgx?'node':'tray'} · ${cnt*n} in the rack`
@@ -5317,7 +5055,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    * here as well meant it only refreshed when you clicked a MODE button, so it went on
    * claiming NVIDIA's SuperPOD RA after you had switched to a Penguin build. */
   if(!adv) $a('rkModeNote').textContent='Hand-configure individual racks: power, thermal, per-rack cabling and a SKU-rational BOM.';
-  if(adv){renderCtl();renderNameCtl();paint();}
+  if(adv){renderCtl();paint();}
  });
  document.addEventListener('click',e=>{if(e.target&&e.target.dataset&&e.target.dataset.close){SEL=null;paint();}});
  ['wdZoom','wdLabels'].forEach(id=>{const el=$a(id); if(el) el.addEventListener('input',()=>paint());});
@@ -5353,14 +5091,13 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    * existed has no A.row, and `undefined.charCodeAt` took the whole build sheet down. */
   return {...d,racksPerRow:gi('racksPerRow'),rowStart:A.row||'A',name:rackName,bom:bom(d),
    trunkFibers:gi('trunkFibers'),sparesPct:gi('spares'),
-   site:A.site,room:A.room,rowFirst:A.row,patRack:A.patRack,patDev:A.patDev,patPort:A.patPort,
    customLayout:Array.isArray(A.rackOrder)&&A.rackOrder.length>0,
    rackOrder:Array.isArray(A.rackOrder)?A.rackOrder.slice():null,
    devName,portName,
    /* Rule verdicts travel WITH the model, so every export carries them and a downstream
     * system can refuse a build that FAILs instead of quoting it. */
    rules:rules({...d,bom:bom(d)}),
-   colourMap:Object.fromEntries(Object.keys(CDEF).map(k=>[k,{hex:colOf(k),name:colName(k)}]))};};
+   colourMap:CCOL};};
  // import target from Size It
  /* Partner Solutions -> Advanced. The general-purpose estate becomes real racks in
   * the SuperPOD layout, so it shows up in the floor plan, the rack count, the phase
@@ -6026,7 +5763,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['','',''],
    ['NOTE','Placement changes the cable BOM more than it changes the rack count. Confirm the leaf grouping against the reference architecture before committing to ToR.','']]});
   sh.push({name:'Cables',rows:[['Class','Colour','Colour name','Links','Speed','Media','Reach m','Optic/connector','Description'],
-   ...d.L.map(l=>[l.cls,(d.colourMap[l.cls]||{}).hex||'',(d.colourMap[l.cls]||{}).name||'',l.n,l.speed,l.media,l.reach,l.opt,l.desc])]});
+   ...d.L.map(l=>[l.cls,'','',l.n,l.speed,l.media,l.reach,l.opt,l.desc])]});
   sh.push({name:'Trunking',rows:[['Metric','Value','Note'],
    ['Racks per trunk',d.trunkRacks,'user input — the pod size'],
    ['Panel ports per trunk',d.trunkPorts,'MPO positions per patch panel'],
@@ -6075,13 +5812,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      return [p,rs.length,c,rs.filter(r=>r.kind==='network').length,
        rs.filter(r=>r.kind==='storage').length,
        c*d.arch.gpusPerRack, c*d.arch.rackKw+(rs.length-c)*8];})]});
-  sh.push({name:'Naming',rows:[['Element','Example','Pattern','Note'],
-   ['Site',d.site,'{site}','user input'],['Room',d.room,'{room}','user input'],
-   ['First row',d.rowFirst,'{row}','rows increment alphabetically'],
-   ['Rack',d.name(1),d.patRack,'no dashes — separators break DCIM and NetBIOS fields'],
-   ['Device',d.devName(d.name(1),8,'CT01'),d.patDev,'U position embedded'],
-   ['Port',d.portName(d.devName(d.name(1),8,'CT01'),'IB1'),d.patPort,'includes BMC and management ports'],
-   ...d.racks.map((r,i)=>[r.kind+' rack',d.name(i+1),d.patRack,r.vendor])]});
+
   dl('ai-factory-workbook-'+new Date().toISOString().slice(0,10)+'.xlsx',xlsx(sh),'');
  };
  $s('bsJson').onclick=()=>{const d=model();if(!d)return;
@@ -6125,7 +5856,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
        ns_basis:'4.9 ns/m single-mode + 450 ns per switch hop, both directions — derived, not measured'}},
    phases:{count:d.phases,su_per_phase:d.suPerPhase,
      note:'Phase 1 carries the spine layer, so its per-rack cable count is disproportionate by design.'},
-   cable_colours:Object.fromEntries(Object.keys(d.colourMap||{}).map(k=>[k,d.colourMap[k]])),
    bom:d.bom||[],
    racks:d.racks.map((r,i)=>({id:d.name(i+1),kind:r.kind,vendor:r.vendor,phase:r.phase,su:r.su})),
    tag_schema:Object.fromEntries(TAGS.map(t=>[t.cat,Object.fromEntries(t.rows.map(r=>[r[0],r[1]]))])),
