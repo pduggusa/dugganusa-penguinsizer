@@ -4867,6 +4867,113 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   ].filter(Boolean).join('');
  }
  const N1=x=>Math.round(x*10)/10;
+ /* ---- WHAT PLUGS IN, WHAT IT PLUGS INTO, AND WITH WHAT ----------------------------
+  * A port list that gives you names and nothing else tells an installer where to stand
+  * and not what to do. Each port group now carries the LINK CLASS it belongs to, the
+  * medium and connector actually selected for that reach, the stock length it rounds up
+  * to, and the far end of the run — so the panel answers "these go from X to Y" instead
+  * of listing identifiers.
+  *
+  * Every field is read from the SAME link classes the BOM bills. If the parts list says
+  * 8 x 800G OSFP on optics at 15 m, this says so too, because it is the same object. */
+ const ENDPOINT={
+  compute:['Node / tray compute NIC','IB leaf switch'],
+  'ib-uplink':['IB leaf switch','IB spine switch'],
+  storage:['Node storage NIC','Front-end Ethernet leaf'],
+  'eth-uplink':['Front-end Ethernet leaf','Customer storage network'],
+  bmc:['Node / tray BMC','In-rack OOB switch'],
+  'oob-uplink':['In-rack OOB switch','OOB aggregation'],
+  memai:['MemoryAI appliance','Front-end Ethernet leaf'],
+  console:['Serial console port','Terminal server'],
+ };
+ const STOCKL=[1,2,3,5,7,10,15,20,30,50,75,100,150,200,300,500];
+ /* Port groups for a device abbreviation, generated from the architecture's own port
+  * topology — never a hand-written table, which is how a picture starts disagreeing with
+  * the parts list. */
+ /* Which link classes stay inside the cabinet and which cross the floor. A run that
+  * leaves the rack has to NAME the cabinet it lands in — "IB leaf switch" tells an
+  * installer what, not where, and where is the part that decides whether you are holding
+  * a 3 m jumper or a 15 m trunk. */
+ const IN_RACK=new Set(['bmc','console']);
+ function portsFor(dev,d,thisRack){
+  const A_=d.arch, n=Math.max(1,A_.nodesPerRack), q=k=>Math.round((A_.perRack[k]||0)/n);
+  const link=cls=>d.L.find(l=>l.cls===cls)||null;
+  /* Network racks follow the compute block, so the first one is compute+1. When the
+   * planes are split A/B the two ends are named separately. */
+  const netA=d.netRacks?rackName(d.computeRacks+1):null;
+  const netB=d.netRacks>1?rackName(d.computeRacks+d.netRacks):null;
+  const row=(prefix,count,cls,note)=>{
+   if(!count) return null;
+   const l=link(cls), ep=ENDPOINT[cls]||['—','—'];
+   const stock=l?(STOCKL.find(x=>x>=l.reach)||500):null;
+   const inRack=IN_RACK.has(cls);
+   const where=inRack?`in this cabinet (${thisRack})`
+     :netA?(netB?`cabinet ${netA} / ${netB} (A and B planes)`:`cabinet ${netA}`)
+     :'cabinet not yet placed';
+   return {ports:count===1?prefix:`${prefix}1..${prefix}${count}`, count, cls,
+     speed:l?l.speed:'', media:l?l.media:'', reach:l?l.reach:null, stock,
+     from:ep[0], to:ep[1], where, inRack, note};
+  };
+  if(dev==='ND'||dev==='CT') return [
+    row('IB',q('compute'),'compute','1 rail per GPU, rail-optimised'),
+    row('ST',q('storage'),'storage','storage / in-band'),
+    row('MGT',q('mgmt'),'bmc','in-band management'),
+    row('BMC',q('bmc'),'bmc','out-of-band'),
+  ].filter(Boolean);
+  if(dev==='IBL') return [row('P',FABRIC.sw.ibLeaf.ports,'compute','leaf downlinks to nodes')].filter(Boolean);
+  if(dev==='ETL') return [row('P',FABRIC.sw.ethLeaf.ports,'storage','front-end leaf ports')].filter(Boolean);
+  if(dev==='OOB') return [row('P',FABRIC.sw.oob.ports,'bmc','1GbE BMC aggregation')].filter(Boolean);
+  if(dev==='MEM') return [row('FE',2,'memai','front-end to the compute tier')].filter(Boolean);
+  return [];
+ }
+ function elevation(kind,d){
+  if(kind==='memory') return [
+   {u:1,n:1,t:'oob',label:'SN2201 OOB — rack management',dev:'OOB'},
+   {u:1,n:1,t:'patch',label:'MPO-12/APC patch panel',dev:'PP'},
+   {u:4,n:10,t:'memai',label:MEMAI.label+' — '+MEMAI.mem,dev:'MEM'},
+  ];
+  if(kind==='patch') return [
+   {u:1,n:1,t:'oob',label:'Rack management',dev:'OOB'},
+   {u:1,n:40,t:'patch',label:'MPO-12/APC patch panel — 24 positions',dev:'PP'},
+   {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
+  ];
+  if(kind==='gp') return [
+   {u:1,n:1,t:'oob',label:'iDRAC / OOB switch',dev:'OOB'},
+   {u:1,n:1,t:'patch',label:'Patch panel',dev:'PP'},
+   {u:1,n:2,t:'ethleaf',label:'PowerSwitch S5448F-ON — leaf',dev:'ETL'},
+   {u:2,n:16,t:'compute',label:((d&&d.gpLabel)||'Dell PowerEdge')+' — general purpose',dev:'PE'},
+   {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
+  ];
+  /* HGX / node builds stack as NODES. The node count is now the MODEL's — the number the
+   * rack was actually sized to, space-vs-power — not floor(40/U), which drew a rack fuller
+   * than the feed can energise. A drawing that disagrees with the power budget is how a
+   * floor plan passes review and fails commissioning. */
+  if(kind==='compute' && d && d.computeArchU && d.computeArchU>1) return [
+   {u:1,n:1,t:'manifold',label:'Coolant manifold / plumbing',dev:'MAN'},
+   {u:1,n:2,t:'ethleaf',label:'ToR leaf',dev:'ETL'},
+   {u:d.computeArchU,n:Math.max(1,(d.arch&&d.arch.nodesPerRack)||Math.floor(40/d.computeArchU)),t:'compute',
+    label:(d.computeLabel||'Compute node')+' — '+d.computeArchU+'U node'
+      +(d.arch?` · ${d.arch.nodeKw} kW (${d.arch.bound})`:''),dev:'ND'},
+   {u:1,n:1,t:'oob',label:'SN2201 OOB',dev:'OOB'},
+   {u:1,n:2,t:'power',label:'Rack PDU A / B'+(d.arch?' — '+d.arch.feed.connector:''),dev:'PDU'},
+  ];
+  if(kind==='network') return [
+   {u:2,n:1,t:'manifold',label:'Blanking / plumbing'},
+   {u:4,n:4,t:'ibleaf',label:'Q3400-RD IB leaf',dev:'IBL'},
+   {u:2,n:4,t:'ethleaf',label:'SN5600D Ethernet leaf',dev:'ETL'},
+   {u:1,n:2,t:'oob',label:'SN2201 OOB',dev:'OOB'},
+   {u:1,n:8,t:'patch',label:'MPO-12/APC patch panel',dev:'PP'},
+  ];
+  return [
+   {u:1,n:2,t:'manifold',label:'Coolant manifold',dev:'MAN'},
+   {u:1,n:4,t:'power',label:'Power shelf 33 kW',dev:'PS'},
+   {u:1,n:10,t:'compute',label:'Compute tray — 4x B300 + 2x Grace',dev:'CT'},
+   {u:1,n:9,t:'nvswitch',label:'NVLink switch tray',dev:'NVS'},
+   {u:1,n:8,t:'compute',label:'Compute tray — 4x B300 + 2x Grace',dev:'CT'},
+   {u:1,n:4,t:'power',label:'Power shelf 33 kW',dev:'PS'},
+   {u:1,n:2,t:'manifold',label:'Coolant manifold',dev:'MAN'},
+  ];
+ }
  function detailCard(r,i){
   const d=derive();   // vendor/label lookups below need the model; it was never passed in
   /* `d` was missing here. elevation() branches on d.computeArchU to stack HGX builds as
@@ -4906,9 +5013,13 @@ ${c.iso?`<h2>Multi-tenancy</h2>
       <div class="rk-ports">
         <div class="rk-elevh">LABELLED DEVICES &amp; PORTS</div>
         <div class="rk-plist">${dl.map(b=>{
-          const dn=devName(nm,b.uPos,b.dev), ps=portsFor(b.dev.replace(/\d+$/,''),d);
-          return `<div class="rk-dev"><div class="dn">${dn}</div>
-            ${ps.length?ps.map(p=>`<div class="pr"><span class="pn">${portName(dn,p[0])}</span><span class="pd">${p[1]}</span></div>`).join(''):'<div class="pr"><span class="pd">no cabled ports</span></div>'}
+          const dn=devName(nm,b.uPos,b.dev), ps=portsFor(b.dev.replace(/\d+$/,''),d,nm);
+          return `<div class="rk-dev"><div class="dn">${dn} <span style="color:var(--faint);font-weight:400">U${pad(b.uPos,2)}</span></div>
+            ${ps.length?ps.map(p=>`<div class="pr" style="display:block;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+               <div><span class="pn">${portName(dn,p.ports)}</span> <span class="pd">${p.count}x ${p.speed} — ${p.note}</span></div>
+               <div style="font-size:10.5px;color:var(--faint);margin-top:2px">
+                 ${p.from} <b style="color:var(--cool)">&rarr;</b> ${p.to} · <b style="color:${p.inRack?'var(--ok)':'var(--warn)'}">${p.where}</b>${p.media?` · ${p.media}`:''}${p.stock?` · ${p.stock} m stock (${p.reach} m computed)`:''}</div>
+             </div>`).join(''):'<div class="pr"><span class="pd">no cabled ports</span></div>'}
           </div>`;}).join('')}</div>
       </div>
     </div></div>`;
