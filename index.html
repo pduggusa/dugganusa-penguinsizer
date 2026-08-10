@@ -669,7 +669,7 @@
             <button class="rk-btn primary" id="advImportBtn">↙ Import target from Size It</button>
             <span class="adv-importnote" id="advImportNote">Pulls the GPU count currently set on the Size It tab and rebuilds the whole design against it.</span>
           </div>
-          <p class="lede" style="margin-top:10px">Architecture: <select id="advArch" class="rk-btn" style="padding:5px 9px"></select> Rack feed: <select id="advFeed" class="rk-btn" style="padding:5px 9px"></select> <span id="advArchNote"></span></p>
+          <p class="lede" style="margin-top:10px">Architecture: <select id="advArch" class="rk-btn" style="padding:5px 9px"></select> Rack feed: <select id="advFeed" class="rk-btn" style="padding:5px 9px"></select> PDU: <select id="advPdu" class="rk-btn" style="padding:5px 9px"><option value="vertical">0U vertical (rear channel)</option><option value="horizontal">1U horizontal (costs rack U)</option></select> <span id="advArchNote"></span></p>
           <div class="adv-ctl" id="advCtl"></div>
           <div class="adv-rules" id="advRules"></div>
           <div class="adv-out" id="advOut"></div>
@@ -1444,6 +1444,8 @@
           <button class="rk-btn" id="bsCsv">⬇ Build sheet (CSV)</button>
           <button class="rk-btn" id="bsJson">⬇ Full build (JSON)</button>
           <button class="rk-btn" id="bsBomJson" title="Rationalized BOM with stable part IDs, vendor, MPN and provenance — the shape an ordering system consumes">⬇ BOM for ordering (JSON)</button>
+          <button class="rk-btn" id="bsCable" title="Per-link-class cable schedule: from, to, media, connector, stock length, quantity">⬇ Cable schedule (CSV)</button>
+          <button class="rk-btn primary" id="bsSku" title="Every line with its specification and quantity and an EMPTY part-number column — the sheet you send the vendor to get SKUs back">⬇ SKU request sheet (CSV)</button>
           <span class="mem-local">🔒 generated in your browser · nothing uploaded</span>
         </div>
         <footer style="margin-top:18px">
@@ -3161,6 +3163,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const LS='penguin-adv-planner-v1';
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:4608,arch:'gb300-nvl72',feed:'415-3-300',feedsPerRack:1,rackU:48,reserveU:4,
+      siteKw:1200,pduOrient:'vertical',pduPerRack:2,
       floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       netPlacement:'eor',netRed:'ab50',rackPitchM:0.6,
       rackDepthM:1.2, coldAisleM:1.2, hotAisleM:0.9, serviceM:1.0,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
@@ -3273,7 +3276,18 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const feedKw=+(feed.kw*(red==='2N'?1:feeds)).toFixed(1);
 
   const rackU=Math.max(12,gi('rackU')||48), reserveU=Math.max(0,gi('reserveU')||0);
-  const usableU=Math.max(0,rackU-reserveU);
+  /* ---- PDU ORIENTATION IS A U-BUDGET DECISION, NOT A PREFERENCE -------------------
+   * A 0U vertical PDU mounts in the rear channel and costs no rack units. A horizontal
+   * PDU is a 1U device and you need one per feed path, so an A/B pair takes 2U straight
+   * off the usable budget — which at 4U per node is half a node's worth of space, and on
+   * a space-limited build that is a node you do not get to install.
+   *
+   * Modelling it as a BOM line only would have been the easy half. The reason it is here,
+   * in the U arithmetic, is that this is the half that changes the answer. */
+  const pduPerRack=Math.max(1,Math.round(gi('pduPerRack')||2));
+  const pduHoriz=(A.pduOrient||'vertical')==='horizontal';
+  const pduU=pduHoriz?pduPerRack:0;
+  const usableU=Math.max(0,rackU-reserveU-pduU);
   const rackScale=a.sku==='rack';
   const gr=a.grain||{gpu:8,cpu:2,per:1,pkw:a.pkw||10,fixedKw:0};
   const fixedU=(s&&s.fixedU)||0;
@@ -3328,6 +3342,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    racksPerSU: rackScale?(a.su||8):null,
    gpusPerSU:  rackScale?a.per*(a.su||8):null,
    rails, perRack, usableU, rackU, reserveU,
+   pduPerRack, pduOrient:pduHoriz?'horizontal':'vertical', pduU,
    feed, feedsPerRack:feeds, feedMode:red, feedKw,
    cooling:a.cool||'', liquid:/liquid|DTC/i.test(a.cool||''),
    /* The GPU ceiling is a FABRIC limit, not a rack limit. Rack-scale rides NVIDIA's
@@ -3781,6 +3796,19 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    gridSlots,emptySlots,
    computeArchU:(ARCH.find(x=>x.key===A.arch)||{}).u||null,
    gpRacks,gpKW,gpLabel,gpNodes,gpKWPerRack:gpRacks?+(gpKW/gpRacks).toFixed(1):0,
+   /* ---- WHAT THE ROOM HAS TO DELIVER ------------------------------------------
+    * The client constraint in a real RFQ is almost never "how many racks" — it is
+    * "I have 1.2 MW". Until now nothing in the model knew the site had a ceiling,
+    * so a build could size cleanly and be undeliverable in the room it was for.
+    *
+    * NETWORK AND MEMORY COUNT. Compute is the big number and it is the one people
+    * quote; the switching, the OOB and the KV-cache tier are the ones that turn a
+    * 96%-of-budget design into a 104% one. Estimated at 8 kW for a network or patch
+    * rack — OURS, and stated as such. */
+   siteKw:Math.max(0,gi('siteKw')||0),
+   computeKw:+(computeRacks*AS.rackKw).toFixed(1),
+   netKw:+((netRacks+ (racks.filter(r=>r.kind==='patch').length))*8).toFixed(1),
+   totalKw:+(computeRacks*AS.rackKw + (netRacks+racks.filter(r=>r.kind==='patch').length)*8 + memKw + (gi('gpKW')||0)).toFixed(1),
    computeVendor,computeLabel,
    gpus,realGpus,suNeeded,blockTotal,blockRacks,blockLabel,blockGpus,
    f,computeRacks,netRacks,oobCount,swU,perRack,
@@ -3847,6 +3875,21 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   if(/xe8812|orv3/i.test(A_.key)||A_.feed.k==='48dc-orv3')
    out.push(R('E5','Electrical', null, 'ORv3 busbar — base spec is ~18 kW',
     `OCP Open Rack v3's BASE specification is a 48 V busbar rated around 18 kW. Vendor racks quoting 300 kW+ are ORv3-INSPIRED, not base-spec. Do not size a busbar from the OCP document.`));
+
+  /* SITE CEILING. The one constraint a customer states first and a sizer usually
+   * models last. Headroom is reported either way, because "it fits" and "it fits with
+   * 3% left" are different answers to the same question. */
+  if(d.siteKw>0){
+   const pct=Math.round(100*d.totalKw/d.siteKw), head=+(d.siteKw-d.totalKw).toFixed(1);
+   out.push(R('S1','Site', d.totalKw<=d.siteKw?(pct<=90?true:null):false,
+    `Site power — ${N1_(d.totalKw)} kW of ${N1_(d.siteKw)} kW (${pct}%)`,
+    `${N1_(d.computeKw)} kW compute + ${N1_(d.netKw)} kW network/patch${d.memKw?' + '+N1_(d.memKw)+' kW memory tier':''}${d.gpKW?' + '+N1_(d.gpKW)+' kW general-purpose':''}. `
+    +(d.totalKw>d.siteKw
+      ? `OVER BUDGET by ${N1_(-head)} kW. The room cannot energise this build — reduce the GPU target, or the site needs more power before the order goes in.`
+      : pct>90
+        ? `${N1_(head)} kW of headroom, which is under 10%. That is no room for a phase-2, a denser node refresh, or the cooling plant drawing more than planned on the worst day of the year.`
+        : `${N1_(head)} kW of headroom. Network and patch racks are estimated at 8 kW each — OURS, not a measured figure.`)));
+  }
 
   // ---- NETWORKING ------------------------------------------------------------------
   const leafDown=(f.ibLeaf||0)*72;
@@ -4201,6 +4244,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  // ---- controls --------------------------------------------------------------------
  const F=[
   {k:'gpus',l:'Target GPUs',step:576,hint:'rounds up to whole racks of the architecture'},
+  {k:'siteKw',l:'Site power budget (kW)',step:50,hint:'what the room can actually deliver'},
+  {k:'pduPerRack',l:'PDUs per rack',step:1,hint:'2 = A/B feed paths'},
   {k:'rackU',l:'Rack height (U)',step:1,hint:'48 = AI cabinet · 42 = traditional'},
   {k:'reserveU',l:'Reserved U',step:1,hint:'patch, PDU, growth — off the top of usable'},
   {k:'feedsPerRack',l:'Feeds per rack',step:1,hint:'capacity feeds SUM · 2N feeds do not'},
@@ -4238,6 +4283,9 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     asel.onchange=e=>{A.arch=e.target.value;save();paint();};}
   /* FEED PICKER, not a kW box. See FEEDS — capacity is a breaker, a voltage and a
    * derate, and letting someone type 137 kW produces a rack nobody can energise. */
+  const psel=$a('advPdu');
+  if(psel){psel.value=A.pduOrient||'vertical';
+    psel.onchange=e=>{A.pduOrient=e.target.value;save();paint();};}
   const fsel=$a('advFeed');
   if(fsel){fsel.innerHTML=FEEDS.map(f=>`<option value="${f.k}"${(A.feed||'415-3-300')===f.k?' selected':''}>${f.label} — ${f.kw} kW</option>`).join('');
     fsel.onchange=e=>{A.feed=e.target.value;save();paint();};}
@@ -4872,6 +4920,21 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  /* Full BOM across every asset class the build actually needs, not just cables.
   * Switch quantities carry their RA-table provenance; passive and optic counts are
   * derived from the link classes and say so. */
+ /* Which of the three fabrics a part belongs to. An RFQ asks for a non-blocking
+  * back-end, a dedicated front-end for storage, and out-of-band management as separate
+  * deliverables — so the BOM has to be able to answer "what does the back-end cost"
+  * without someone reading 24 lines and guessing. */
+ const NET_OF={
+  compute:'backend-ib','ib-uplink':'backend-ib',
+  storage:'frontend-eth','eth-uplink':'frontend-eth',memai:'frontend-eth',
+  bmc:'oob-mgmt','oob-uplink':'oob-mgmt',console:'oob-mgmt'};
+ const NET_LABEL={'backend-ib':'Back-end compute fabric (InfiniBand)',
+  'frontend-eth':'Front-end / storage fabric (Ethernet)',
+  'oob-mgmt':'Out-of-band management and console',
+  'facility':'Rack, power and passive infrastructure'};
+ /* Published because the Build Sheet is a separate IIFE and its exports group by fabric.
+  * One map, two consumers — the alternative is a second copy that drifts. */
+ window.__NETS={of:NET_OF,label:NET_LABEL};
  function bom(d){
   const f=d.f, sp=n=>Math.ceil(n*gi('spares')/100);
   /* One helper so a switch count cannot cite an NVIDIA table it was not read from.
@@ -4889,16 +4952,27 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   const opt=d.L.filter(l=>l.media.includes('SMF'));
   const optLinks=opt.reduce((a,l)=>a+l.n,0);
   const rows=[
-   ['Rack',d.arch.label+' compute rack',d.computeRacks,
-     d.arch.rackScale?`${d.blockTotal} SU x ${d.arch.racksPerSU} racks — NVIDIA RA`
-       :`${d.computeRacks} racks at ${d.arch.gpusPerRack} GPU each — DERIVED (OURS), sized on racks${d.arch.vendorSU?`. ${d.arch.vendorSU.vendor} publishes the ${d.arch.vendorSU.name} that is NOT MODELLED here`:''}`],
-   ...(d.planes>1&&!d.torMode?[['Rack','Network rack — side A (left of row)',d.netRacksPerSide,
-     `plane A of ${d.planes} · ${d.netRed==='ab100'?'sized for the FULL load':'sized for half the load'}`],
-    ['Rack','Network rack — side B (right of row)',d.netRacksPerSide,
-     `plane B — deliberately at the opposite row end so one row-end event cannot take both planes`]]:[]),
-   ...(d.torMode?[['Rack','Top-of-rack switching (no dedicated network racks)',d.computeRacks,
-     `${d.torSwitchU}U of switching per compute rack — ToR, so node links stay in-rack on short DAC and only uplinks leave`]]:[]),
-   ['Rack','Network rack (42U usable)',d.netRacks,`${NUMF(d.swU)}U of switching packed at 42U/rack — derived`],
+   /* ---- CABINETS ARE COUNTED ONCE -----------------------------------------------
+    * This used to emit a "<arch> compute rack" line, a "Network rack" line, "side A"
+    * and "side B" lines, AND a rack enclosure line. On a 512-GPU build that asked a
+    * distributor for 9 compute racks, 7 network racks and 19 enclosures for a floor
+    * that holds 18 cabinets — the A/B split double-counted the network total, and the
+    * enclosure line double-counted every one of them.
+    *
+    * A rack appears exactly once now, as the ENCLOSURE it is, with the composition in
+    * the basis. What goes IN the cabinets is priced by the compute, switch and power
+    * lines. Surfaced by reading the SKU sheet the way a vendor would. */
+   ['Enclosure',`Rack enclosure ${d.arch.rackU}U · ${Math.round(d.rackW*1000)}mm W x ${Math.round(d.rackD*1000)}mm D`,
+     d.racks.filter(r=>r.kind!=='empty').length,
+     `EVERY cabinet, counted once: ${d.computeRacks} compute`
+     +(d.netRacks?` + ${d.netRacks} network${d.planes>1&&!d.torMode?` (${d.netRacksPerSide} per plane, A and B at opposite row ends so one row-end event cannot take both)`:''}`:'')
+     +(d.racks.filter(r=>r.kind==='patch').length?` + ${d.racks.filter(r=>r.kind==='patch').length} patch`:'')
+     +(d.mRacks?` + ${d.mRacks} memory`:'')
+     +(d.gpRacks?` + ${d.gpRacks} general-purpose`:'')
+     +`. ${d.arch.rackU}U at ${d.arch.reserveU}U reserved${d.arch.pduU?` and ${d.arch.pduU}U of horizontal PDU`:''} = ${d.arch.usableU}U usable per cabinet. Specification DERIVED from your floor settings; part number NOT PUBLISHED — vendor lookup required`],
+   ['Power',`Rack PDU — ${d.arch.pduOrient==='horizontal'?'1U horizontal':'0U vertical'} · ${d.arch.feed.label} · ${d.arch.feed.connector}`,
+     d.racks.length*d.arch.pduPerRack,
+     `${d.arch.pduPerRack} per rack (${d.arch.pduPerRack===2?'A/B feed paths':'single path'}), inlet follows the ${d.arch.feed.label} feed you selected. ${d.arch.pduOrient==='horizontal'?`Horizontal costs ${d.arch.pduU}U of the rack.`:'0U vertical costs no rack units.'} Part number NOT PUBLISHED — vendor lookup required`],
    /* WHAT IS ACTUALLY IN THE RACK. A rack-scale NVL72 is trays, NVLink switch trays and
     * power shelves. An HGX node build is NODES — it has no NVLink switch tray and no
     * shared power shelf, because each node carries its own PSUs. Billing a Relion build
@@ -4915,8 +4989,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ]:[
      ['Compute',d.arch.label+' — '+d.arch.nodeU+'U node',d.computeRacks*d.arch.nodesPerRack,
        `${d.arch.nodesPerRack} per rack (${d.arch.bound}: ${d.arch.spaceMax} by ${d.arch.usableU}U usable, ${d.arch.powerMax} by the ${d.arch.feed.label} feed) — DERIVED (OURS)`],
-     ['Power','Rack PDU — '+d.arch.feed.connector,d.computeRacks*2,
-       `A/B pair per rack. NO power shelf: ${d.arch.label} nodes carry their own PSUs`],
+     ['Compute',`NO power shelf — ${d.arch.label} nodes carry their own PSUs`,0,'stated so its absence reads as deliberate, not as a missing line'],
    ]),
    /* PROVENANCE, not decoration. When the fabric was computed by us these must NOT say
     * "RA Table 3" — that would launder our arithmetic into NVIDIA's reference
@@ -4933,7 +5006,6 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Fibre','MPO-12/APC jumper '+stock(d.rowRun+(d.floors>1?gi('interFloorM'):0))+'m',d.ibUp+d.ethUp,'leaf to spine — derived'],
    ...(d.memUnits?[
     ['Memory',MEMAI.label+' — '+MEMAI.mem,d.memUnits,`${d.memPerSU} per ${d.blockLabel} x ${d.blockTotal} — OUR default ratio, not a Penguin-published rule`],
-    ['Rack','MemoryAI rack (42U usable)',d.mRacks,`${d.memU}U at ${MEMAI.u}U per appliance, packed at 42U/rack — derived`],
    ]:[]),
    ['Fibre',gi('trunkFibers')+'F trunk assembly — inter-floor riser',d.risers,d.risers?`riser, ${d.trunkLinks} links each — derived`:'single floor, none required'],
    /* Horizontal trunking is a user input now, so it has to appear as orderable parts:
@@ -5017,6 +5089,17 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    * note — "plane A of 2, sized for half the load" came out as a VENDOR figure. Silently
    * defaulting to the STRONGER claim is precisely the failure this whole change exists to
    * stop. A vendor claim now has to be earned by citing a vendor source. */
+  /* Fabric assignment from the part itself. Switches and optics follow the fabric they
+   * serve; enclosures, PDUs, patch fields and cable management are facility. */
+  const netOf=l=>{
+   const t=(l.item||'').toLowerCase(), c=(l.cat||'').toLowerCase();
+   if(/ib leaf|ib spine|quantum|dr8|infiniband/.test(t)) return 'backend-ib';
+   if(/eth |ethernet|sn5600|memoryai/.test(t)) return 'frontend-eth';
+   if(/oob|sn2201|console|bmc|cat6|sfp28/.test(t)) return 'oob-mgmt';
+   if(/enclosure|pdu|patch panel|cable manager|rack/.test(t)||c==='enclosure') return 'facility';
+   if(/jumper|trunk|fibre|optic/.test(t)) return 'backend-ib';
+   return 'facility';
+  };
   const provOf=b=>{
    const t=b||'';
    if(/ASSUMED|NOT PUBLISHED|EXTRAPOLATED|UNVERIFIED/i.test(t)) return 'assumed';
@@ -5037,7 +5120,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    }
    bin[id]={...l, id, catalogueId:cat,
      vendor:vendorOf(l,cat), mpn:c?c.mpn:null, uom:c?c.uom:'ea',
-     u:c?c.u:null, prov:provOf(l.basis), merged:1};
+     u:c?c.u:null, prov:provOf(l.basis), net:netOf(l), merged:1};
   });
   return Object.values(bin).map(b=>({...b,total:b.qty+b.sp}));
  }
@@ -5706,10 +5789,73 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     id:b.id, catalogueId:b.catalogueId||null, category:b.cat, description:b.item,
     vendor:b.vendor, mpn:b.mpn, uom:b.uom, rackU:b.u||null,
     qty:b.qty, spares:b.sp, orderQty:b.total,
-    provenance:b.prov, mergedFrom:b.merged>1?b.merged:1, basis:b.basis
+    provenance:b.prov, fabric:b.net||null, mergedFrom:b.merged>1?b.merged:1, basis:b.basis
    }))
   };
  };
+ /* ---- CABLE SCHEDULE --------------------------------------------------------------
+  * The BOM says how many cables. A schedule says WHICH cable goes WHERE and HOW LONG,
+  * which is the document an installer works from and the one a distributor prices
+  * against. Everything here is already computed — reach from row run plus tray rise plus
+  * any riser, media selected from that reach, stock length rounded up to something that
+  * is actually sold. It just never had a sheet of its own. */
+ const CABLE_STD=[1,2,3,5,7,10,15,20,30,50,75,100,150,200,300,500];
+ function cableSchedule(){
+  const d=model(); if(!d) return '';
+  const stock=m=>CABLE_STD.find(x=>x>=m)||500;
+  const from={compute:'Compute node / tray NIC','ib-uplink':'IB leaf switch',storage:'Compute node storage NIC',
+   'eth-uplink':'Ethernet leaf switch',bmc:'Node / tray BMC','oob-uplink':'In-rack OOB switch',
+   memai:'MemoryAI appliance',console:'Serial console port'};
+  const to={compute:'IB leaf switch','ib-uplink':'IB spine switch',storage:'Ethernet leaf switch',
+   'eth-uplink':'Ethernet spine switch',bmc:'In-rack OOB switch','oob-uplink':'OOB aggregation',
+   memai:'Ethernet leaf switch',console:'Terminal server'};
+  const head=['fabric','link_class','from','to','qty','spares','order_qty','speed','media','connector',
+    'computed_reach_m','stock_length_m','notes'];
+  const N=window.__NETS||{of:{},label:{}}, NO=N.of, NL=k=>N.label[k]||'—';
+  const spPct=d.sparesPct||0;
+  const rows=d.L.map(l=>{
+   const sp=Math.ceil(l.n*spPct/100);
+   const conn=/Cat6/.test(l.media)?'RJ45':/QSFP/.test(l.media)?'QSFP28':/rollover/i.test(l.media)?'RJ45 rollover':
+     /DAC|AOC/.test(l.media)?'SFP28':'OSFP';
+   return [NL(NO[l.cls])||'—',l.cls,from[l.cls]||'—',to[l.cls]||'—',
+     l.n,sp,l.n+sp,l.speed,l.media,conn,l.reach,stock(l.reach),
+     '"'+String(l.desc||'').replace(/"/g,"'")+'"'].join(',');
+  });
+  return [head.join(','),...rows].join('\n');
+ }
+ $s('bsCable').onclick=()=>{const c=cableSchedule();
+  if(c)dl('cable-schedule-'+new Date().toISOString().slice(0,10)+'.csv',c,'text/csv');};
+
+ /* ---- SKU REQUEST SHEET -------------------------------------------------------------
+  * The deliverable when you do NOT have the vendor's part numbers, which is the normal
+  * case. Every line carries its full specification and quantity and an EMPTY part-number
+  * column, so the vendor fills one column and hands it back priced.
+  *
+  * Deliberately NOT the same file as the ordering BOM. That one asserts what a part IS;
+  * this one asks. Mixing them is how a blank part number becomes a guessed one. */
+ function skuSheet(){
+  const b=window.__BOM(); if(!b) return '';
+  const head=['fabric','category','specification','qty','spares','order_qty','uom','rack_u_each',
+    'vendor','VENDOR_PART_NUMBER','VENDOR_DESCRIPTION','VENDOR_UNIT_PRICE','LEAD_TIME_WEEKS',
+    'provenance','our_basis'];
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,"'")+'"';
+  const NL=k=>((window.__NETS||{label:{}}).label[k])||'—';
+  const rows=b.lines.map(l=>[
+    q(NL(l.fabric)),q(l.category),q(l.description),l.qty,l.spares,l.orderQty,q(l.uom),
+    l.rackU==null?'':l.rackU,q(l.vendor),q(l.mpn||''),'','','',q(l.provenance),q(l.basis)].join(','));
+  const id=b.identity||{};
+  return [
+   '"SKU REQUEST — '+q(b.build.label).replace(/"/g,'')+'"',
+   '"Partner","'+(id.partner||'')+'","Customer","'+(id.customer||'')+'","Project","'+(id.project||'')+'"',
+   '"Build","'+b.build.gpus+' GPU · '+b.build.computeRacks+' compute racks · '+b.build.nodesPerRack+' nodes/rack · '+b.build.rackKw+' kW/rack · '+b.build.feed.label+'"',
+   '"Consistency","'+b.consistency.fail+' FAIL / '+b.consistency.warn+' WARN — quotable: '+b.consistency.quotable+'"',
+   '"NOTE","Specification and quantity are OURS and are sizing-grade. The four VENDOR_ columns are empty on purpose — please complete and return. Do not infer a part number from the specification."',
+   '',
+   head.join(','),...rows].join('\n');
+ }
+ $s('bsSku').onclick=()=>{const c=skuSheet();
+  if(c)dl('sku-request-'+new Date().toISOString().slice(0,10)+'.csv',c,'text/csv');};
+
  $s('bsBomJson').onclick=()=>{const b=window.__BOM(); if(!b)return;
   dl('bom-'+(b.build.architecture||'build')+'-'+new Date().toISOString().slice(0,10)+'.json',
      JSON.stringify(b,null,1),'application/json');};
