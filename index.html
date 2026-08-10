@@ -650,6 +650,7 @@
           <div class="seg" id="rkPlace" style="max-width:330px">
             <button data-p="left">Left of row</button><button data-p="mor">Middle of row</button><button data-p="eor" class="on">Right of row</button><button data-p="tor">Top of rack</button>
           </div>
+          <button class="rk-btn" id="rkReset" title="Clear every saved setting across all tabs and start clean">↺ Reset all</button>
           <span class="rk-modenote" id="rkModeNote">Hand-configure individual racks: power, thermal, per-rack cabling and a SKU-rational BOM.</span>
         </div>
 
@@ -1951,6 +1952,16 @@ sync();
  $id("rkProject").addEventListener("input",e=>{state.project=e.target.value;setDirty(true);persist();});
  $id("rkSpares").value=state.spares;
  $id("rkSpares").addEventListener("input",e=>{const v=parseInt(e.target.value,10);state.spares=isNaN(v)?0:Math.max(0,Math.min(50,v));setDirty(true);persist();paint();});
+ /* Reset ALL of it. Each module persists under its own key, so clearing one leaves a
+  * mixed state no fresh visitor could ever reach — and that state is what then gets
+  * reported as a bug. */
+ const RESET_KEYS=['penguin-rack-planner-v2','penguin-adv-planner-v1','penguin-partner-v1',
+   'penguin-aifactory-v1','penguin-cable-colours','penguin-devart-v1'];
+ $id("rkReset").onclick=()=>{
+  if(!confirm('Reset EVERY tab to defaults?\n\nThis clears the rack planner, the advanced floor, Dell Enterprise, Dell AI Factory, your cable colours and any stencils you uploaded.\n\nExports already downloaded are unaffected. This cannot be undone.'))return;
+  try{RESET_KEYS.forEach(k=>localStorage.removeItem(k));}catch(e){}
+  location.reload();
+ };
  $id("rkAdd").onclick=()=>{if(state.racks.length>=MAX_RACKS){alert("Max "+MAX_RACKS+" racks.");return;}state.racks.push(defRack());setDirty(true);persist();render();};
  /* Import the Size It build. The planner is deliberately independent — it holds hand-edited
   * per-rack detail and a saved BOM, so it must never silently follow the sizer. This is the
@@ -3054,7 +3065,23 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const swU=f.ibLeaf*FABRIC.sw.ibLeaf.u + f.ibSpine*FABRIC.sw.ibSpine.u
           + (f.ethComputeLeaf+f.ethStorageLeaf+f.ethSpine)*FABRIC.sw.ethLeaf.u;
   const oobCount=computeRacks;                       // one SN2201 pair rolls up per rack
-  const netRacks=Math.max(1,Math.ceil(swU/42));
+  /* TOP-OF-RACK MEANS THE SWITCHES ARE IN THE COMPUTE RACK. The placement setting was
+   * shortening the cable run AND still building dedicated network racks, so ToR counted
+   * its own benefit twice and the cable BOM was wrong in both directions.
+   *
+   * The cables ARE the point. ToR: node-to-leaf is a sub-2 m passive DAC inside the
+   * rack, and only the leaf-to-spine uplinks leave it. EoR/MoR: every single node link
+   * crosses the row, which pushes the media selection off copper and onto optics — a
+   * transceiver at each end plus a trunk, for every link, instead of one cheap DAC.
+   *
+   * The catch, and it is why NVIDIA's RA does NOT use ToR at SuperPOD scale: a
+   * rail-optimised fabric groups the SAME rail from many nodes onto one leaf. Doing
+   * that top-of-rack needs one leaf PER RAIL in every rack — 8 switches a rack — or you
+   * give up rail optimisation. ToR is right for smaller builds and wrong for the RA. */
+  const torMode = (A.netPlacement||'eor')==='tor';
+  const netRacks = torMode ? 0 : Math.max(1,Math.ceil(swU/42));
+  const torSwitchU = torMode ? Math.ceil(swU/Math.max(1,computeRacks)) : 0;
+  const torRailWarn = torMode && FABRIC.su.rails>1;
 
   // ---- link classes ---------------------------------------------------------------
   // Per NVL72 rack: 18 compute trays x 4 ConnectX-8 = 72 compute-fabric links (1/GPU),
@@ -3111,6 +3138,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const vModel=VAST[A.vastModel||'dbox']||VAST.dbox;
   const vU=vc*VAST.cbox.u + vd*vModel.u;
   const vRacks=(vMode==='none')?0:(vU?Math.ceil(vU/42):0);
+  const vOff=(vMode==='none');
   const vKw=+(vc*VAST.cbox.kw + vd*vModel.kw).toFixed(1);
   // CNode back-end + front-end, DNode back-end, plus BMC and serial console per box.
   const vBE = vCnodes*VAST.cbox.ports.be + vd*vModel.ports.be;
@@ -3249,6 +3277,12 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const trunkRacks=Math.max(1,gi('trunkRacks')||4);
   const trunkPorts=Math.max(1,gi('trunkPorts')||24);
   const trunkGroups=Math.ceil(perRow/trunkRacks);          // rack pods per row
+  /* Pod index for any rack POSITION. Pods do not span rows — a trunk assembly runs
+   * along one row into one patch field. */
+  const podOf=(i)=>{const row=Math.floor(i/perRow), col=i%perRow;
+    return row*trunkGroups + Math.floor(col/trunkRacks);};
+  const podLabel=(i)=>{const row=Math.floor(i/perRow), col=i%perRow;
+    return String.fromCharCode(String(A.row||'A').charCodeAt(0)+row)+'-P'+(Math.floor(col/trunkRacks)+1);};
   /* One assembly per pod was a guess, not a calculation — a pod of four NVL72 racks
    * offers far more links than a single 24F trunk can carry. Assemblies follow the
    * offered LOAD against trunk capacity, held to the load cap. */
@@ -3326,7 +3360,16 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    memReachM,memHops,memCrossFloor,memNs,
    fibrePerRack,portsPerRack,sideDiv,effHops,aislesOn,faceOf,aisleAt,
    rowRun,place,pitch,rise,worstHops,hubF,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
-   vc,vd,vCnodes,vAuto,manual,vModel,vU,vRacks,vKw,vBE,vFE,vBMC,vCON,
+   vc:vOff?0:vc, vd:vOff?0:vd, vCnodes:vOff?0:vCnodes, vAuto, manual, vModel,
+   vU:vOff?0:vU, vRacks, vKw:vOff?0:vKw, vBE:vOff?0:vBE, vFE:vOff?0:vFE,
+   vBMC:vOff?0:vBMC, vCON:vOff?0:vCON, vOff, vMode,
+   vastLabel:VAST[vModel]?VAST[vModel].label:'VAST', vCboxLabel:VAST.cbox.label,
+   vCboxU:VAST.cbox.u, vCboxKw:VAST.cbox.kw, vBoxU:VAST[vModel]?VAST[vModel].u:2,
+   vBoxKw:VAST[vModel]?VAST[vModel].kw:1.4,
+   memLabel:MEMAI.label, memAppU:MEMAI.u, memAppKw:MEMAI.kw,
+   swIb:FABRIC.sw.ibLeaf.model, swIbU:FABRIC.sw.ibLeaf.u,
+   swEth:FABRIC.sw.ethLeaf.model, swEthU:FABRIC.sw.ethLeaf.u,
+   torMode,torSwitchU,torRailWarn,rails:FABRIC.su.rails,podOf,podLabel,
    gpRacks,gpKW,gpLabel,gpNodes,gpKWPerRack:gpRacks?+(gpKW/gpRacks).toFixed(1):0,
    computeVendor,computeLabel,
    gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
@@ -3948,9 +3991,16 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       g.setAttribute('transform',`translate(${(e2.clientX-ox)*sx} ${(e2.clientY-oy)*sy})`);
       const vx=(e2.clientX-box.left)*sx, vy=(e2.clientY-box.top)*sy;
       let best=null,bd=Infinity;
-      RPOS.forEach(pt=>{const dd=Math.hypot(pt.cx-vx,pt.cy-vy); if(dd<bd){bd=dd;best=pt.i;}});
+      const fromPod=d.podOf(from);
+      RPOS.forEach(pt=>{ if(d.podOf(pt.i)!==fromPod) return;      // stay inside the pod
+        const dd=Math.hypot(pt.cx-vx,pt.cy-vy); if(dd<bd){bd=dd;best=pt.i;}});
       target=best==null?from:best;
-      if(live) live.innerHTML=`moving <b>${rackName(from+1)}</b> &rarr; position <b>${target+1}</b> (<b>${rackName(target+1)}</b>) — release to drop`;
+      const overPod=(()=>{let b2=null,d2=Infinity;
+        RPOS.forEach(pt=>{const dd=Math.hypot(pt.cx-vx,pt.cy-vy); if(dd<d2){d2=dd;b2=pt.i;}});
+        return b2==null?fromPod:d.podOf(b2);})();
+      if(live) live.innerHTML = overPod!==fromPod
+        ? `<b style="color:var(--warn)">${d.podLabel(from)} only</b> — moving a rack to another pod rewires its trunk and patch field, so that is a cabling change rather than a drag. Snapping back inside <b>${d.podLabel(from)}</b>.`
+        : `moving <b>${rackName(from+1)}</b> &rarr; position <b>${target+1}</b> (<b>${rackName(target+1)}</b>) in pod <b>${d.podLabel(target)}</b> — release to drop`;
      };
      const up=()=>{
       window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up);
@@ -4023,7 +4073,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   // ---- storage panel ----------------------------------------------------------------
   const sp=$a('advStorage');
   if(sp) sp.innerHTML=`
-   <div class="callout" style="border-left-color:${d.vAuto.exact?'var(--ok)':'var(--warn)'}">
+   ${d.vOff?'<p class="note">Storage set to <b>None</b> — no VAST in this build. No storage racks, no boxes in the BOM, no storage links in the cabling.</p>':''}
+   <div class="callout" style="display:${d.vOff?'none':'block'};border-left-color:${d.vAuto.exact?'var(--ok)':'var(--warn)'}">
      <div class="callout-h" style="color:${d.vAuto.exact?'var(--ok)':'var(--warn)'}">${d.manual?'Manual override in effect':'Basis: '+d.vAuto.basis}</div>
      <p>VAST and NVIDIA's Enterprise reference architecture is built on <b>four-node scalable units</b> and its published tables stop at <b>32 nodes / 256 GPUs</b>. That is a different and much smaller SU than the DGX SuperPOD GB300 SU used above, which is 8 racks and 576 GPUs. <b>The two SU definitions are not interchangeable</b> and this tool keeps them apart deliberately.</p>
      ${d.vModel.verified?'':`<p style="color:var(--hot)"><b>${d.vModel.label} specs are unverified.</b> ${d.vModel.note}</p>`}
@@ -4080,6 +4131,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   const optLinks=opt.reduce((a,l)=>a+l.n,0);
   const rows=[
    ['Rack','GB300 NVL72 compute rack',d.computeRacks,`${Math.ceil(d.suNeeded)} SU x 8 racks — RA`],
+   ...(d.torMode?[['Rack','Top-of-rack switching (no dedicated network racks)',d.computeRacks,
+     `${d.torSwitchU}U of switching per compute rack — ToR, so node links stay in-rack on short DAC and only uplinks leave`]]:[]),
    ['Rack','Network rack (42U usable)',d.netRacks,`${NUMF(d.swU)}U of switching packed at 42U/rack — derived`],
    ['Compute','Compute tray (4x B300 + 2x Grace)',d.computeRacks*18,'18 per NVL72 rack — RA'],
    ['Compute','NVLink switch tray',d.computeRacks*9,'9 per NVL72 rack — RA'],
@@ -4108,8 +4161,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Copper',`Cat6A patch 3m — ${colName('bmc')}`,d.bmc,`BMC / OOB. Colour ${colName('bmc')} is a SEPARATE part number — derived`],
    ['Copper',`Cat6 rollover console — ${colName('console')}`,(d.L.find(x=>x.cls==='console')||{n:0}).n,`Serial console. Colour ${colName('console')} is a separate SKU — derived`],
    ['Copper','SFP28 DAC/AOC',d.oobUp,'SN2201 uplinks — derived'],
-   ['Storage',VAST.cbox.label,d.vc,`${d.manual?'manual override':'auto from '+(d.vAuto.exact?'RA table':'EXTRAPOLATED RA')} — ${d.vCnodes} CNodes`],
-   ['Storage',d.vModel.label,d.vd,(d.vModel.verified?'':'SPECS UNVERIFIED — ')+(d.manual?'manual override':d.vAuto.basis)],
+   ...(d.vOff?[]:[['Storage',VAST.cbox.label,d.vc,`${d.manual?'manual override':'auto from '+(d.vAuto.exact?'RA table':'EXTRAPOLATED RA')} — ${d.vCnodes} CNodes`],
+   ['Storage',d.vModel.label,d.vd,(d.vModel.verified?'':'SPECS UNVERIFIED — ')+(d.manual?'manual override':d.vAuto.basis)]]),
    ['Passive','MPO-12/APC patch panel (12-port)',Math.ceil((d.ibDown+d.ibUp+d.ethDown+d.ethUp)/12),'structured field, 12 links per panel — derived'],
    ['Passive','Cable manager (1U)',(d.computeRacks+d.netRacks)*2,'2 per rack — convention'],
   ];
@@ -4531,6 +4584,60 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['NOTE','Sizing-grade. Vendor figures are labelled on the References tab. 95% cap — this is not a quote, an electrical stamp or a mechanical stamp.','','']]});
   sh.push({name:'Racks',rows:rowsCsv});
   sh.push({name:'BOM',rows:[['Category','Item','Qty','Basis'],...d.bom.map(r=>[r[0],r[1],r[2],r[3]])]});
+  /* BOM PER RACK. The flat BOM answers "what do I order"; this answers "what goes in
+   * THIS rack" — which is the question the installer standing in front of it has, and
+   * the one a receiving dock needs to check a pallet against. Composition is derived
+   * from the rack kind, so a Dell general-purpose rack does not get NVLink trays and a
+   * VAST rack does not get power shelves. */
+  const perRackRows=[['Rack','Kind','Vendor','Phase','SU','Item','Qty','U ea','kW ea','Basis']];
+  d.racks.forEach((r,i)=>{
+   const nm=d.name(i+1), L=[];
+   if(r.kind==='compute'){
+    const dell=d.computeVendor==='dell';
+    L.push([d.computeLabel+' — compute tray',18,1,6.4,'18 trays per rack — NVIDIA RA']);
+    if(dell){
+     L.push(['ORv3-style blind-mate power + liquid manifold',1,'','','OCP ORv3 base spec is a 48 V busbar at ~18 kW; Dell 300 kW+ racks are ORv3-INSPIRED, not base-spec']);
+    }else{
+     L.push(['NVLink switch tray',9,1,'','9 switch trays — NVIDIA RA']);
+     L.push(['Power shelf (33 kW)',6,1,'','6-8 shelves per rack — NVIDIA RA']);
+     L.push(['NVLink copper cable cartridge',1,'','','in-rack backplane, deliberately NOT a cable-BOM item']);
+    }
+    L.push(['SN2201 OOB switch',2,1,'','in-rack out-of-band pair']);
+    L.push(['Compute fabric links',d.perRack.compute,'','','1 per GPU — rail-optimised']);
+    L.push(['Storage / in-band links',d.perRack.storage,'','','BlueField-3 ports']);
+    L.push(['BMC links',d.perRack.bmc,'','','tray + switch-tray BMC']);
+   }else if(r.kind==='network'){
+    L.push([d.swIb+' (InfiniBand leaf/spine)',Math.ceil((d.f.ibLeaf+d.f.ibSpine)/Math.max(1,d.netRacks)),d.swIbU,'','RA Table 3, packed across '+d.netRacks+' network rack(s)']);
+    L.push([d.swEth+' (Ethernet)',Math.ceil((d.f.ethComputeLeaf+d.f.ethStorageLeaf+d.f.ethSpine)/Math.max(1,d.netRacks)),d.swEthU,'','RA Table 4']);
+    L.push(['MPO-12/APC patch field',1,'','','trunk terminations']);
+    L.push(['Rack PDU A / B',2,'','','IEC 60309']);
+   }else if(r.kind==='storage'){
+    L.push([d.vastLabel,Math.ceil((d.vd||0)/Math.max(1,d.vRacks)),d.vBoxU,d.vBoxKw,'VAST/NVIDIA RA — '+(d.vAuto&&d.vAuto.exact?'published row':'EXTRAPOLATED past the published table')]);
+    L.push([d.vCboxLabel,Math.ceil((d.vc||0)/Math.max(1,d.vRacks)),d.vCboxU,d.vCboxKw,'VAST/NVIDIA RA']);
+    L.push(['Rack PDU A / B',2,'','','IEC 60309']);
+   }else if(r.kind==='memory'){
+    L.push([d.memLabel,Math.ceil((d.memUnits||0)/Math.max(1,d.mRacks)),d.memAppU,d.memAppKw,'11 TB per appliance vendor-published; kW ESTIMATED — Penguin publishes no power figure']);
+    L.push(['Rack PDU A / B',2,'','','IEC 60309']);
+   }else if(r.kind==='gp'){
+    L.push([d.gpLabel,Math.ceil((d.gpNodes||0)/Math.max(1,d.gpRacks)),'',d.gpKWPerRack,'Dell general-purpose from Partner Solutions — per-node kW is OUR estimate, not a Dell figure']);
+    L.push(['Rack PDU A / B',2,'','','IEC 60309']);
+   }
+   L.forEach(l=>perRackRows.push([nm,r.kind,r.vendor,r.phase,r.su||'',l[0],l[1],l[2],l[3],l[4]]));
+  });
+  perRackRows.push(['','','','','','','','','','']);
+  perRackRows.push(['NOTE','Composition is derived from the rack KIND, not from a vendor packing list. Tray ORDER varies by OEM integrator. Confirm against the as-built drawing before this becomes a receiving checklist. 95% cap.','','','','','','','','']);
+  sh.push({name:'BOM per rack',rows:perRackRows});
+  sh.push({name:'Network placement',rows:[['Metric','Value','Note'],
+   ['Placement',d.place,'left / middle / end of row, or top-of-rack'],
+   ['Dedicated network racks',d.netRacks,d.torMode?'ZERO — ToR puts switching in the compute racks':'switching lives in its own racks'],
+   ['Switch U per compute rack',d.torSwitchU||0,d.torMode?'consumed out of compute rack usable U':'n/a — switches are in network racks'],
+   ['Worst horizontal reach',d.rowRun,'m — '+(d.torMode?'in-rack, so node links do not cross the row':'every node link crosses the row to the hub')],
+   ['Node-link media',d.torMode?'passive DAC, in-rack':'optics — transceiver each end + trunk',
+     'THIS is the cost difference. ToR keeps node links on copper; EoR/MoR pushes every one of them onto optics.'],
+   ['Rail-optimised caveat',d.torRailWarn?'YES — read this':'n/a',
+     d.torRailWarn?'A rail-optimised fabric groups the SAME rail from many nodes onto one leaf. Doing that top-of-rack needs one leaf PER RAIL in every rack — '+d.rails+' switches a rack — or you give up rail optimisation. This is why NVIDIA\'s RA does not use ToR at SuperPOD scale. ToR suits smaller builds.':''],
+   ['','',''],
+   ['NOTE','Placement changes the cable BOM more than it changes the rack count. Confirm the leaf grouping against the reference architecture before committing to ToR.','']]});
   sh.push({name:'Cables',rows:[['Class','Colour','Colour name','Links','Speed','Media','Reach m','Optic/connector','Description'],
    ...d.L.map(l=>[l.cls,(d.colourMap[l.cls]||{}).hex||'',(d.colourMap[l.cls]||{}).name||'',l.n,l.speed,l.media,l.reach,l.opt,l.desc])]});
   sh.push({name:'Trunking',rows:[['Metric','Value','Note'],
