@@ -1346,6 +1346,17 @@ const ARCH=[
   * (GPUs x NVIDIA's published accelerator TDP) + ~2 kW host — because Dell publishes
   * PSU ratings, and a PSU rating is a ceiling, not a draw. The Partner Solutions tab
   * carries the same derivation and says so on its face. */
+ /* VERIFIED against "Altus XE4318GTSv2-DTC" (Penguin datasheet, 11.2025), read
+  * 2026-08-10 — docs/VENDOR-DOCS.md. 4U rackmount; 2x AMD EPYC 9005/9004 at 500 W max
+  * TDP; 8-GPU SXM NVIDIA HGX B300; 8 x 800 Gb/s OSFP InfiniBand XDR / dual 400 Gb/s
+  * Ethernet via onboard ConnectX-8; 2x 10GbE RJ45; dedicated RJ45 BMC; 5+5 x 5200 W
+  * 80Plus Titanium; 6.90 x 17.60 x 36.22 in; Direct-To-Liquid Cooling STANDARD.
+  *
+  * This is a GPU generation above the XE4318GTS-DTC above it, which is B200, and the
+  * sizer carried only that one until the datasheets were read. pkw is DERIVED as before:
+  * 8 x 1.4 kW B300 + 2 x 500 W EPYC + platform. */
+ {key:"altus-xe4318v2",label:"Penguin Altus XE4318GTSv2-DTC",who:"AMD EPYC 9005/9004 + B300 HGX · 4U DTC",gpu:"B300",per:8,unit:"node 4U",u:4,cpu:"EPYC 9005/9004",cpuper:2,nvl:8,pkw:14.3,cool:"liquid DTC",edge:"var(--ok)",
+  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14.3,fixedKw:0}},
  {key:"gb300-nvl72",label:"NVIDIA GB300 NVL72",who:"rack-scale · SuperPOD block",gpu:"B300",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:142,cool:"liquid DTC",su:8,edge:"var(--grace)",
   grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:6.4,fixedKw:26.8},sku:"rack"},
  {key:"dgx-b300",label:"NVIDIA DGX B300",who:"HGX 8-GPU node · 10U",gpu:"B300",per:8,unit:"node",u:10,cpu:"Xeon 6776P",cpuper:2,nvl:8,pkw:14,cool:"air/liquid",edge:"var(--cool)",
@@ -1615,9 +1626,30 @@ sync();
   * 9 NVLink switch trays, 6–8× 33 kW power shelves, 2 in-rack SN2201 OOB switches.
   * NVLink5 GPU↔GPU rides the copper cable-cartridge backplane — deliberately NOT a cable-BOM line. */
  const SPEC={
+  /* VERIFIED against the Penguin datasheet "Relion XE4418GTS-DTC" (11.2025), read
+   * 2026-08-10 — see docs/VENDOR-DOCS.md. Published: 4U rackmount; 2x Xeon 6 6700/6500
+   * at 350 W max TDP; HGX B300 288GB HBM3e SXM6 x8; 8 x 800 Gb/s OSFP InfiniBand XDR /
+   * dual 400 Gb/s Ethernet via onboard ConnectX-8; 2x 10GbE RJ45 on-board LAN; dedicated
+   * RJ45 BMC on an AST2600; 5+5 x 5200 W 80Plus Titanium; 6.90 x 17.60 x 36.22 in.
+   * The port topology below matches the sheet exactly — compute 8, storage 2, mgmt 2,
+   * bmc 1 — which is worth stating because it was arrived at independently.
+   *
+   * WEIGHT IS NOT ON THE DATASHEET. Dimensions are, weight is not. The 100 kg here has
+   * no source and rule P2 says so; the Rack Planner takes an override.
+   *
+   * pkw 14 remains DERIVED: 8 x 1.4 kW B300 + 2 x 350 W CPU + platform. The 5+5 x 5200 W
+   * supply is a RATING — 26 kW usable across five live units — not a draw, and sizing a
+   * feed from a PSU label is the mistake this tool exists to avoid. */
   "relion-xe4418":{label:"Penguin Relion XE4418GTS-DTC",unit:"node", nodeU:4, gpuPer:8, pkw:14,  weight:100,
+    psuCount:10, psuWatts:5200, psuRedundancy:'5+5 N+N', depthIn:36.22, widthIn:17.60, heightIn:6.90,
     ports:{compute:8,storage:2,mgmt:2,bmc:1}},
   "altus-xe4318": {label:"Penguin Altus XE4318GTS-DTC",unit:"node", nodeU:4, gpuPer:8, pkw:10.5,weight:100,
+    psuCount:10, psuWatts:5200, psuRedundancy:'5+5 N+N', depthIn:36.22, widthIn:17.60, heightIn:6.90,
+    ports:{compute:8,storage:2,mgmt:2,bmc:1}},
+  /* Datasheet-verified — see the ARCH entry. Same chassis and power system as the B200
+   * sibling; the GPU is HGX B300 and the CPUs are 500 W parts. */
+  "altus-xe4318v2":{label:"Penguin Altus XE4318GTSv2-DTC",unit:"node", nodeU:4, gpuPer:8, pkw:14.3,weight:100,
+    psuCount:10, psuWatts:5200, psuRedundancy:'5+5 N+N', depthIn:36.22, widthIn:17.60, heightIn:6.90,
     ports:{compute:8,storage:2,mgmt:2,bmc:1}},
   "dgx-b300":     {label:"NVIDIA DGX B300",        unit:"node", nodeU:10,gpuPer:8, pkw:14,  weight:130,
     ports:{compute:8,storage:2,mgmt:2,bmc:1}},
@@ -4643,6 +4675,18 @@ ${c.iso?`<h2>Multi-tenancy</h2>
      +(d.mRacks?` + ${d.mRacks} memory`:'')
      +(d.gpRacks?` + ${d.gpRacks} general-purpose`:'')
      +`. ${d.arch.rackU}U at ${d.arch.reserveU}U reserved${d.arch.pduU?` and ${d.arch.pduU}U of horizontal PDU`:''} = ${d.arch.usableU}U usable per cabinet. Specification DERIVED from your floor settings; part number NOT PUBLISHED — vendor lookup required`],
+   /* TEN PSUs PER NODE IS TEN CORDS PER NODE. The Relion datasheet gives 5+5 x 5200 W
+    * true N+N, so a rack of 8 nodes needs 80 power cords and the build needs 640. They
+    * were nowhere in the BOM — a rack of servers with no cords in the parts list is a
+    * delivery that stops at the loading dock. Split A/B because that is what N+N means. */
+   ...((d.arch.spec&&d.arch.spec.psuCount)?[
+     ['Power',`Power cord — ${d.arch.feed.single==='n/a'?'C13/C14':'C19/C20'} · A feed`,
+       Math.ceil(d.nodesTotal*d.arch.spec.psuCount/2),
+       `${d.arch.spec.psuCount} PSUs per node (${d.arch.spec.psuRedundancy}, ${d.arch.spec.psuWatts} W each — VENDOR-PUBLISHED), half on the A feed`],
+     ['Power',`Power cord — ${d.arch.feed.single==='n/a'?'C13/C14':'C19/C20'} · B feed`,
+       Math.floor(d.nodesTotal*d.arch.spec.psuCount/2),
+       `the other half on B. True N+N means both paths are populated, not one plus a spare`],
+   ]:[]),
    ['Power',`Rack PDU — ${d.arch.pduOrient==='horizontal'?'1U horizontal':'0U vertical'} · ${d.arch.feed.label} · ${d.arch.feed.connector}`,
      d.racks.filter(r=>r.kind!=='empty').length*d.arch.pduPerRack,
      `${d.arch.pduPerRack} per rack (${d.arch.pduPerRack===2?'A/B feed paths':'single path'}), inlet follows the ${d.arch.feed.label} feed you selected. ${d.arch.pduOrient==='horizontal'?`Horizontal costs ${d.arch.pduU}U of the rack.`:'0U vertical costs no rack units.'} Part number NOT PUBLISHED — vendor lookup required`],
