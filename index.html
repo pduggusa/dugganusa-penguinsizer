@@ -5408,13 +5408,17 @@ window.__MATH=(function(){
    coresPerSocket:86, coresVerified:false, maxRamTB:null, gen:17,
    note:'1U two-socket Intel Xeon 6. PSU range assumed to follow the R770 family — not separately verified.'},
   {k:'r770', label:'PowerEdge R770',  u:2, sockets:2, cpu:'Intel Xeon 6',   vendor:'Dell', maxPsuW:3200, psuVerified:true,
-   coresPerSocket:86, coresVerified:true,  maxRamTB:null, gen:17,
+   coresPerSocket:144, coresVerified:true, idleW:314, idleAvgW:294, idleMinW:14, idleMaxW:531,
+   idleBasis:'Dell iDRAC10 Redfish mockup, 2x Xeon 6766E / 288 cores / 64 GiB, CPUs at 47.8C — IDLE',
+   psuModel:'800 W Delta redundant', psuEff:85, maxRamTB:null, gen:17,
    note:'2U two-socket. Dell lists PSUs from 800 W to 3200 W and Xeon 6 SKUs to 6787P (86C/172T). Up to 16 SAS4/SATA, 24 mixed, or 40 E3.S NVMe.'},
   {k:'r6725',label:'PowerEdge R6725', u:1, sockets:2, cpu:'AMD EPYC Turin', vendor:'Dell', maxPsuW:3200, psuVerified:false,
    coresPerSocket:128, coresVerified:false, maxRamTB:null, gen:17,
    note:'1U two-socket AMD, built for performance density.'},
   {k:'r7725',label:'PowerEdge R7725', u:2, sockets:2, cpu:'AMD EPYC Turin', vendor:'Dell', maxPsuW:3200, psuVerified:true,
-   coresPerSocket:128, coresVerified:false, maxRamTB:6, gen:17,
+   coresPerSocket:128, coresVerified:true, idleW:182, idleAvgW:181, idleMinW:177, idleMaxW:201,
+   idleBasis:'Dell iDRAC10 Redfish mockup, 2x EPYC 9755 128-core / 256 cores / 32 GiB, CPUs at 26C — IDLE',
+   psuModel:'1500 W Delta redundant', psuEff:92, maxRamTB:6, gen:17,
    note:'2U two-socket AMD. Up to 6 TB DDR5, 8x PCIe Gen5, dual OCP. Full Titanium PSU table published.'}
  ];
  /* R7725 PSU table — transcribed verbatim from Dell\'s Installation & Service Manual.
@@ -5648,12 +5652,37 @@ window.__MATH=(function(){
  }
  const arrayIopsEff=()=>P.iopsMode==='derive'?iopsCapability().eff:(P.arrayIops||1);
 
+ /* ---- WHAT DELL'S OWN HARDWARE ACTUALLY DRAWS -------------------------------
+  * Dell publishes full iDRAC Redfish MOCKUPS — complete API trees captured from real
+  * machines — in dell/iDRAC-Redfish-Scripting. They contain PowerConsumedWatts,
+  * min/avg/max over an interval, and per-PSU input, output and efficiency.
+  *
+  * They corrected this tool twice:
+  *
+  *  1. The load factor was BADLY wrong as a method. A flat fraction of PSU RATING
+  *     said 1320 W for an R770; the machine draws 314 W. A 1500 W PSU on the R7725
+  *     carries a 182 W load — 12% of its rating, not 55%. Sizing off a PSU ceiling
+  *     overstates by 4-7x.
+  *  2. The Intel core count was wrong. 86C came from the R770 page's P-core list;
+  *     Dell's own R770 mockup ships a Xeon 6766E at 144 cores per socket.
+  *
+  * WHAT THEY ARE NOT: these are IDLE lab systems. The R7725xd sits at 26 C against a
+  * 23 C inlet with 32 GiB of memory in a 256-core box. So they are a measured FLOOR,
+  * not a load figure — a fully-populated node under work draws far more. Treating an
+  * idle mockup as a design figure would be the same error in the other direction, and
+  * the tool says so rather than quietly adopting the smaller number.
+  *
+  * PSU EFFICIENCY IS REAL AND PUBLISHED HERE: 85% on the 800 W Delta, 92% on the
+  * 1500 W. Facility draw = IT draw / efficiency, which is a line most sizings skip. */
+ const REDFISH_NOTE='Measured idle from Dell iDRAC Redfish mockups (dell/iDRAC-Redfish-Scripting). A FLOOR, not a design load — those machines are idle and lightly populated.';
+
  const LS_P='penguin-partner-v1';
  const D={basis:'profile',gen:17,wl:'oltp',units:10,plat:'r770',
    cores:null,ramGB:null,iops:null,mbps:null,capGB:null,load:null,
    coresPerSocket:null, ramPerNodeGB:2048, psuW:2400,
    aIops:0,aMbps:0,aCapTB:0,aLatMs:0,aReadPct:70,aWindow:'',
    sfam:'PowerStore',smodel:'ps3200t',arrayTB:150,arrayIops:150000,
+   powerMode:'model', measuredW:0,
    sBasis:'follow', sCapTB:500, sIops:120000, sMbps:4000, sGrowth:25, loSource:'liveoptics',
    iopsMode:'derive', drives:24, driveIops:100000, driveMBps:7000, ioKB:8, raid:'dre', readPct:70,
    sw:'s5448f', rackU:42, reserveU:4, voltage:415, phase:'3', pf:0.98, redundancy:'2N',
@@ -5706,7 +5735,17 @@ window.__MATH=(function(){
   const nodes=Math.max(1,byCore,byRam);
   const nodeLimit=byRam>byCore?'memory-bound':byCore>byRam?'core-bound':'balanced';
   // POWER — load factor x PSU capacity. Ours, editable, and the biggest lever here.
-  const psuW=P.psuW, nodeKW=psuW*load/1000, computeKW=+(nodes*nodeKW).toFixed(1);
+  /* Node power: MEASURED IDLE + a workload delta, not a fraction of the PSU ceiling.
+   * Dell's Redfish mockups show the ceiling method overstating by 4-7x. Idle is theirs
+   * and cited; the delta is ours and is the number to replace with your own Redfish
+   * reading. Facility draw divides by PSU efficiency — also Dell-published. */
+  const psuW=P.psuW;
+  const idleKW=(plat.idleW||250)/1000;
+  const deltaKW=Math.max(0,(psuW*load/1000)-idleKW);
+  const nodeKW=P.powerMode==='measured'&&P.measuredW>0 ? P.measuredW/1000 : +(idleKW+deltaKW).toFixed(2);
+  const psuEff=(plat.psuEff||90)/100;
+  const computeKW=+(nodes*nodeKW).toFixed(1);
+  const facilityKW=+(computeKW/psuEff).toFixed(1);
   /* STORAGE — sized on its own terms. Deriving the array from the compute workload
    * meant you could not size an array refresh without inventing a compute estate to
    * justify it, which is a real project people actually have. */
@@ -5796,7 +5835,8 @@ window.__MATH=(function(){
     racks*feeds*(spOver?feedsNeeded:1),null,null,
     P.redundancy+' redundancy, 80% continuous-load derate'+(spOver?'; single-phase ceiling exceeded, feeds multiplied':''),spOver);
   return {w,plat,st,sw,per,load,demand,coresPerNode,ramPerNode,nodes,byCore,byRam,nodeLimit,psuW,nodeKW,computeKW,
-    capTB,arrays,byCap,byIops,arrLimit,arrW,storeKW,storeU,sMode,sDemand,aIopsCap,iops:iopsCapability(),fabricPorts,switches,swKW,totalKW,amps,breaker,connector,feeds,
+    capTB,arrays,byCap,byIops,arrLimit,arrW,storeKW,storeU,sMode,sDemand,aIopsCap,iops:iopsCapability(),
+    idleKW,deltaKW,psuEff,facilityKW,fabricPorts,switches,swKW,totalKW,amps,breaker,connector,feeds,
     totalBTU,airBTU,liquidKW,cfm,lpm,usableU,uTotal,racks,rackLimit,lines,bom,hw,three,V,
     spCeilKW,spOver,feedsNeeded,growth:P.growth,gen:P.gen};
  }
@@ -5892,7 +5932,12 @@ window.__MATH=(function(){
     ${num('coresPerSocket','Cores per socket','R770: 86C/172T is Dell-listed. AMD figure is ours — confirm the SKU.')}
     ${num('ramPerNodeGB','Memory per node GB','R7725 supports up to 6 TB — vendor-published')}
     ${sel('psuW','PSU',PSU.map(p=>`<option value="${p.w}"${+P.psuW===p.w?' selected':''}>${p.w} W ${p.cls} — ${p.btu.toLocaleString()} BTU/hr</option>`).join(''),'Dell’s published table. This is a CEILING.')}
-    ${num('load','Load factor 0–1','<b>ours, and the biggest lever on every number below</b> — replace with a measured draw',0.05)}
+    ${num('load','Load factor 0–1','sets the workload delta above idle. <b>Ours</b> — and Dell&rsquo;s own Redfish mockups show a flat fraction of PSU RATING overstates by 4–7×, which is why idle is measured separately.',0.05)}
+    <label class="pn-f"><span>Power basis</span><select data-pk="powerMode">
+      <option value="model"${P.powerMode!=='measured'?' selected':''}>Modelled — measured idle + delta</option>
+      <option value="measured"${P.powerMode==='measured'?' selected':''}>I have a Redfish measurement</option></select>
+      <em>iDRAC reports PowerConsumedWatts with min/avg/max. That retires every assumption on this panel.</em></label>
+    ${P.powerMode==='measured'?num('measuredW','Measured watts per node','from /redfish/v1/Chassis/System.Embedded.1/Power',10):''}
    </div>
    <div class="mem-panel"><h5>Storage</h5>
     ${sel('smodel','Array',STORE.filter(s=>!s.nodes).map(s=>`<option value="${s.k}"${s.k===P.smodel?' selected':''}>${s.label}</option>`).join(''))}
@@ -5929,8 +5974,11 @@ window.__MATH=(function(){
     ${row('Cores delivered',N(r.nodes*r.coresPerNode),'cores',r.coresPerNode+' per node · '+N(r.demand.cores)+' demanded')}
     ${row('Memory delivered',N(r.nodes*r.ramPerNode/1024),'TB',N(r.demand.ramGB/1024)+' TB demanded')}
     ${row('Rack units',N(r.nodes*r.plat.u),'U',r.plat.u+'U each')}
-    ${row('Load per node',N1(r.nodeKW),'kW',`${r.psuW} W PSU × ${r.load} load factor — `+badge(false,'ours'))}
-    ${row('Compute load',N1(r.computeKW),'kW','nodes × per-node')}
+    ${row('Idle floor',N1(r.idleKW),'kW',r.plat.idleBasis?badge(true,'dell measured')+' '+r.plat.idleBasis:badge(false,'estimated'))}
+    ${row('Workload delta',N1(r.deltaKW),'kW',badge(false,'ours')+' what the work adds on top of idle — replace with your own Redfish reading')}
+    ${row('Load per node',N1(r.nodeKW),'kW',P.powerMode==='measured'?badge(true,'your measurement'):'idle + delta')}
+    ${row('Compute load',N1(r.computeKW),'kW','IT draw — nodes × per-node')}
+    ${row('Facility draw',N1(r.facilityKW),'kW',`÷ ${(r.psuEff*100).toFixed(0)}% PSU efficiency `+badge(true,'dell')+` ${r.plat.psuModel||''} — this is what the room pays for`)}
    </tbody></table></div>
    <div class="mem-panel"><h5>Storage</h5><table class="pn-t"><tbody>
     ${row('Array',r.st.label,r.st.u?r.st.u+'U':'—',badge(!!r.st.vendor,r.st.vendor?'vendor':'unverified'))}
