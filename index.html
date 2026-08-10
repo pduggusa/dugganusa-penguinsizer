@@ -2159,10 +2159,23 @@ sync();
      ?`Simple mode holds ${MAX_RACKS}, so ${MAX_RACKS} will be built covering ${(MAX_RACKS*per*s.gpuPer).toLocaleString()} of ${gpus.toLocaleString()} GPUs.\n\n`
      :'')+
    `This replaces the current ${state.racks.length} rack${state.racks.length===1?'':'s'}.`;
-  if(!confirm(msg))return false;
+  /* Fabric. Every node needs a leaf port per rail plus storage and management, so a
+   * build with no switch in it is not a build. 48 usable ports per S5448F-ON, two
+   * minimum for redundancy — the same A/B thinking the advanced planner applies. */
+  const portsNeeded=nodesNeeded*((SPEC[arch].ports&&SPEC[arch].ports.compute)||2);
+  const leaves=Math.max(2,Math.ceil(portsNeeded/48));
+  const swArch='dell-s5448f';
+  const netRacksNeeded=SPEC[swArch]?Math.ceil(leaves/Math.max(1,calc({...defRack(),arch:swArch,nodes:null}).maxSpace)):0;
+  if(!confirm(msg+`\n\nPlus fabric: ${leaves} leaf switch${leaves===1?'':'es'} for ${portsNeeded} node ports, in ${netRacksNeeded} network rack${netRacksNeeded===1?'':'s'}.`))return false;
   let left=Math.min(nodesNeeded,racks*per);
   state.racks=Array.from({length:racks},()=>{const n=Math.min(per,left);left-=n;
     return {...defRack(),arch,nodes:n,liquidFrac:liquid};}).filter(r=>r.nodes>0);
+  if(SPEC[swArch]&&state.racks.length<MAX_RACKS){
+   const perNet=Math.max(1,calc({...defRack(),arch:swArch,nodes:null}).maxSpace);
+   let sw=leaves;
+   while(sw>0&&state.racks.length<MAX_RACKS){const nn=Math.min(perNet,sw);sw-=nn;
+    state.racks.push({...defRack(),arch:swArch,nodes:nn,liquidFrac:0});}
+  }
   if(!state.racks.length)state.racks=[defRack()];
   const sb=document.querySelector('#rkMode button[data-m="simple"]'); if(sb)sb.click();
   setDirty(true);persist();render();
@@ -3429,6 +3442,20 @@ ${c.iso?`<h2>Multi-tenancy</h2>
      }
     } else ordered=ordered.concat(padToRow([...net]));
    }
+   /* Patch panels occupy real U. Network racks absorb some; anything beyond that gets
+    * its own patch rack rather than being a BOM line with no home. */
+    const panelsPerNetRack=8, panelU=1, panelsPerPatchRack=40;
+    /* trunkPanels is derived further down, so compute the same quantity from inputs
+     * that exist here: one MPO position per 800G link, divided by panel port count. */
+    const mpoPositions=computeRacks*((perRack&&perRack.compute)||72);
+    const panelsEst=Math.ceil(mpoPositions/Math.max(1,gi('trunkPorts')||24));
+    const absorbed=net.length*panelsPerNetRack;
+    const overflow=Math.max(0,panelsEst-absorbed);
+    const patchRacks=Math.ceil(overflow/panelsPerPatchRack);
+    for(let i=0;i<patchRacks;i++)
+     racks.push({kind:'patch',vendor:'passive',su:null,phase:1,idx:0,key:'p'+(i+1)});
+    const pat=racks.filter(r=>r.kind==='patch');
+    if(pat.length) ordered=ordered.concat(padToRow([...pat]));
    if(sto.length) ordered=ordered.concat(padToRow([...sto]));
    if(mem.length) ordered=ordered.concat(padToRow([...mem]));
    if(gp.length)  ordered=ordered.concat(padToRow([...gp]));
@@ -3713,6 +3740,11 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    {u:1,n:1,t:'oob',label:'SN2201 OOB — rack management',dev:'OOB'},
    {u:1,n:1,t:'patch',label:'MPO-12/APC patch panel',dev:'PP'},
    {u:4,n:10,t:'memai',label:MEMAI.label+' — '+MEMAI.mem,dev:'MEM'},
+  ];
+  if(kind==='patch') return [
+   {u:1,n:1,t:'oob',label:'Rack management',dev:'OOB'},
+   {u:1,n:40,t:'patch',label:'MPO-12/APC patch panel — 24 positions',dev:'PP'},
+   {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
   ];
   if(kind==='storage') return [
    {u:1,n:1,t:'oob',label:'SN2201 OOB — rack management',dev:'OOB'},
@@ -4430,6 +4462,11 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    B('oob',40,'—','SN2201 OOB uplinks — SFP28 DAC'),
    B('pdu',54,'—','Rack PDU A / B — '+(d.netRed==='single'?'single feed':'A/B feeds, opposite row ends')),
   ].join('');
+  if(r.kind==='patch') return [
+   B('patch',200,'—','Rear of the patch field — trunk assemblies land here, node and leaf jumpers leave from the front'),
+   B('oob',40,'—','Rack management — Cat6A'),
+   B('pdu',40,'—','Rack PDU A / B — passive field, minimal load'),
+  ].join('');
   if(r.kind==='storage') return [
    B('manifold',40,'—','Blanking / airflow — VAST is air-cooled'),
    B('ethleaf',110,'—','DBox rear — 4x back-end 100G per enclosure, 2x BMC, 2x console'),
@@ -4475,6 +4512,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   r.kind==='compute'?`Scalable Unit ${r.su} · ${d.computeLabel}`
  :r.kind==='gp'?`General-purpose · ${d.gpLabel} · ${d.gpKWPerRack} kW — power is OUR estimate, not a Dell figure`
  :r.kind==='storage'?`Storage · ${d.vastLabel} + ${d.vCboxLabel} · ${d.vd} DBox / ${d.vc} CBox across ${d.vRacks} rack${d.vRacks===1?'':'s'}`
+ :r.kind==='patch'?`Patch field · MPO-12/APC · ${d.trunkPanels} panels total, ${d.portsPerRack} MPO positions per compute rack`
  :r.kind==='memory'?`Memory tier · ${d.memLabel} · ${d.memUnits} appliance${d.memUnits===1?'':'s'} · ${d.memTB} TB — kW ESTIMATED, Penguin publishes no power figure`
  :'Network rack · leaf, spine and OOB'}</div></div>
       <button class="rk-btn" data-close="1">close</button></div>
