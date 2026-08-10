@@ -650,6 +650,10 @@
           <div class="seg" id="rkPlace" style="max-width:330px">
             <button data-p="left">Left of row</button><button data-p="mor">Middle of row</button><button data-p="eor" class="on">Right of row</button><button data-p="tor">Top of rack</button>
           </div>
+          <span class="dt-lbl">Fabric redundancy</span>
+          <div class="seg" id="rkRed" style="max-width:400px">
+            <button data-r="single">Single plane</button><button data-r="ab50" class="on">A/B · half each</button><button data-r="ab100">A/B · full each</button>
+          </div>
           <button class="rk-btn" id="rkReset" title="Clear every saved setting across all tabs and start clean">↺ Reset all</button>
           <span class="rk-modenote" id="rkModeNote">Hand-configure individual racks: power, thermal, per-rack cabling and a SKU-rational BOM.</span>
         </div>
@@ -3044,7 +3048,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:4608,floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',vastMode:'auto',
-      netPlacement:'eor',rackPitchM:0.6,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
+      netPlacement:'eor',netRed:'ab50',rackPitchM:0.6,
+      rackDepthM:1.2, coldAisleM:1.2, hotAisleM:0.9, serviceM:1.0,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
       trunkRacks:4,trunkPorts:24,trunkSide:'right',rackOrder:null,aisles:1,
       memAI:1,memPerSU:1,loadCap:80,
       site:'DC1',room:'R01',row:'A',patRack:'{site}{room}{row}{rack}',
@@ -3078,8 +3083,34 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * rail-optimised fabric groups the SAME rail from many nodes onto one leaf. Doing
    * that top-of-rack needs one leaf PER RAIL in every rack — 8 switches a rack — or you
    * give up rail optimisation. ToR is right for smaller builds and wrong for the RA. */
+  /* FABRIC REDUNDANCY — LEFT AND RIGHT, AND WHAT MAINTENANCE COSTS YOU.
+   * A single plane means every firmware upgrade is an outage window. Two planes at
+   * opposite ends of the row (A left, B right) mean a switch, a patch field or a whole
+   * row-end can go away and the workload survives — but ONLY if you decided up front
+   * how much it survives with:
+   *
+   *   single  one plane. Maintenance = downtime. Cheapest, and honest about it.
+   *   ab50    two planes, each carrying half. Maintenance costs you HALF YOUR
+   *           BANDWIDTH, not your uptime. This is the common design.
+   *   ab100   two planes, each sized for the WHOLE load. Maintenance is invisible to
+   *           the workload. Costs double the switches and double the optics.
+   *
+   * The reason it is left AND right rather than two switches in one rack: a shared
+   * rack, a shared patch field or a shared PDU pair is a single event that takes both
+   * planes, which converts your redundancy into paperwork. */
   const torMode = (A.netPlacement||'eor')==='tor';
-  const netRacks = torMode ? 0 : Math.max(1,Math.ceil(swU/42));
+  const netRed = A.netRed||'ab50';
+  const planes = netRed==='single' ? 1 : 2;
+  const perPlane = netRed==='ab100' ? 1 : (netRed==='ab50' ? 0.5 : 1);
+  const swUred = Math.ceil(swU*planes*perPlane);
+  const netRacks = torMode ? 0 : Math.max(planes,Math.ceil(swUred/42));
+  const netRacksPerSide = torMode ? 0 : Math.ceil(netRacks/planes);
+  const maintLoss = netRed==='single' ? 100 : (netRed==='ab50' ? 50 : 0);
+  const maintText = netRed==='single'
+    ? 'ONE PLANE. Any switch maintenance is a workload outage — there is no second path. Budget a window, or accept the risk deliberately.'
+    : netRed==='ab50'
+    ? 'Two planes, each carrying half. Taking side A down for maintenance leaves the workload UP on side B at 50% fabric bandwidth. Training jobs will slow, not stop — confirm your collective operations tolerate it.'
+    : 'Two planes, each sized for the whole load. Maintenance on either side is invisible to the workload. You are paying double the switches and double the optics for that.';
   const torSwitchU = torMode ? Math.ceil(swU/Math.max(1,computeRacks)) : 0;
   const torRailWarn = torMode && FABRIC.su.rails>1;
 
@@ -3171,6 +3202,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     ? Math.max(1,Math.ceil(totalRows/rowsPerFloorSet))
     : Math.max(1,gi('floors'));
   const rowsPerFloor=rowsPerFloorSet>0?rowsPerFloorSet:Math.max(1,Math.ceil(totalRows/floors));
+
+
   const perFloorRacks=Math.ceil((computeRacks+netRacks+vRacks+mRacks)/floors);
   /* Only the floors that DO NOT hold the spine need a riser. The spine floor's leaf
    * traffic never leaves the floor. Charging every leaf-spine link to the riser — which
@@ -3265,6 +3298,29 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    byKey.forEach(r=>out.push(r));
    racks.length=0; out.forEach((r,i)=>{ r.idx=i+1; racks.push(r); });
   }
+
+  /* PHYSICAL SPACE. Columns are racks across a row, and a row is a real object with a
+   * real width, a depth, a cold aisle in front and a hot aisle behind. A floor plan
+   * that does not close on metres is a diagram, not a plan — and the number that kills
+   * projects is not rack count, it is whether the room is long enough. */
+  const rackW=Math.max(0.3,gi('rackPitchM')||0.6);
+  const rackD=Math.max(0.6,gi('rackDepthM')||1.2);
+  const coldA=Math.max(0,gi('coldAisleM')||1.2);
+  const hotA=Math.max(0,gi('hotAisleM')||0.9);
+  const serviceM=Math.max(0,gi('serviceM')||1.0);
+  const cols=Math.max(1,perRow);
+  const floorWidthM=+(cols*rackW + serviceM*2).toFixed(1);          // row length + service at both ends
+  const rowsOnFloor=Math.max(1,rowsPerFloor||totalRows);
+  const rowPitchM=+(rackD + (coldA+hotA)/2).toFixed(2);             // rack + its share of both aisles
+  const floorDepthM=+(rowsOnFloor*rowPitchM + coldA).toFixed(1);    // plus one terminating aisle
+  const floorAreaM2=+(floorWidthM*floorDepthM).toFixed(0);
+  const m2PerRack=racks.length?+(floorAreaM2/Math.ceil(racks.length/Math.max(1,floors))).toFixed(1):0;
+
+  /* EMPTY POSITIONS STAY EMPTY. A grid of cols x rows rarely divides evenly into the
+   * rack count, and quietly compacting the last row makes the drawing lie about the
+   * floor. The gaps are real: they are where the next phase lands. */
+  const gridSlots=cols*rowsOnFloor*Math.max(1,floors);
+  const emptySlots=Math.max(0,gridSlots-racks.length);
 
   /* ---- USER-DEFINED TRUNKING -------------------------------------------------
    * Three things a real fibre plant designer sets and this tool previously assumed:
@@ -3370,6 +3426,9 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    swIb:FABRIC.sw.ibLeaf.model, swIbU:FABRIC.sw.ibLeaf.u,
    swEth:FABRIC.sw.ethLeaf.model, swEthU:FABRIC.sw.ethLeaf.u,
    torMode,torSwitchU,torRailWarn,rails:FABRIC.su.rails,podOf,podLabel,
+   netRed,planes,perPlane,netRacksPerSide,maintLoss,maintText,swUred,
+   cols,rackW,rackD,coldA,hotA,serviceM,floorWidthM,floorDepthM,floorAreaM2,rowPitchM,m2PerRack,
+   gridSlots,emptySlots,
    gpRacks,gpKW,gpLabel,gpNodes,gpKWPerRack:gpRacks?+(gpKW/gpRacks).toFixed(1):0,
    computeVendor,computeLabel,
    gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
@@ -3530,7 +3589,11 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'gpus',l:'Target GPUs',step:576,hint:'576 per SU'},
   {k:'floors',l:'Floors',step:1,hint:'vertical spread'},
   {k:'racksPerRow',l:'Racks per row',step:1,hint:'rows are computed'},
-  {k:'rackPitchM',l:'Rack pitch (m)',step:0.1,hint:'0.6 = 600mm'},
+  {k:'rackPitchM',l:'Rack pitch (m)',step:0.1,hint:'0.6 = 600mm — column width'},
+  {k:'rackDepthM',l:'Rack depth (m)',step:0.1,hint:'1.2 = 1200mm'},
+  {k:'coldAisleM',l:'Cold aisle (m)',step:0.1,hint:'front-to-front per ASHRAE TC9.9'},
+  {k:'hotAisleM',l:'Hot aisle (m)',step:0.1,hint:'back-to-back'},
+  {k:'serviceM',l:'End service space (m)',step:0.1,hint:'each end of a row'},
   {k:'trayRiseM',l:'Tray rise (m)',step:1,hint:'up+over+down'},
   {k:'interFloorM',l:'Inter-floor run (m)',step:5,hint:'riser length'},
   {k:'trunkFibers',l:'Trunk fibres',step:12,hint:'12/24/48/96/144'},
@@ -4131,6 +4194,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   const optLinks=opt.reduce((a,l)=>a+l.n,0);
   const rows=[
    ['Rack','GB300 NVL72 compute rack',d.computeRacks,`${Math.ceil(d.suNeeded)} SU x 8 racks — RA`],
+   ...(d.planes>1&&!d.torMode?[['Rack','Network rack — side A (left of row)',d.netRacksPerSide,
+     `plane A of ${d.planes} · ${d.netRed==='ab100'?'sized for the FULL load':'sized for half the load'}`],
+    ['Rack','Network rack — side B (right of row)',d.netRacksPerSide,
+     `plane B — deliberately at the opposite row end so one row-end event cannot take both planes`]]:[]),
    ...(d.torMode?[['Rack','Top-of-rack switching (no dedicated network racks)',d.computeRacks,
      `${d.torSwitchU}U of switching per compute rack — ToR, so node links stay in-rack on short DAC and only uplinks leave`]]:[]),
    ['Rack','Network rack (42U usable)',d.netRacks,`${NUMF(d.swU)}U of switching packed at 42U/rack — derived`],
@@ -4207,6 +4274,11 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  }
 
  // ---- mode switching ---------------------------------------------------------------
+ document.querySelectorAll('#rkRed button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#rkRed button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  A.netRed=b.dataset.r; save(); paint();
+  const nn=$a('rkModeNote'); if(nn&&window.__ADV_MODEL){try{nn.textContent=window.__ADV_MODEL().maintText;}catch(e){}}
+ });
  document.querySelectorAll('#rkPlace button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#rkPlace button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); A.netPlacement=b.dataset.p;
@@ -4634,6 +4706,23 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Worst horizontal reach',d.rowRun,'m — '+(d.torMode?'in-rack, so node links do not cross the row':'every node link crosses the row to the hub')],
    ['Node-link media',d.torMode?'passive DAC, in-rack':'optics — transceiver each end + trunk',
      'THIS is the cost difference. ToR keeps node links on copper; EoR/MoR pushes every one of them onto optics.'],
+   ['Columns (racks per row)',d.cols,'the row length driver'],
+   ['Row pitch',d.rowPitchM+' m','rack depth '+d.rackD+' m + its share of both aisles'],
+   ['Floor width',d.floorWidthM+' m',d.cols+' columns x '+d.rackW+' m + '+d.serviceM+' m service at each end'],
+   ['Floor depth',d.floorDepthM+' m','rows x row pitch + one terminating cold aisle'],
+   ['Floor area',d.floorAreaM2+' m²','per floor — CHECK THIS AGAINST THE ROOM. Rack count is never what kills a project; room length is.'],
+   ['Area per rack',d.m2PerRack+' m²','including aisles and service space'],
+   ['Grid slots',d.gridSlots,'columns x rows x floors'],
+   ['Empty positions',d.emptySlots,d.emptySlots?'left EMPTY on purpose — the grid rarely divides evenly and compacting the last row makes the drawing lie. These gaps are where the next phase lands.':'grid divides evenly'],
+   ['Fabric redundancy',d.netRed==='single'?'single plane':d.netRed==='ab100'?'A/B, each full load':'A/B, each half load',
+     'left and right of row — never both planes in one rack, one patch field or one PDU pair'],
+   ['Planes',d.planes,d.planes>1?'A left, B right':'one'],
+   ['Network racks per side',d.netRacksPerSide,'switching split across both row ends'],
+   ['Bandwidth lost during maintenance',d.maintLoss+'%',d.maintText],
+   ['A/B across phases',d.planes>1&&d.phases>1?'CHECK THIS':'n/a',
+     d.planes>1&&d.phases>1
+       ? 'You are building '+d.phases+' phases with a two-plane fabric. If plane B lands in a later phase than plane A, THERE IS NO REDUNDANCY UNTIL THAT PHASE COMPLETES — you are running single-plane with a maintenance outage exposure for the whole interval, which is usually months. Either land both planes in phase 1 at reduced width, or accept the exposure deliberately and write it down.'
+       : 'single plane or single phase — no staging exposure'],
    ['Rail-optimised caveat',d.torRailWarn?'YES — read this':'n/a',
      d.torRailWarn?'A rail-optimised fabric groups the SAME rail from many nodes onto one leaf. Doing that top-of-rack needs one leaf PER RAIL in every rack — '+d.rails+' switches a rack — or you give up rail optimisation. This is why NVIDIA\'s RA does not use ToR at SuperPOD scale. ToR suits smaller builds.':''],
    ['','',''],
