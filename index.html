@@ -669,7 +669,9 @@
             <button class="rk-btn primary" id="advImportBtn">↙ Import target from Size It</button>
             <span class="adv-importnote" id="advImportNote">Pulls the GPU count currently set on the Size It tab and rebuilds the whole design against it.</span>
           </div>
+          <p class="lede" style="margin-top:10px">Architecture: <select id="advArch" class="rk-btn" style="padding:5px 9px"></select> Rack feed: <select id="advFeed" class="rk-btn" style="padding:5px 9px"></select> <span id="advArchNote"></span></p>
           <div class="adv-ctl" id="advCtl"></div>
+          <div class="adv-rules" id="advRules"></div>
           <div class="adv-out" id="advOut"></div>
           <h3 class="mem-h">Wiring diagram — rows, hub placement and cable runs</h3>
           <p class="lede">Every rack in the build, laid out in rows at your <b style="color:var(--ink)">racks-per-row</b> setting, with the network hub drawn where your <b style="color:var(--ink)">placement</b> setting puts it. Cable bundles are drawn to scale — <b style="color:var(--ink)">thickness is link count, colour is the cable colour you set</b>. <b style="color:var(--ink)">Drag any rack</b> — including the VAST storage racks — to a different position and the layout, the naming sequence and every export follow it. Aisles are drawn <b style="color:var(--ink)">front-to-front and back-to-back</b> per ASHRAE TC9.9, so the cold aisle is where the intakes face each other. Click a rack to expand its labels and per-class link breakdown.</p>
@@ -1440,6 +1442,7 @@
           <button class="rk-btn primary" id="bsXlsx">⬇ Workbook (XLSX — 8 sheets)</button>
           <button class="rk-btn" id="bsCsv">⬇ Build sheet (CSV)</button>
           <button class="rk-btn" id="bsJson">⬇ Full build (JSON)</button>
+          <button class="rk-btn" id="bsBomJson" title="Rationalized BOM with stable part IDs, vendor, MPN and provenance — the shape an ordering system consumes">⬇ BOM for ordering (JSON)</button>
           <span class="mem-local">🔒 generated in your browser · nothing uploaded</span>
         </div>
         <footer style="margin-top:18px">
@@ -1473,10 +1476,6 @@ const GPU={B300:{name:"B300 Blackwell Ultra",hbm:288,fp4:15.3,tdp:1.4,capexId:"c
  * physically exists inside it — the GB300 NVL72's 18 compute trays (4× B300 + 2× Grace each),
  * or simply the node for HGX builds. NVIDIA's own sizers quantize to `per`; we size to `grain`. */
 const ARCH=[
- {key:"gb300-nvl72",label:"NVIDIA GB300 NVL72",who:"rack-scale · SuperPOD block",gpu:"B300",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:142,cool:"liquid DTC",su:8,edge:"var(--grace)",
-  grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:6.4,fixedKw:26.8},sku:"rack"},
- {key:"dgx-b300",label:"NVIDIA DGX B300",who:"HGX 8-GPU node · 10U",gpu:"B300",per:8,unit:"node",u:10,cpu:"Xeon 6776P",cpuper:2,nvl:8,pkw:14,cool:"air/liquid",edge:"var(--cool)",
-  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14,fixedKw:0}},
  {key:"relion-xe4418",label:"Penguin Relion XE4418GT",who:"Intel Xeon 6 + B300 HGX · 4U DTC",gpu:"B300",per:8,unit:"node 4U",u:4,cpu:"Xeon 6",cpuper:2,nvl:8,pkw:14,cool:"liquid DTC",edge:"var(--ok)",hero:1,
   grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14,fixedKw:0}},
  {key:"altus-xe4318",label:"Penguin Altus XE4318GTS",who:"AMD EPYC Turin + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"EPYC Turin",cpuper:2,nvl:8,pkw:10.5,cool:"liquid DTC",edge:"var(--warn)",
@@ -1486,6 +1485,10 @@ const ARCH=[
   * (GPUs x NVIDIA's published accelerator TDP) + ~2 kW host — because Dell publishes
   * PSU ratings, and a PSU rating is a ceiling, not a draw. The Partner Solutions tab
   * carries the same derivation and says so on its face. */
+ {key:"gb300-nvl72",label:"NVIDIA GB300 NVL72",who:"rack-scale · SuperPOD block",gpu:"B300",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:142,cool:"liquid DTC",su:8,edge:"var(--grace)",
+  grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:6.4,fixedKw:26.8},sku:"rack"},
+ {key:"dgx-b300",label:"NVIDIA DGX B300",who:"HGX 8-GPU node · 10U",gpu:"B300",per:8,unit:"node",u:10,cpu:"Xeon 6776P",cpuper:2,nvl:8,pkw:14,cool:"air/liquid",edge:"var(--cool)",
+  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14,fixedKw:0}},
  {key:"dell-xe9680l",label:"Dell PowerEdge XE9680L",who:"Intel Xeon 6 + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"Xeon 5th Gen",cpuper:2,nvl:8,pkw:10,cool:"liquid DTC",edge:"var(--cool)",
   grain:{gpu:8,cpu:2,per:1,label:"node",pkw:10,fixedKw:0},derivedKw:true},
  {key:"dell-xe9712",label:"Dell PowerEdge XE9712",who:"GB200 NVL72 · rack-scale liquid",gpu:"B200",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:120,cool:"liquid DTC",su:8,edge:"var(--grace)",
@@ -1655,27 +1658,22 @@ function renderSize(rows){
     ${r.trainDays!=null?`<div class="metric"><span class="k">Train ${val("model")}B·${val("tokens")}T</span><span class="v" style="color:var(--cool)">${r.trainDays} days <small>· ckpt ${r.ckpt}TB</small></span></div>`:""}
     <button class="card-build" data-build="${r.gpus}" data-arch="${r.a.key}" title="Lay this build out in the Rack Planner">⚙ Build this in the Rack Planner →</button>
   </div>`).join("");
- /* Route by SHAPE, not by habit. Advanced mode is built on the GB300 NVL72 scalable
-  * unit and carries only a GPU count, so sending a 4U-node architecture there returned
-  * an NVL72 layout with a footnote apologising for it. Anything that is not rack-scale
-  * now goes to Simple mode and is laid out AS ITSELF. */
+ /* Route by SIZE now, not by apology.
+  *
+  * This used to throw a confirm() warning that Advanced would return an NVL72 floor plan
+  * whatever you asked for, because Advanced was hardwired to the GB300 NVL72 scalable
+  * unit. That dialog is gone — not suppressed, OBSOLETE. Advanced reads the architecture
+  * and lays out Relion as Relion, Altus as Altus, DGX as DGX. So the only question left
+  * is whether the build fits Simple mode's 5-rack hand-editing view, and if it does not,
+  * Advanced takes it and builds the thing you actually asked for. */
  document.querySelectorAll("#cards [data-build]").forEach(b=>b.onclick=()=>{
   const g=+b.dataset.build, arch=b.dataset.arch;
   if(!window.__advImport&&!window.__archImport){alert("Rack planner not ready — open the Rack Planner tab once, then retry.");return;}
   const rackScale=(arch==='gb300-nvl72'||arch==='dell-xe9712'||arch==='dell-xe8812');
   const plan=window.__archPlan?window.__archPlan(arch,g):null;
-  /* Simple mode lays the architecture out AS ITSELF but holds 5 racks. Advanced mode
-   * scales to SuperPOD but is built on the GB300 NVL72 scalable unit and carries only
-   * a GPU count. So: if it fits, build it honestly in Simple. If it doesn't, Advanced
-   * is the only thing that can hold it — and it says what it changed. */
   if(!rackScale&&plan&&plan.racksNeeded<=plan.max&&window.__archImport){
    if(!window.__archImport(arch,g))return;
   }else if(window.__advImport){
-   if(!rackScale&&plan&&!confirm(
-     `${plan.label} at ${g.toLocaleString()} GPUs needs ${plan.racksNeeded} racks.\n\n`+
-     `Simple mode holds ${plan.max}, so this has to go to ADVANCED — which is built on the `+
-     `GB300 NVL72 scalable unit and carries only the GPU target. The rack layout you get `+
-     `will be NVL72-shaped, NOT ${plan.label}.\n\nContinue?`))return;
    window.__advImport(g,arch);
   }
   document.querySelector('#tabs button[data-v="rack"]').click();
@@ -2098,9 +2096,11 @@ sync();
   const needed=Math.ceil((spec.rackScale?pick.grains:pick.grains)/perRack);
   const racks=Math.min(MAX_RACKS,Math.max(1,needed));
   const total=spec.rackScale?pick.grains:pick.grains;
-  if(needed>MAX_RACKS&&window.__advImport&&spec.rackScale){
-   if(confirm(`Import ${pick.label}: ${pick.gpus.toLocaleString()} GPUs needs ${needed} racks, and Simple mode holds ${MAX_RACKS}.\n\nSwitch to ADVANCED mode and build the full ${pick.gpus.toLocaleString()}-GPU design instead?\n\nCancel to import a truncated ${MAX_RACKS}-rack version here.`)){
-    window.__advImport(pick.gpus); return;
+  /* Any architecture can go to Advanced now, not just rack-scale ones — Advanced builds
+   * it as itself. So the offer is made whenever the build outgrows this view. */
+  if(needed>MAX_RACKS&&window.__advImport){
+   if(confirm(`Import ${pick.label}: ${pick.gpus.toLocaleString()} GPUs needs ${needed} racks, and Simple mode holds ${MAX_RACKS}.\n\nSwitch to ADVANCED mode and build the full ${pick.gpus.toLocaleString()}-GPU design as ${pick.label}?\n\nCancel to import a truncated ${MAX_RACKS}-rack version here.`)){
+    window.__advImport(pick.gpus,pick.key); return;
    }
   }
   const msg=`Import ${pick.label}: ${total} ${spec.unit}${total===1?"":"s"} (${pick.gpus.toLocaleString()} GPUs).\n\n`+
@@ -2157,6 +2157,12 @@ sync();
   * produced an NVL72 layout with a footnote explaining why it wasn't what you asked
   * for. A footnote is not a rack elevation. Non-rack-scale architectures come here
   * instead and get laid out as themselves. */
+ /* The per-node/per-tray port topology, published read-only so the ADVANCED planner can
+  * compose a rack out of the same numbers this one does. It used to carry a literal
+  * {compute:72,storage:36,bmc:27,mgmt:18} — the NVL72 answer, hardcoded — which is why
+  * a Penguin build got an NVL72 cable count. Exposing the table beats copying it into
+  * ARCH: a second copy of a port topology is a drift bug with a fuse on it. */
+ window.__RACKSPEC=SPEC;
  window.__archPlan=(arch,gpus)=>{
   const s=SPEC[arch]; if(!s)return null;
   const per=Math.max(1,calc({...defRack(),arch,nodes:null}).maxSpace);
@@ -3170,16 +3176,58 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     note:'A single SU needs no spine layer — every rail is one hop inside the SU. These counts are read from the RA narrative, not from Table 3/4.'};
   const exact=FABRIC.table[su]||null;
   const key=rows.find(r=>r>=su)||rows[rows.length-1];
-  return {su,exact:!!exact,single:false,basisSU:exact?su:key,
+  return {su,exact:!!exact,single:false,basisSU:exact?su:key,derived:false,
    basis:exact?`RA Table 3/4, exact ${su}-SU row`:`rounded up to the published ${key}-SU design (no interpolation)`,
    ...(exact||FABRIC.table[key])};
+ }
+ /* ---- FABRIC FOR ARCHITECTURES NVIDIA NEVER PUBLISHED A TABLE FOR -------------------
+  * Tables 3 and 4 are keyed on the NVL72 scalable unit. A Relion build has no SU — we
+  * refuse to invent one — so there is no row to read and the counts have to be computed
+  * from switch radix and the link count the racks actually present.
+  *
+  * This arithmetic is OURS. It returns derived:true and every basis string it produces
+  * says DERIVED, so nothing downstream can render it next to an "RA Table 3" badge and
+  * launder it into NVIDIA's reference architecture. Rule V1 asserts that mechanically.
+  *
+  * Radix maths, stated so it can be argued with:
+  *   IB leaf   Q3400-RD is 144x800G. Rail-optimised designs run half down, half up:
+  *             72 downlinks per leaf. Leaf count rounds UP TO A MULTIPLE OF RAILS,
+  *             because a rail that lands on a fraction of a leaf is not rail-optimised.
+  *   IB spine  each leaf offers upPerLeaf uplinks; a 144-port spine absorbs 144 of them.
+  *             One leaf layer needs no spine at all — a spine with nothing to join is
+  *             cost with no topology behind it.
+  *   Ethernet  SN5600D at 64 ports, same shape, storage and in-band separately.        */
+ function fabricDerived(AS,computeRacks){
+  const perRack=AS.perRack;
+  const upPerLeaf=Math.max(1,Math.min(72,gi('ibUplinksPerLeaf')||72));
+  const computeLinks=computeRacks*perRack.compute;
+  const IBDOWN=72, IBRADIX=FABRIC.sw.ibLeaf.ports, ETH=FABRIC.sw.ethLeaf.ports;
+  const rails=Math.max(1,AS.rails);
+  let ibLeaf=Math.ceil(computeLinks/IBDOWN);
+  ibLeaf=Math.ceil(ibLeaf/rails)*rails;                 // keep rails whole
+  const ibSpine=ibLeaf<=rails?0:Math.ceil(ibLeaf*upPerLeaf/IBRADIX);
+  const storageLinks=computeRacks*perRack.storage;
+  const ethComputeLeaf=Math.max(1,Math.ceil(storageLinks/ETH));
+  const ethStorageLeaf=Math.max(1,Math.ceil(storageLinks/ETH));
+  const ethSpine=ethComputeLeaf<=1?0:Math.ceil((ethComputeLeaf+ethStorageLeaf)*FABRIC.uplink.ethComputeLeafLinks/ETH);
+  return {su:null,exact:false,single:ibSpine===0,derived:true,basisSU:null,
+   gpus:computeRacks*AS.gpusPerRack,
+   ibLeaf,ibSpine,ethComputeLeaf,ethStorageLeaf,ethSpine,
+   storageBW:storageLinks+'x'+FABRIC.sw.ethLeaf.speed,mgmtOob:'2+2',
+   basis:`DERIVED (OURS) — NVIDIA publishes no reference architecture for ${AS.label}, so these counts are computed from switch radix and the ${computeLinks.toLocaleString()} compute links this build presents, NOT read from RA Table 3/4`,
+   note:ibSpine===0?'One leaf layer carries this build — no spine is required, and buying one would be cost with no topology behind it.':null};
  }
 
  // ---- state ----------------------------------------------------------------------
  const LS='penguin-adv-planner-v1';
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
-   ||{gpus:4608,floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
-      vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',vastMode:'auto',
+   ||{gpus:4608,arch:'gb300-nvl72',feed:'415-3-300',feedsPerRack:1,rackU:48,reserveU:4,
+      floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
+      /* Storage OFF by default. It used to auto-derive from the GPU target, so three VAST
+       * racks appeared on every floor plan whether or not the build had bought any —
+       * furniture in a drawing that is supposed to be a plan. Switch it to Auto and the
+       * RA tables size it exactly as before; the tier is one selector away, not implied. */
+      vastCbox:0,vastDbox:0,vastModel:'dbox',vastDesign:'285',vastMode:'none',
       netPlacement:'eor',netRed:'ab50',rackPitchM:0.6,
       rackDepthM:1.2, coldAisleM:1.2, hotAisleM:0.9, serviceM:1.0,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
       trunkRacks:4,trunkPorts:24,trunkSide:'right',rackOrder:null,aisles:1,
@@ -3190,13 +3238,173 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const save=()=>{try{localStorage.setItem(LS,JSON.stringify(A));}catch(e){}};
  const gi=k=>{const n=parseFloat(A[k]);return isNaN(n)?0:n;};
 
+ /* ---- RACK POWER IS A FEED, NOT A NUMBER ------------------------------------------
+  * A free-text kW box lets somebody type 137 and get a floor plan no electrician can
+  * deliver. Racks are fed by a breaker at a voltage, and the capacity that follows is
+  * arithmetic, not taste. So the budget is SELECTED from real feeds and the kW is
+  * computed as the exact inverse of the simple planner's electrical path:
+  *
+  *     amps   = kW*1000 / (V * sqrt3 * pf)      <- calc(), unchanged
+  *     breaker= nextBreaker(amps / 0.8)         <- 80% continuous derate
+  *  => kW     = A * 0.8 * V * sqrt3 * pf        <- this, going the other way
+  *
+  * Running it in both directions from one formula is what stops the two planners
+  * disagreeing about what a 250 A feed carries.
+  *
+  * NOTE the default is 300 A, not the 250 A that "looks like" the NVL72's 142 kW.
+  * 415 V 3ph 250 A derates to 140.9 kW, which is 1.1 kW SHORT of an NVL72 — rule E1
+  * fails it, correctly. A rack you cannot actually energise is not a smaller rack. */
+ const PF=0.98, DERATE=0.8, S3=Math.sqrt(3);
+ const feedKW=(V,A_,three)=>+(A_*DERATE*V*(three?S3:1)*PF/1000).toFixed(1);
+ const FEEDS=[
+  {k:'208-3-60', V:208,ph:3,amps:60,  why:'legacy air-cooled hall'},
+  {k:'415-3-60', V:415,ph:3,amps:60,  why:'common high-density air'},
+  {k:'415-3-100',V:415,ph:3,amps:100, why:'rear-door heat exchanger / liquid-assist'},
+  {k:'415-3-200',V:415,ph:3,amps:200, why:'direct-to-chip liquid'},
+  {k:'415-3-250',V:415,ph:3,amps:250, why:'does NOT carry a 142 kW NVL72 — 1.1 kW short'},
+  {k:'415-3-300',V:415,ph:3,amps:300, why:'default — carries an NVL72 with margin'},
+  {k:'415-3-400',V:415,ph:3,amps:400, why:'busway tap-off'},
+  {k:'48dc-orv3', V:48,ph:1,amps:0,  kw:18, why:'OCP Open Rack v3 BASE busbar. Dell’s 300 kW+ racks are ORv3-INSPIRED, not base-spec — do not size a busbar from the OCP document'}
+ ].map(f=>({...f, kw: f.kw!=null?f.kw:feedKW(f.V,f.amps,f.ph===3),
+   label: f.amps? `${f.V} V ${f.ph}φ ${f.amps} A` : '48 V DC busbar (ORv3 base)',
+   /* The connector follows the breaker, same ladder the simple planner uses. It is a
+    * BOM line — a 63 A IEC 60309 and a busway tap-off are different parts to order. */
+   connector: !f.amps ? 'busbar blind-mate'
+     : f.amps<=16?'IEC 60309 16A' : f.amps<=32?'IEC 60309 32A' : f.amps<=63?'IEC 60309 63A'
+     : f.amps<=125?'IEC 60309 125A' : 'busway tap-off'}));
+ const feedOf=()=>FEEDS.find(f=>f.k===A.feed)||FEEDS.find(f=>f.k==='415-3-300');
+
+ /* ---- THE ARCHITECTURE, NOT THE NVL72 ---------------------------------------------
+  * This is the fix for issue #1. derive() used to take `arch` and use it for a vendor
+  * tag and a label while every number downstream — 8 racks/SU, 576 GPU/SU, 72 GPU and
+  * 142 kW a rack, a literal {compute:72,storage:36,bmc:27,mgmt:18}, 4 rails — was a
+  * GB300 NVL72 constant. Build a Penguin Relion at scale and you got an NVL72 floor
+  * plan with Penguin's name on it, plus a dialog apologising for it. A disclaimer is
+  * not a feature.
+  *
+  * So: ONE object, read from the architecture, that every downstream number comes from.
+  *
+  * PROVENANCE IS THE HARD PART. NVIDIA publishes the NVL72 scalable unit, the 8-racks-
+  * per-SU figure and RA Tables 3/4. They publish NONE of that for a Relion or an Altus.
+  * Anything we compute for those is OURS and says so — it must not inherit NVIDIA's
+  * vendor label by sitting in the same code path. Rule V1 enforces that mechanically
+  * rather than trusting a reviewer to notice.
+  *
+  * NON-REGRESSION: for gb300-nvl72 this MUST reproduce the constants it replaces —
+  * 18 trays, 72 GPU, 142 kW, 8 racks/SU, 4 rails, {72,36,27,18}. scripts/adv-fingerprint.mjs
+  * is the diff that proves it. */
+ function archSpec(){
+  const key=A.arch||'gb300-nvl72';
+  const a=ARCH.find(x=>x.key===key)||ARCH.find(x=>x.key==='gb300-nvl72');
+  const s=(window.__RACKSPEC||{})[a.key]||null;
+  const feed=feedOf(), feeds=Math.max(1,Math.round(gi('feedsPerRack')||1));
+  /* Capacity feeds SUM. Redundancy feeds do NOT — under 2N each path must carry the
+   * whole load on its own, so two 250 A feeds in 2N buy you resilience, not headroom.
+   * Conflating the two is how a rack gets commissioned onto a breaker that trips. */
+  const red=A.netRed==='ab100'?'2N':'capacity';
+  const feedKw=+(feed.kw*(red==='2N'?1:feeds)).toFixed(1);
+
+  const rackU=Math.max(12,gi('rackU')||48), reserveU=Math.max(0,gi('reserveU')||0);
+  const usableU=Math.max(0,rackU-reserveU);
+  const rackScale=a.sku==='rack';
+  const gr=a.grain||{gpu:8,cpu:2,per:1,pkw:a.pkw||10,fixedKw:0};
+  const fixedU=(s&&s.fixedU)||0;
+
+  let nodesPerRack,bound,gpusPerRack,rackKw,spaceMax,powerMax;
+  if(rackScale){
+   /* The rack IS the SKU. Tray count, GPU count and rack draw are all vendor-published
+    * and are not ours to recompute from a U budget. */
+   nodesPerRack=gr.per; bound='rack-scale';
+   gpusPerRack=a.per; rackKw=a.pkw;
+   spaceMax=powerMax=gr.per;
+  }else{
+   /* Space vs power, the same split the Size It sizer already reports. Which of the two
+    * bound the rack is the interesting answer, so it is carried, not just consumed. */
+   spaceMax=Math.max(0,Math.floor(Math.max(0,usableU-fixedU)/a.u));
+   powerMax=gr.pkw>0?Math.floor(Math.max(0,feedKw-(gr.fixedKw||0))/gr.pkw):spaceMax;
+   nodesPerRack=Math.max(1,Math.min(spaceMax,powerMax,(s&&s.maxNodes!=null)?s.maxNodes:Infinity));
+   bound=powerMax<spaceMax?'POWER-limited':spaceMax<powerMax?'space-limited':'balanced';
+   gpusPerRack=nodesPerRack*gr.gpu;
+   rackKw=+(nodesPerRack*gr.pkw+(gr.fixedKw||0)).toFixed(1);
+  }
+
+  /* PER-RACK PORT TOPOLOGY, from the node the rack is actually full of.
+   * fixedPorts folds in for BMC only. The SPEC's fixed mgmt entry is the in-rack SN2201
+   * OOB UPLINK, and derive() already counts that as oobUp — folding it here too would
+   * bill the OOB uplinks twice. Verified against the literal being deleted:
+   *   fold all fixedPorts -> {72,36,mgmt 20,27}  MISMATCH
+   *   fold bmc only       -> {72,36,mgmt 18,27}  MATCH
+   * Rule N6 asserts the two never both claim it. */
+  const pp=(s&&s.ports)||{compute:gr.gpu,storage:2,mgmt:2,bmc:1};
+  const perRack={compute:pp.compute*nodesPerRack, storage:(pp.storage||0)*nodesPerRack,
+                 bmc:(pp.bmc||0)*nodesPerRack, mgmt:(pp.mgmt||0)*nodesPerRack};
+  ((s&&s.fixedPorts)||[]).forEach(f=>{ if(f.cls==='bmc') perRack.bmc+=f.n; });
+
+  /* Rail count is GPUs per node in a rail-optimised fabric — one NIC port per GPU onto
+   * one leaf per rail. NVL72's compute tray holds 4 GPUs, so 4 rails, which is exactly
+   * the RA's "8 leaf per SU = 4 rails x 2". An 8-GPU HGX node is 8 rails, and that is
+   * why top-of-rack stops being sensible for it (rule N2). */
+  const rails=gr.gpu;
+
+  return {
+   key:a.key, arch:a, spec:s, label:a.label, rackScale,
+   nodesPerRack, spaceMax, powerMax, bound, gpusPerRack, rackKw,
+   /* nodeU is the height of the thing the rack is FULL OF. For a node build that is
+    * ARCH.u (a 4U Relion). For a rack-scale SKU, ARCH.u is 48 — the height of the whole
+    * CABINET, not of the tray inside it — so reading it as a node height made rule P1
+    * compute 18 x 48U = 864U into a 44U rack and fail every NVL72 build. The tray height
+    * lives in SPEC.nodeU, and there it is 1U: 18 trays + 26U overhead = 44U exactly. */
+   nodeU: rackScale?((s&&s.nodeU)||1):a.u,
+   cabinetU:a.u,
+   nodeKw:gr.pkw, nodeGpus:gr.gpu, grainLabel:gr.label, fixedU, fixedKw:gr.fixedKw||0,
+   racksPerSU: rackScale?(a.su||8):null,
+   gpusPerSU:  rackScale?a.per*(a.su||8):null,
+   rails, perRack, usableU, rackU, reserveU,
+   feed, feedsPerRack:feeds, feedMode:red, feedKw,
+   cooling:a.cool||'', liquid:/liquid|DTC/i.test(a.cool||''),
+   /* The GPU ceiling is a FABRIC limit, not a rack limit. Rack-scale rides NVIDIA's
+    * published two-layer design, which tops out at 16 SU. A derived build's ceiling is
+    * what a two-layer fat tree of 144-radix switches can hold: 144*144/2. Ours. */
+   ceiling: rackScale?9216:10368,
+   ceilingBasis: rackScale
+     ? 'NVIDIA RA — published two-layer fabric tops out at 16 SU / 9,216 GPU'
+     : 'DERIVED (OURS) — two-layer fat tree of 144-radix switches, 144²/2 endpoints',
+   provenance: (a.key==='gb300-nvl72')?'vendor':'derived',
+   basis: (a.key==='gb300-nvl72')
+     ? 'NVIDIA DGX SuperPOD GB300 reference architecture'
+     : (rackScale
+        ? 'DERIVED — NVIDIA’s NVL72 scalable unit applied to '+a.label+'; NVIDIA publishes no RA for this vendor’s implementation'
+        : 'DERIVED — no vendor reference architecture is published for '+a.label+'; rack composition is OURS')
+  };
+ }
+
  // ---- derive ----------------------------------------------------------------------
  function derive(){
-  const gpus=Math.max(576,Math.min(9216,gi('gpus')));
-  const suNeeded=gpus/FABRIC.su.gpus;
-  const f=fabricFor(suNeeded);
-  const computeRacks=Math.ceil(suNeeded)*FABRIC.su.racks;
-  const realGpus=Math.ceil(suNeeded)*FABRIC.su.gpus;
+  const AS=archSpec();
+  /* The clamp used to be max(576, min(9216, …)) — 1 SU to 16 SU of NVL72, an NVL72
+   * constant wearing no label. The floor is now one rack of whatever you are building
+   * and the ceiling is the fabric's, which differs by provenance. */
+  const gpus=Math.max(AS.gpusPerRack,Math.min(AS.ceiling,gi('gpus')));
+  /* Rack-scale architectures are sold in scalable units and NVIDIA publishes the SU.
+   * Nothing else has one, and we refuse to invent one — a number we made up sitting in
+   * a slot NVIDIA owns reads as NVIDIA's however it is badged. Those size on RACKS. */
+  const suNeeded=AS.rackScale?gpus/AS.gpusPerSU:null;
+  const computeRacks=AS.rackScale
+    ? Math.ceil(suNeeded)*AS.racksPerSU
+    : Math.max(1,Math.ceil(gpus/AS.gpusPerRack));
+  const realGpus=AS.rackScale?Math.ceil(suNeeded)*AS.gpusPerSU:computeRacks*AS.gpusPerRack;
+  /* Fabric: the RA table when there IS one, our own arithmetic when there is not, and
+   * the difference is carried on f.derived so every basis cell downstream can say which
+   * it is reading. */
+  const f=AS.rackScale?fabricFor(suNeeded):fabricDerived(AS,computeRacks);
+  /* THE PURCHASABLE BLOCK. Rack-scale sells scalable units; everything else sells racks.
+   * Phasing, the MemoryAI ratio and every "per SU" figure in the UI hang off this, so
+   * naming it once keeps `Math.ceil(suNeeded)` — which is NaN when there is no SU —
+   * from leaking into a dozen render paths as "NaN scalable units". */
+  const blockTotal=AS.rackScale?Math.ceil(suNeeded):computeRacks;
+  const blockRacks=AS.rackScale?AS.racksPerSU:1;
+  const blockLabel=AS.rackScale?'scalable unit':'rack';
+  const blockGpus=AS.rackScale?AS.gpusPerSU:AS.gpusPerRack;
 
   // network rack packing: switches at their published U, 42U usable per network rack
   const swU=f.ibLeaf*FABRIC.sw.ibLeaf.u + f.ibSpine*FABRIC.sw.ibSpine.u
@@ -3244,12 +3452,15 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     ? 'Two planes, each carrying half. Taking side A down for maintenance leaves the workload UP on side B at 50% fabric bandwidth. Training jobs will slow, not stop — confirm your collective operations tolerate it.'
     : 'Two planes, each sized for the whole load. Maintenance on either side is invisible to the workload. You are paying double the switches and double the optics for that.';
   const torSwitchU = torMode ? Math.ceil(swU/Math.max(1,computeRacks)) : 0;
-  const torRailWarn = torMode && FABRIC.su.rails>1;
+  const torRailWarn = torMode && AS.rails>1;
 
   // ---- link classes ---------------------------------------------------------------
-  // Per NVL72 rack: 18 compute trays x 4 ConnectX-8 = 72 compute-fabric links (1/GPU),
-  // 18 x 2 BlueField-3 ports = 36 storage/in-band links, 18 tray BMC + 9 switch-tray BMC.
-  const perRack={compute:72,storage:36,bmc:27,mgmt:18};
+  /* Composed from the node the rack is full of, not from an NVL72 literal. For a GB300
+   * that still resolves to 18 trays x 4 ConnectX-8 = 72 compute links (1/GPU), 18 x 2
+   * BlueField-3 = 36 storage/in-band, 18 tray BMC + 9 switch-tray BMC = 27 — identical
+   * to the constant this replaces. For a Relion it resolves to that rack's real ports,
+   * which is the entire point of issue #1. */
+  const perRack=AS.perRack;
   const ibDown=computeRacks*perRack.compute;
   /* IB leaf radix is 144 with 72 downlinks, so 72 uplinks is non-blocking (1:1) and
    * anything less is deliberate oversubscription. Exposed as a selector because that
@@ -3303,10 +3514,17 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const vRacks=(vMode==='none')?0:(vU?Math.ceil(vU/42):0);
   const vOff=(vMode==='none');
   const vKw=+(vc*VAST.cbox.kw + vd*vModel.kw).toFixed(1);
-  // CNode back-end + front-end, DNode back-end, plus BMC and serial console per box.
-  const vBE = vCnodes*VAST.cbox.ports.be + vd*vModel.ports.be;
-  const vFE = vCnodes*VAST.cbox.ports.fe;
-  const vBMC= vc*VAST.cbox.ports.bmc + vd*vModel.ports.bmc;
+  /* CNode back-end + front-end, DNode back-end, plus BMC and serial console per box.
+   *
+   * ZEROED WHEN STORAGE IS OFF, and that is not belt-and-braces. `vOff` used to be
+   * applied only in the return object, so selecting storage "None" removed the VAST
+   * boxes from the BOM and the racks from the floor — and left 504 VAST links in the
+   * cable plant, priced, coloured and counted. Exactly the defect
+   * assert-controls-move-the-model.mjs was written for ("storage set to none still
+   * ordered 23 CBoxes"), fixed on the parts side and missed on the cable side. */
+  const vBE = vOff?0: vCnodes*VAST.cbox.ports.be + vd*vModel.ports.be;
+  const vFE = vOff?0: vCnodes*VAST.cbox.ports.fe;
+  const vBMC= vOff?0: vc*VAST.cbox.ports.bmc + vd*vModel.ports.bmc;
   // ---- MemoryAI KV cache tier ----------------------------------------------------
   /* On by default because it is the thing this tool exists to argue for — but it is a
    * TOGGLE, because a build that will not be memory-bound should not be sold one. Count
@@ -3315,7 +3533,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * and concurrency, which this tool does not know. */
   const memOn=(parseFloat(A.memAI)||0)>0;   // '' and NaN are OFF, not ON
   const memPerSU=Math.max(0,gi('memPerSU'));
-  const memUnits=memOn?Math.ceil(Math.ceil(suNeeded)*memPerSU):0;
+  const memUnits=memOn?Math.ceil(blockTotal*memPerSU):0;
   const memU=memUnits*MEMAI.u;
   const mRacks=memU?Math.ceil(memU/42):0;
   const memKw=+(memUnits*MEMAI.kw).toFixed(1);
@@ -3360,7 +3578,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
 
 
 
-  const vCON= vc*VAST.cbox.ports.console + vd*vModel.ports.console;
+  const vCON= vOff?0: vc*VAST.cbox.ports.console + vd*vModel.ports.console;
 
   const L=[
    {cls:'compute',n:ibDown,speed:'800G',media:'OSFP + MPO-12/APC SMF',reach:rowRun,
@@ -3396,8 +3614,12 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * hold NVIDIA switching — three different purchase orders, three different support
    * contracts, and a floor plan is much less useful if it does not say which is which. */
   const phases=Math.max(1,gi('phases')||1);
-  const suTotal=Math.ceil(suNeeded);
-  const suPerPhase=Math.ceil(suTotal/phases);
+  /* Rack-scale builds phase by SCALABLE UNIT because that is the purchasable block.
+   * Everything else has no SU — refusing to invent one is the whole provenance argument
+   * — so those phase by RACK, which is their purchasable block. Same shape, honest unit. */
+  const suTotal=AS.rackScale?blockTotal:null;
+  const suPerPhase=AS.rackScale?Math.ceil(suTotal/phases):null;
+  const blockPerPhase=Math.ceil(blockTotal/phases);
   const racks=[];
   /* Whose gear is in the compute racks depends on what you built. Hardcoding Penguin
    * meant a floor plan of Dell kit was labelled — and colour-coded, and exported —
@@ -3406,9 +3628,10 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const computeVendor=/^dell-/.test(A.arch||'')?'dell'
     :/^(gb300|dgx)/.test(A.arch||'')?'nvidia':'penguin';
   const computeLabel=(ARCH.find(a=>a.key===A.arch)||{}).label||'GB300 NVL72';
-  for(let s=0;s<suTotal;s++)
-   for(let r=0;r<FABRIC.su.racks;r++)
-    racks.push({kind:'compute',vendor:computeVendor,su:s+1,phase:Math.min(phases,Math.floor(s/suPerPhase)+1),idx:racks.length+1,key:'c'+(racks.length+1)});
+  for(let s=0;s<blockTotal;s++)
+   for(let r=0;r<blockRacks;r++)
+    racks.push({kind:'compute',vendor:computeVendor,su:AS.rackScale?s+1:null,
+      phase:Math.min(phases,Math.floor(s/blockPerPhase)+1),idx:racks.length+1,key:'c'+(racks.length+1)});
   for(let n=0;n<netRacks;n++) racks.push({kind:'network',vendor:'nvidia',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(netRacks/phases)))+1),idx:racks.length+1,key:'n'+(n+1)});
   for(let n=0;n<vRacks;n++) racks.push({kind:'storage',vendor:'vast',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(vRacks/phases)))+1),idx:racks.length+1,key:'v'+(n+1)});
   for(let n=0;n<mRacks;n++) racks.push({kind:'memory',vendor:'penguin',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(mRacks/phases)))+1),idx:racks.length+1,key:'m'+(n+1)});
@@ -3420,19 +3643,18 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const gpKW=+(gi('gpKW')||0), gpLabel=A.gpLabel||'Dell general-purpose', gpNodes=Math.round(gi('gpNodes')||0);
   for(let n=0;n<gpRacks;n++) racks.push({kind:'gp',vendor:'dell',su:null,phase:Math.min(phases,Math.floor(n/Math.max(1,Math.ceil(gpRacks/phases)))+1),idx:racks.length+1,key:'g'+(n+1)});
 
-  /* ROW-ALIGNED LAYOUT BY KIND, and A/B network at opposite ends.
+  /* ONLY THE RACKS YOU ACTUALLY FILL.
    *
-   * The rack list was a naive sequential fill: 64 compute, then 12 network, then
-   * storage, then memory, chopped into rows at racks-per-row. So network began
-   * wherever compute happened to stop — mid-row — and the tail row was half empty.
-   * "Networking all smooshed over at the end of blank rows" is exactly what that
-   * produces, and it also silently contradicted the A/B placement the model claims:
-   * plane A and plane B were adjacent instead of at opposite row ends.
+   * This used to pad EVERY kind out to a row boundary with placeholder `empty` racks so
+   * each kind began on a fresh row. On the stock 4,608-GPU build that put 21 phantom
+   * racks on the floor — a drawing mostly made of nothing, and a rack count that did not
+   * mean racks. Row alignment for its own sake is not worth drawing a datacentre nobody
+   * is building.
    *
-   * Now each kind starts on a row boundary, and network is split into its two planes
-   * and pushed to opposite ends of the network block. Padding to the boundary is
-   * REAL EMPTY SPACE, reported as such rather than back-filled — those gaps are where
-   * the next phase lands. */
+   * Padding now survives in exactly ONE place, because there it encodes a design rule
+   * rather than a tidy edge: the two network planes. A and B are pushed to opposite ends
+   * so a shared rack, a shared patch field or a shared PDU pair cannot take both — that
+   * is the difference between redundancy and paperwork. Everything else packs. */
   const padToRow=(arr)=>{ const r=arr.length%perRow; if(r===0)return arr;
     for(let i=0;i<perRow-r;i++)arr.push({kind:'empty',vendor:null,su:null,phase:1,key:'e'+arr.length});
     return arr; };
@@ -3440,7 +3662,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    const byKind=k=>racks.filter(r=>r.kind===k);
    const comp=byKind('compute'), net=byKind('network'), sto=byKind('storage'),
          mem=byKind('memory'), gp=byKind('gp');
-   let ordered=padToRow([...comp]);
+   let ordered=[...comp];
    if(net.length){
     if(planes>1&&!torMode){
      const half=Math.ceil(net.length/2);
@@ -3474,10 +3696,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     for(let i=0;i<patchRacks;i++)
      racks.push({kind:'patch',vendor:'passive',su:null,phase:1,idx:0,key:'p'+(i+1)});
     const pat=racks.filter(r=>r.kind==='patch');
-    if(pat.length) ordered=ordered.concat(padToRow([...pat]));
-   if(sto.length) ordered=ordered.concat(padToRow([...sto]));
-   if(mem.length) ordered=ordered.concat(padToRow([...mem]));
-   if(gp.length)  ordered=ordered.concat(padToRow([...gp]));
+   /* Packed, not padded. These tails were 17 of the 21 phantom racks. */
+   ordered=ordered.concat(pat).concat(sto).concat(mem).concat(gp);
    racks.length=0; ordered.forEach((r,i)=>{ r.idx=i+1; racks.push(r); });
   }
 
@@ -3618,16 +3838,212 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    memLabel:MEMAI.label, memAppU:MEMAI.u, memAppKw:MEMAI.kw,
    swIb:FABRIC.sw.ibLeaf.model, swIbU:FABRIC.sw.ibLeaf.u,
    swEth:FABRIC.sw.ethLeaf.model, swEthU:FABRIC.sw.ethLeaf.u,
-   torMode,torSwitchU,torRailWarn,rails:FABRIC.su.rails,podOf,podLabel,
+   torMode,torSwitchU,torRailWarn,rails:AS.rails,podOf,podLabel,
+   /* The architecture spec itself, so every consumer — tiles, elevations, BOM, CSV,
+    * XLSX, the rule set — reads ONE source instead of re-deriving 72 and 142. */
+   arch:AS,
    netRed,planes,perPlane,netRacksPerSide,maintLoss,maintText,swUred,
    cols,rackW,rackD,coldA,hotA,serviceM,floorWidthM,floorDepthM,floorAreaM2,rowPitchM,m2PerRack,
    gridSlots,emptySlots,
    computeArchU:(ARCH.find(x=>x.key===A.arch)||{}).u||null,
    gpRacks,gpKW,gpLabel,gpNodes,gpKWPerRack:gpRacks?+(gpKW/gpRacks).toFixed(1):0,
    computeVendor,computeLabel,
-   gpus,realGpus,suNeeded,f,computeRacks,netRacks,oobCount,swU,perRack,
+   gpus,realGpus,suNeeded,blockTotal,blockRacks,blockLabel,blockGpus,
+   f,computeRacks,netRacks,oobCount,swU,perRack,
    ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
    interFloor,trunkLinks,risers,racks};
+ }
+
+ /* ═══ CONSISTENCY RULES ═════════════════════════════════════════════════════════════
+  * Every number in this tool is arithmetic on somebody's datasheet, and arithmetic will
+  * happily produce a rack that cannot be energised, a DAC that cannot reach, or a fabric
+  * with more links than the leaf has ports. The model has always ENCODED these limits;
+  * it never CHECKED them, so a violation looked exactly like a valid design.
+  *
+  * Same doctrine as scripts/assert-controls-move-the-model.mjs: a checker whose output
+  * never varies is the bug. These rules must be able to FAIL, and
+  * scripts/assert-model-consistency.mjs deliberately drives inputs that make each one
+  * fail, because a rule set that cannot fail is decoration.
+  *
+  * PASS  the design satisfies the rule
+  * WARN  legal, but a decision somebody should be making on purpose
+  * FAIL  not buildable as configured
+  * ---------------------------------------------------------------------------------*/
+ const R=(id,cat,ok,title,detail)=>({id,cat,v:ok===true?'PASS':ok===false?'FAIL':'WARN',title,detail});
+ function rules(d){
+  const A_=d.arch, f=d.f, out=[];
+  const N1_=n=>Math.round(n*10)/10;
+
+  // ---- ELECTRICAL / BUSINESS -------------------------------------------------------
+  /* Capacity feeds SUM. Redundancy feeds do NOT — under 2N each path carries the whole
+   * load alone, so two 250 A feeds in 2N buy resilience, not headroom. Conflating them
+   * is how a rack gets commissioned onto a breaker that trips. */
+  out.push(R('E1','Electrical', A_.rackKw<=A_.feedKw,
+   `Rack load vs feed — ${N1_(A_.rackKw)} kW into ${A_.feedKw} kW available`,
+   `${A_.feedsPerRack} x ${A_.feed.label} at ${(100*0.8)}% continuous derate` +
+   (A_.feedMode==='2N'?' — 2N, so each path is sized for the FULL load and the feeds do NOT sum.':' — capacity feeds sum.') +
+   (A_.rackKw>A_.feedKw?` SHORT BY ${N1_(A_.rackKw-A_.feedKw)} kW. Pick a larger breaker, add a capacity feed, or accept fewer nodes per rack.`:'')));
+
+  out.push(R('E2','Electrical', A_.feedMode!=='2N'||A_.feedsPerRack<=2?true:null,
+   `Feed redundancy — ${A_.feedMode}`,
+   A_.feedMode==='2N'
+    ? `A/B sized for the whole load each. Usable capacity is ONE feed (${A_.feed.kw} kW), not the sum of ${A_.feedsPerRack}.`
+    : `${A_.feedsPerRack} capacity feed${A_.feedsPerRack===1?'':'s'} summing to ${A_.feedKw} kW. This is NOT redundancy — losing one loses that share of the rack.`));
+
+  /* Air cannot carry this. ~40 kW/rack is the practical ceiling for contained air with a
+   * rear-door exchanger; past that it is direct-to-chip liquid or it is not a design.
+   *
+   * THREE states, not two. Several platforms ship as air OR liquid — DGX B300 is
+   * "air/liquid" — and the first cut read the word "liquid" in that string and passed
+   * them silently at any density. But "can be liquid" is not "is liquid": above the air
+   * envelope you are COMMITTING to the DTC variant, with a coolant loop, a CDU and a
+   * facility water tie-in that the air variant does not need. That is a procurement and
+   * a building decision, so it warns rather than passing quietly. */
+  const AIRCAP=40, cool=(A_.cooling||'').toLowerCase();
+  const dual=/air/.test(cool)&&/liquid|dtc/.test(cool);
+  const pureLiquid=!(/air/.test(cool))&&/liquid|dtc/.test(cool);
+  out.push(R('E4','Thermal',
+   A_.rackKw<=AIRCAP?true:(pureLiquid?true:(dual?null:false)),
+   `Cooling vs density — ${N1_(A_.rackKw)} kW/rack on "${A_.cooling||'unstated'}"`,
+   A_.rackKw<=AIRCAP?`Within the practical air envelope (~${AIRCAP} kW/rack contained, with a rear-door exchanger).`
+    :pureLiquid?`Direct-to-chip liquid, which is what carries this density.`
+    :dual?`${A_.label} ships air OR liquid. At ${N1_(A_.rackKw)} kW/rack the air variant will NOT carry it — this build commits you to the direct-to-chip option, and with it a coolant loop, a CDU and a facility water tie-in. Price the liquid SKU, not the air one.`
+    :`Air-cooled above ~${AIRCAP} kW/rack is not deliverable. This needs direct-to-chip liquid, or fewer nodes per rack.`));
+
+  if(/xe8812|orv3/i.test(A_.key)||A_.feed.k==='48dc-orv3')
+   out.push(R('E5','Electrical', null, 'ORv3 busbar — base spec is ~18 kW',
+    `OCP Open Rack v3's BASE specification is a 48 V busbar rated around 18 kW. Vendor racks quoting 300 kW+ are ORv3-INSPIRED, not base-spec. Do not size a busbar from the OCP document.`));
+
+  // ---- NETWORKING ------------------------------------------------------------------
+  const leafDown=(f.ibLeaf||0)*72;
+  out.push(R('N1','Network', leafDown>=d.ibDown,
+   `IB leaf capacity — ${(f.ibLeaf||0)} leaf x 72 downlinks = ${leafDown.toLocaleString()} vs ${d.ibDown.toLocaleString()} presented`,
+   leafDown>=d.ibDown?`Every compute link lands on a port.`:`SHORT ${(d.ibDown-leafDown).toLocaleString()} ports. Links with nowhere to land are not a fabric.`));
+
+  out.push(R('N2','Network', d.torMode?(A_.rails<=1):((f.ibLeaf||0)%A_.rails===0),
+   `Rail optimisation — ${A_.rails} rails, ${(f.ibLeaf||0)} IB leaf`,
+   d.torMode
+    ? (A_.rails>1?`Top-of-rack with ${A_.rails} rails needs ${A_.rails} leaf switches IN EVERY RACK, or rail optimisation is given up. This is why NVIDIA's RA does not use ToR at SuperPOD scale.`:`Single rail — ToR is fine here.`)
+    : ((f.ibLeaf||0)%A_.rails===0?`Leaf count divides evenly by rails; the same rail from many nodes groups onto one leaf.`:`Leaf count is not a whole multiple of ${A_.rails} rails — a rail landing on a fraction of a switch is not rail-optimised.`)));
+
+  out.push(R('N3','Network', d.ibBlocking<=1?true:null,
+   `Fabric blocking ratio — 1:${N1_(d.ibBlocking)}`,
+   d.ibBlocking<=1?`Non-blocking: ${d.upPerLeaf} uplinks against 72 downlinks.`
+    :`Deliberate oversubscription at ${d.upPerLeaf} uplinks per leaf. Collectives will feel it — confirm the training job tolerates it, because this saves optics and costs bandwidth.`));
+
+  out.push(R('N4','Network', d.realGpus<=A_.ceiling,
+   `Fabric ceiling — ${d.realGpus.toLocaleString()} of ${A_.ceiling.toLocaleString()} endpoints`,
+   A_.ceilingBasis));
+
+  out.push(R('N5','Network', true,
+   `Spine layer — ${(f.ibSpine||0)?'present ('+f.ibSpine+')':'not required'}`,
+   (f.ibSpine||0)?`Leaf-spine-leaf for anything crossing a leaf.`
+    :`One leaf layer carries this build. Buying a spine here would be cost with no topology behind it.`));
+
+  const oobPorts=d.oobCount*FABRIC.sw.oob.ports;
+  out.push(R('N6','Network', oobPorts>=d.bmc,
+   `OOB capacity — ${d.oobCount} x ${FABRIC.sw.oob.ports} = ${oobPorts.toLocaleString()} ports vs ${d.bmc.toLocaleString()} BMC`,
+   `The in-rack SN2201 uplink is counted once, as oob-uplink (${d.oobUp}), and is deliberately NOT folded into the per-rack management port count — doing both bills it twice.`));
+
+  const podPositions=d.trunkRacks*d.portsPerRack;
+  out.push(R('N7','Passive', d.panelsPerTrunk*d.trunkPorts>=podPositions,
+   `Patch capacity — ${d.panelsPerTrunk} panels x ${d.trunkPorts} = ${d.panelsPerTrunk*d.trunkPorts} positions vs ${podPositions} per pod`,
+   `Panels terminate MPO POSITIONS, not fibres: one 800G DR8 link is one MPO-12 position with 8 of its 12 strands lit.`));
+
+  const offered=d.groupLinks, cap=d.trunkLinks*d.assembliesPerGroup;
+  out.push(R('N8','Passive', offered<=cap*d.loadCap+0.001,
+   `Trunk load — ${offered} links offered into ${cap} link capacity (${Math.round(100*d.loadCap)}% cap)`,
+   `A trunk provisioned to exactly its offered load has no margin for a failed strand, a rebalance after a leaf reboot, or the growth every one of these builds has.`));
+
+  // ---- CABLE LENGTH ----------------------------------------------------------------
+  const STOCKMAX=500, DR8=500;
+  const longest=Math.max(...d.L.map(l=>l.reach||0));
+  out.push(R('C1','Cable', longest<=STOCKMAX,
+   `Longest run — ${N1_(longest)} m against a ${STOCKMAX} m stock ceiling`,
+   longest<=STOCKMAX?`Every computed reach rounds up to a length that is actually sold.`
+    :`Nothing in the ladder reaches ${N1_(longest)} m. The BOM would silently round it to ${STOCKMAX} m and hand you a cable that does not arrive at the other end.`));
+
+  const optical=d.L.filter(l=>/SMF/.test(l.media));
+  const worstOpt=Math.max(0,...optical.map(l=>l.reach||0));
+  out.push(R('C3','Cable', worstOpt<=DR8,
+   `800G DR8 optical budget — ${N1_(worstOpt)} m of ${DR8} m`,
+   `MMS4X00-NM DR8 is a ${DR8} m part. Horizontal row run + tray rise + any inter-floor riser all count against it.`));
+
+  if(d.torMode) out.push(R('C4','Cable', d.rowRun<=2,
+   `Top-of-rack reach — ${N1_(d.rowRun)} m`,
+   d.rowRun<=2?`In-rack jumper on passive DAC. The ToR saving is real: node-to-leaf never leaves the cabinet, and only uplinks do.`
+    :`ToR is claimed but the run is ${N1_(d.rowRun)} m, which is past passive DAC and back onto optics — the saving has evaporated.`));
+
+  /* COPPER REACH. The first cut checked Cat6A against 100 m — and BMC and console runs
+   * are fixed at 3 m because they terminate on the in-rack OOB switch, so that rule could
+   * never fail no matter what you typed. An always-PASS check is decoration.
+   *
+   * The copper run that DOES vary is the OOB switch's own uplink to aggregation: it
+   * crosses the row, and the BOM bills it as "SFP28 DAC/AOC". Passive SFP28 DAC stops
+   * around 5 m and AOC around 30 m; past that the part in the BOM is the wrong part and
+   * the uplink has to go optical, which is a transceiver at each end and a fibre run. */
+  const CAT6A=100, AOC25=30;
+  const inRack=Math.max(0,...d.L.filter(l=>/Cat6/.test(l.media)).map(l=>l.reach||0));
+  const oobRun=(d.L.find(l=>l.cls==='oob-uplink')||{}).reach||0;
+  out.push(R('C5','Cable', oobRun<=AOC25,
+   `OOB uplink on copper — ${N1_(oobRun)} m against a ${AOC25} m SFP28 AOC ceiling`,
+   oobRun<=AOC25
+    ? `In reach for DAC/AOC, which is what the BOM bills. In-rack BMC and console runs are ${N1_(inRack)} m, well inside the ${CAT6A} m Cat6A channel.`
+    : `${N1_(oobRun)} m is past passive DAC (~5 m) and past AOC (~${AOC25} m). The BOM's "SFP28 DAC/AOC" line is the wrong part at this distance — this uplink needs optics: a transceiver at each end plus a fibre run, per OOB switch.`));
+
+  out.push(R('C6','Cable', d.torMode||d.rise>0,
+   `Tray rise counted — ${N1_(d.rise)} m`,
+   d.torMode?`Top-of-rack: no horizontal run, so no rise.`
+    :d.rise>0?`Up, over and down is included in every horizontal reach. This is the term people leave out and then discover their 3 m DACs do not reach.`
+    :`Tray rise is zero. Unless every cable runs under the floor in a straight line, this understates every reach in the BOM.`));
+
+  // ---- PHYSICAL --------------------------------------------------------------------
+  const uUsed=A_.nodesPerRack*A_.nodeU+A_.fixedU;
+  out.push(R('P1','Physical', uUsed<=A_.usableU,
+   `Rack U — ${uUsed}U used of ${A_.usableU}U usable (${A_.rackU}U cabinet less ${A_.reserveU}U reserved)`,
+   A_.rackScale?`Rack-scale: the cabinet IS the SKU and its contents are vendor-fixed.`
+    :`${A_.nodesPerRack} x ${A_.nodeU}U nodes${A_.fixedU?' + '+A_.fixedU+'U rack overhead':''}.`));
+
+  out.push(R('P3','Physical', d.coldA>=1.2&&d.hotA>=0.9?true:null,
+   `Aisle widths — cold ${d.coldA} m, hot ${d.hotA} m`,
+   `ASHRAE TC9.9 works to 1.2 m cold (front-to-front) and 0.9 m hot (back-to-back). Below that you are trading service access and recirculation margin for floor area — a decision, not an oversight.`));
+
+  // ---- PROVENANCE ------------------------------------------------------------------
+  /* The anti-laundering assertion. Issue #1's whole point: our arithmetic must never
+   * wear NVIDIA's label. Checked mechanically rather than left to a reviewer's eye. */
+  /* Scoped to the FABRIC, deliberately. The first cut keyed this on the ARCHITECTURE's
+   * provenance and so failed every Dell NVL72 build — but those two things are not the
+   * same claim. Dell's XE9712 is Dell's cabinet (their published composition, not
+   * NVIDIA's) running NVIDIA's NVL72 SuperPOD fabric (genuinely RA Table 3/4). One flag
+   * covering both meant an honest citation got reported as laundering.
+   *
+   * The precise rule: an RA table may be cited only when the counts were READ from one. */
+  const claimsVendor=(d.bom||[]).filter(b=>/\bRA Table\b|NVIDIA RA/.test(b.basis||''));
+  out.push(R('V1','Provenance', !(f.derived&&claimsVendor.length),
+   `Provenance — ${f.derived?`${claimsVendor.length} line(s) citing an NVIDIA RA table on a DERIVED fabric`:'fabric counts read from NVIDIA RA Tables 3/4'}`,
+   f.derived
+    ? (claimsVendor.length?`These cite a reference architecture that does not cover ${A_.label}: ${claimsVendor.slice(0,3).map(b=>b.item).join('; ')}. Laundering our arithmetic as NVIDIA's RA is the exact failure the provenance system exists to prevent.`
+       :`No line claims an NVIDIA table. Switch counts are computed by us from published radix and badged as ours.`)
+    : `${A_.basis}.${A_.provenance==='derived'?` Note the split: the FABRIC is NVIDIA's published NVL72 design, but the RACK composition is ${A_.label.split(' ')[0]}'s — see V2.`:''}`));
+
+  /* THE ONE A DATASHEET CANNOT ANSWER. Everything above is arithmetic on published
+   * figures. A VENDOR-BLESSED configuration is a different object: a specific,
+   * validated, supportable combination the vendor will actually stand behind. We do not
+   * have Penguin's or Dell's validated-configuration list, and a tool that quietly
+   * implies it does is worse than one that says so. */
+  if(A_.provenance==='derived'){
+   const oem=A_.label.split(' ')[0];
+   /* Say precisely WHICH part is ours, because it differs by architecture shape. On a
+    * node build we computed the rack composition itself. On a rack-scale SKU the
+    * composition is the vendor's and fixed — only the multi-rack grouping is ours.
+    * Claiming we derived a vendor-fixed cabinet would be its own small fiction. */
+   out.push(R('V2','Provenance', null, `Not a vendor-blessed configuration`,
+    A_.rackScale
+     ? `The rack itself is ${oem}'s: ${A_.nodesPerRack} trays, ${A_.gpusPerRack} GPU, ${N1_(A_.rackKw)} kW are VENDOR-PUBLISHED and are not ours to recompute. What is OURS is the grouping around it — ${A_.racksPerSU} racks to a scalable unit is NVIDIA's SuperPOD figure applied to ${oem}'s cabinet, and NVIDIA publishes no reference architecture for this vendor's implementation. ${oem} publishes validated configurations; this tool does not have that list. Confirm the multi-rack design with ${oem} before it becomes a quote.`
+     : `${A_.nodesPerRack} x ${A_.label} per rack at ${N1_(A_.rackKw)} kW is OUR arithmetic on published datasheet figures — ${A_.nodeU}U per node, ${A_.nodeKw} kW per node, ${A_.nodeGpus} GPU per node — bounded by the ${A_.feed.label} feed you selected. ${oem} publishes VALIDATED configurations: specific node counts, cooling loops and fabric layouts they will support. This tool does not have that list. Sizing-grade only — confirm the composition against ${oem}'s blessed configuration before it becomes a quote.`));
+  }
+
+  return out;
  }
 
  /* ---- DEVICE FACEPLATES -----------------------------------------------------------
@@ -3656,7 +4072,19 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   dbox    :{u:2,badge:'VAST DBox',bg:'#1b1026',ink:'#a855f7',bays:22},
  };
  function faceSvg(kind){
-  const f=FACE[kind]; if(!f) return '';
+  let f=FACE[kind]; if(!f) return '';
+  /* The compute faceplate said "NVIDIA GB300" whatever you were building, so a Relion
+   * elevation carried NVIDIA's badge on every node. The faceplate is generated from the
+   * port topology precisely so the picture and the parts list cannot drift — a hardcoded
+   * badge is that same drift, one field over. */
+  if(kind==='compute'){
+   try{ const AS=archSpec();
+    f={...f, badge:AS.label+(AS.rackScale?' compute tray':` — ${AS.nodeU}U node`),
+       ports:[[Math.max(1,Math.round(AS.perRack.compute/AS.nodesPerRack)),'sq','OSFP'],
+              [Math.max(0,Math.round(AS.perRack.storage/AS.nodesPerRack)),'sq','QSFP'],
+              [1,'rj','BMC'],[1,'rj','MGT']]};
+   }catch(e){}
+  }
   const W=760, H=54;
   const g=[`<rect width="${W}" height="${H}" rx="4" fill="${f.bg}"/>`,
            `<rect x="1" y="1" width="${W-2}" height="${H-2}" rx="4" fill="none" stroke="${f.ink}" stroke-opacity=".38"/>`];
@@ -3726,7 +4154,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  function rackName(i){
   const perRow=Math.max(1,gi('racksPerRow'));
   const rowIdx=Math.floor((i-1)/perRow);
-  const rowLetter=String.fromCharCode(A.row.charCodeAt(0)+rowIdx);
+  const rowLetter=String.fromCharCode(String(A.row||'A').charCodeAt(0)+rowIdx);
   const pos=((i-1)%perRow)+1;
   return (A.patRack||'{site}{room}{row}{rack}')
    .replace('{site}',A.site).replace('{room}',A.room)
@@ -3779,13 +4207,18 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    {u:2,n:16,t:'compute',label:((d&&d.gpLabel)||'Dell PowerEdge')+' — general purpose',dev:'PE'},
    {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
   ];
+  /* HGX / node builds stack as NODES. The node count is now the MODEL's — the number the
+   * rack was actually sized to, space-vs-power — not floor(40/U), which drew a rack fuller
+   * than the feed can energise. A drawing that disagrees with the power budget is how a
+   * floor plan passes review and fails commissioning. */
   if(kind==='compute' && d && d.computeArchU && d.computeArchU>1) return [
    {u:1,n:1,t:'manifold',label:'Coolant manifold / plumbing',dev:'MAN'},
    {u:1,n:2,t:'ethleaf',label:'ToR leaf',dev:'ETL'},
-   {u:d.computeArchU,n:Math.max(1,Math.floor(40/d.computeArchU)),t:'compute',
-    label:(d.computeLabel||'Compute node')+' — '+d.computeArchU+'U node',dev:'ND'},
+   {u:d.computeArchU,n:Math.max(1,(d.arch&&d.arch.nodesPerRack)||Math.floor(40/d.computeArchU)),t:'compute',
+    label:(d.computeLabel||'Compute node')+' — '+d.computeArchU+'U node'
+      +(d.arch?` · ${d.arch.nodeKw} kW (${d.arch.bound})`:''),dev:'ND'},
    {u:1,n:1,t:'oob',label:'SN2201 OOB',dev:'OOB'},
-   {u:1,n:2,t:'power',label:'Rack PDU A / B',dev:'PDU'},
+   {u:1,n:2,t:'power',label:'Rack PDU A / B'+(d.arch?' — '+d.arch.feed.connector:''),dev:'PDU'},
   ];
   if(kind==='network') return [
    {u:2,n:1,t:'manifold',label:'Blanking / plumbing'},
@@ -3810,9 +4243,33 @@ ${c.iso?`<h2>Multi-tenancy</h2>
               IBL:[['P01..P144','144x 800G OSFP']],ETL:[['P01..P64','64x 400G']],
               OOB:[['P01..P48','48x 1GbE']],PP:[['F01..F12','MPO-12/APC']],
               MEM:[['FE1..FE2','2x 400G front-end to Ethernet leaf — assumed topology'],['MGT','1GbE management'],['BMC','out-of-band BMC'],['CON','serial console']]};
+ /* PORTS is a fixed table keyed on device abbreviation, and it has no 'ND' row because
+  * HGX node builds did not exist in the advanced planner until now — so every node in a
+  * Relion rack reported "no cabled ports" while the BOM billed 88 of them per rack.
+  *
+  * The node row is GENERATED, not written by hand, and generated from the SAME port
+  * topology the BOM bills (SPEC[arch].ports via archSpec). Nothing here is invented: if
+  * the parts list says 8 OSFP and 2 QSFP a node, this labels 8 and 2. A hand-authored
+  * row would be a second source of truth, which is how a picture starts disagreeing with
+  * the parts list. */
+ function portsFor(dev,d){
+  if(dev!=='ND') return PORTS[dev]||[];
+  const A_=(d&&d.arch)||archSpec(), n=Math.max(1,A_.nodesPerRack);
+  const q=k=>Math.round((A_.perRack[k]||0)/n);
+  const rng=(p,c)=>c<=0?null:c===1?[p,null]:[`${p}1..${p}${c}`,null];
+  const out=[];
+  const c=q('compute'); if(c) out.push([c===1?'IB1':`IB1..IB${c}`,`${c}x 800G compute fabric — 1 rail per GPU`]);
+  const s=q('storage'); if(s) out.push([s===1?'ST1':`ST1..ST${s}`,`${s}x 400G storage / in-band`]);
+  const m=q('mgmt');    if(m) out.push([m===1?'MGT':`MGT1..MGT${m}`,`${m}x 1GbE in-band management`]);
+  const bm=q('bmc');    if(bm) out.push([bm===1?'BMC':`BMC1..BMC${bm}`,`${bm}x out-of-band BMC`]);
+  return out;
+ }
  // ---- controls --------------------------------------------------------------------
  const F=[
-  {k:'gpus',l:'Target GPUs',step:576,hint:'576 per SU'},
+  {k:'gpus',l:'Target GPUs',step:576,hint:'rounds up to whole racks of the architecture'},
+  {k:'rackU',l:'Rack height (U)',step:1,hint:'48 = AI cabinet · 42 = traditional'},
+  {k:'reserveU',l:'Reserved U',step:1,hint:'patch, PDU, growth — off the top of usable'},
+  {k:'feedsPerRack',l:'Feeds per rack',step:1,hint:'capacity feeds SUM · 2N feeds do not'},
   {k:'floors',l:'Floors',step:1,hint:'vertical spread'},
   {k:'racksPerRow',l:'Racks per row',step:1,hint:'rows are computed'},
   {k:'rackPitchM',l:'Rack pitch (m)',step:0.1,hint:'0.6 = 600mm — column width'},
@@ -3849,6 +4306,17 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     dsel.onchange=e=>{A.vastDesign=e.target.value;save();paint();};}
   if(msel){msel.innerHTML=Object.entries(VAST).map(([k,v])=>`<option value="${k}"${(A.vastModel||'dbox')===k?' selected':''}>${v.label}${v.verified?'':' (unverified)'}</option>`).join('');
     msel.onchange=e=>{A.vastModel=e.target.value;save();paint();};}
+  /* ARCHITECTURE PICKER. Advanced used to have none — arch arrived only via the Size It
+   * import and was used for a label. Now it drives the whole composition, so it has to
+   * be reachable here, and the note under it says what the pick actually changed. */
+  const asel=$a('advArch');
+  if(asel){asel.innerHTML=ARCH.map(a=>`<option value="${a.key}"${(A.arch||'gb300-nvl72')===a.key?' selected':''}>${a.label}</option>`).join('');
+    asel.onchange=e=>{A.arch=e.target.value;save();paint();};}
+  /* FEED PICKER, not a kW box. See FEEDS — capacity is a breaker, a voltage and a
+   * derate, and letting someone type 137 kW produces a rack nobody can energise. */
+  const fsel=$a('advFeed');
+  if(fsel){fsel.innerHTML=FEEDS.map(f=>`<option value="${f.k}"${(A.feed||'415-3-300')===f.k?' selected':''}>${f.label} — ${f.kw} kW</option>`).join('');
+    fsel.onchange=e=>{A.feed=e.target.value;save();paint();};}
   $a('advCtl').innerHTML=F.map(f=>`<div class="mem-f"><label>${f.l}</label>
     <input type="number" data-ak="${f.k}" value="${A[f.k]}" step="${f.step}"/><div class="hint">${f.hint}</div></div>`).join('');
   $a('advCtl').querySelectorAll('[data-ak]').forEach(el=>el.addEventListener('input',e=>{
@@ -3898,7 +4366,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   d.racks.forEach((r,i)=>{
    const nm=rackName(i+1), rows=elevation(r.kind,d);
    const perRow=Math.max(1,gi('racksPerRow'));
-   const rowLetter=String.fromCharCode(A.row.charCodeAt(0)+Math.floor(i/perRow));
+   const rowLetter=String.fromCharCode(String(A.row||'A').charCodeAt(0)+Math.floor(i/perRow));
    out.push({rack:nm,row:rowLetter,su:r.su||'',u:'',asset_type:'rack',
      device:nm,port:'',identifier:nm,length:nm.length,description:r.kind==='compute'?'GB300 NVL72 compute rack':r.kind==='gp'?'General-purpose rack (Dell)':'Network rack'});
    let u=48;
@@ -3987,11 +4455,52 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  function paint(){
   const d=derive();
   const f=d.f;
+  /* Provenance for the fabric table's basis column. On a build NVIDIA published an RA
+   * for, cite the table. On one they did not, show the arithmetic and colour it amber —
+   * the counts are ours and must never sit in a green "RA Table 3" cell. */
+  const PC=f.derived?'warn':'ok';
+  const PB=(table,how)=>f.derived?`DERIVED (OURS) — ${how}`:`RA ${table}`;
+
+  /* The one-line answer to "what did picking that architecture actually change?", and it
+   * belongs in paint() — it lived in renderCtl(), which only runs on a mode switch, so it
+   * kept saying "18 compute trays · 142 kW · 8 racks per SU" while the selector beside it
+   * read Penguin Relion. A summary that does not follow the model is worse than none. */
+  const an=$a('advArchNote'); const AS=d.arch;
+  const mn=$a('rkModeNote');
+  if(mn) mn.textContent=AS.rackScale
+   ? `Built on NVIDIA’s published SuperPOD reference architecture — up to ${AS.ceiling.toLocaleString()} GPUs across 16 scalable units. Click any rack to expand its elevation and port labels.`
+   : `Built as ${AS.label} — ${AS.nodesPerRack} nodes a rack on a ${AS.feed.label} feed, sized on RACKS because no vendor scalable unit is published for it. Composition and switch counts are ours and badged as such. Click any rack to expand its elevation and port labels.`;
+  if(an) an.innerHTML=AS.rackScale
+   ? `<b style="color:var(--ok)">${AS.nodesPerRack} ${AS.grainLabel||'tray'}s · ${AS.gpusPerRack} GPU · ${AS.rackKw} kW</b> per rack, ${AS.racksPerSU} racks per scalable unit — <span class="pn-b v">vendor</span>`
+   : `<b style="color:var(--warn)">${AS.nodesPerRack} node${AS.nodesPerRack===1?'':'s'} · ${AS.gpusPerRack} GPU · ${AS.rackKw} kW</b> per rack (${AS.bound} — ${AS.spaceMax} by ${AS.usableU}U usable, ${AS.powerMax} by the feed) · <b>no published scalable unit</b>, sized on racks — <span class="pn-b e">derived</span>`;
+
+  /* ---- CONSISTENCY PANEL. Rendered ABOVE the numbers, not buried under them: a build
+   * that cannot be energised or cabled should be the first thing you read, not a
+   * footnote after the exaFLOPS. */
+  const RL=rules({...d,bom:bom(d)});
+  const rp=$a('advRules');
+  if(rp){
+   const bad=RL.filter(r=>r.v==='FAIL'), warn=RL.filter(r=>r.v==='WARN');
+   const col=v=>v==='FAIL'?'var(--hot)':v==='WARN'?'var(--warn)':'var(--ok)';
+   rp.innerHTML=`<div class="adv-key" style="margin:12px 0;border-color:${bad.length?'var(--hot)':warn.length?'var(--warn)':'var(--ok)'}">
+     <div class="kh" style="color:${bad.length?'var(--hot)':warn.length?'var(--warn)':'var(--ok)'}">
+       Consistency — ${bad.length?`<b>${bad.length} FAIL</b>, `:''}${warn.length} to decide, ${RL.filter(r=>r.v==='PASS').length} pass
+       <span style="color:var(--faint);font-weight:400">· electrical, fabric, cable reach, space, provenance</span></div>
+     <div class="mem-tbl-wrap"><table class="mem-tbl"><tbody>
+     ${RL.slice().sort((a,b)=>({FAIL:0,WARN:1,PASS:2})[a.v]-({FAIL:0,WARN:1,PASS:2})[b.v]).map(r=>
+      `<tr><td style="width:60px"><span class="pn-b ${r.v==='PASS'?'v':'e'}" style="${r.v==='FAIL'?'background:rgba(239,68,68,.14);color:var(--hot);border-color:rgba(239,68,68,.35)':''}">${r.v}</span></td>
+       <td style="width:64px;font-family:var(--mono);color:var(--faint)">${r.id} ${r.cat}</td>
+       <td><b style="color:${col(r.v)}">${r.title}</b></td>
+       <td class="desc">${r.detail}</td></tr>`).join('')}
+     </tbody></table></div>
+     <div class="kn">Every one of these can fail, and <span style="font-family:var(--mono)">scripts/assert-model-consistency.mjs</span> drives inputs that make each one fail on purpose. A check whose verdict never varies is not a check.</div>
+   </div>`;
+  }
   // ---- summary + fabric BOM -------------------------------------------------------
   $a('advOut').innerHTML=`
    <div class="mem-hero" style="margin-bottom:14px">
      <div class="mem-k" style="--e:var(--cool)"><div class="n" style="color:var(--cool)">${NUMF(d.realGpus)}</div>
-       <div class="l">GPUs across ${Math.ceil(d.suNeeded)} scalable unit${Math.ceil(d.suNeeded)===1?'':'s'}</div>
+       <div class="l">GPUs across ${d.blockTotal} ${d.blockLabel}${d.blockTotal===1?'':'s'} of ${d.arch.label}</div>
        <div class="s">${d.computeRacks} compute + ${d.netRacks} network racks</div></div>
      <div class="mem-k" style="--e:var(--grace)"><div class="n" style="color:var(--grace)">${NUMF(d.totalLinks)}</div>
        <div class="l">fabric + management links</div><div class="s">+${NUMF(d.spares)} spares at ${gi('spares')}%</div></div>
@@ -4000,19 +4509,21 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      <div class="mem-k" style="--e:${d.risers?'var(--warn)':'var(--faint)'}"><div class="n" style="color:${d.risers?'var(--warn)':'var(--faint)'}">${d.risers||'—'}</div>
        <div class="l">inter-floor fibre trunks</div><div class="s">${d.floors} floor${d.floors===1?'':'s'} · ${d.trunkLinks} links per ${gi('trunkFibers')}F trunk</div></div>
    </div>
-   <div class="callout" style="border-left-color:${f.exact?'var(--ok)':'var(--warn)'}">
-     <div class="callout-h" style="color:${f.exact?'var(--ok)':'var(--warn)'}">Basis: ${f.basis}</div>
-     <p>Switch counts below are transcribed from NVIDIA's DGX SuperPOD GB300 Reference Architecture, Tables 3 and 4. ${f.exact?'This configuration lands on a published row exactly.':'Your target does not land on a published row, so the counts shown are the next design up. We do not interpolate a spine count — topology is not a linear function of GPU count.'}${f.note?` <b>${f.note}</b>`:''}</p>
+   <div class="callout" style="border-left-color:${f.derived?'var(--hot)':f.exact?'var(--ok)':'var(--warn)'}">
+     <div class="callout-h" style="color:${f.derived?'var(--hot)':f.exact?'var(--ok)':'var(--warn)'}">Basis: ${f.basis}</div>
+     <p>${f.derived
+       ? `<b>These switch counts are OURS.</b> NVIDIA publishes Tables 3 and 4 for the GB300 NVL72 scalable unit and nothing equivalent for ${d.arch.label}, so there is no row to transcribe. Rather than borrow the NVL72 numbers and put your architecture's name on them, the counts above are computed from published switch radix and the links this build actually presents — and every one of them is badged <span class="pn-b e">derived</span> so it cannot be read as NVIDIA's reference architecture.`
+       : `Switch counts below are transcribed from NVIDIA's DGX SuperPOD GB300 Reference Architecture, Tables 3 and 4. ${f.exact?'This configuration lands on a published row exactly.':'Your target does not land on a published row, so the counts shown are the next design up. We do not interpolate a spine count — topology is not a linear function of GPU count.'}`}${f.note?` <b>${f.note}</b>`:''}</p>
    </div>
    <div class="mem-tbl-wrap" style="margin-bottom:14px"><table class="mem-tbl">
      <thead><tr><th>Fabric role</th><th>Model</th><th>Qty</th><th>Ports each</th><th>Basis</th></tr></thead><tbody>
-     <tr><td><b>InfiniBand leaf</b></td><td>${FABRIC.sw.ibLeaf.model}</td><td>${f.ibLeaf}</td><td>${FABRIC.sw.ibLeaf.ports} x ${FABRIC.sw.ibLeaf.speed}</td><td class="ok">RA Table 3 — 8 per SU, 4 rails x 2</td></tr>
-     <tr><td><b>InfiniBand spine</b></td><td>${FABRIC.sw.ibSpine.model}</td><td>${f.ibSpine||'—'}</td><td>${FABRIC.sw.ibSpine.ports} x ${FABRIC.sw.ibSpine.speed}</td><td class="ok">RA Table 3</td></tr>
-     <tr><td>Ethernet compute leaf</td><td>${FABRIC.sw.ethLeaf.model}</td><td>${f.ethComputeLeaf}</td><td>${FABRIC.sw.ethLeaf.ports} x ${FABRIC.sw.ethLeaf.speed}</td><td class="ok">RA Table 4</td></tr>
-     <tr><td>Ethernet storage leaf</td><td>${FABRIC.sw.ethLeaf.model}</td><td>${f.ethStorageLeaf}</td><td>${FABRIC.sw.ethLeaf.ports} x ${FABRIC.sw.ethLeaf.speed}</td><td class="ok">RA Table 4</td></tr>
-     <tr><td>Ethernet spine</td><td>${FABRIC.sw.ethSpine.model}</td><td>${f.ethSpine||'—'}</td><td>${FABRIC.sw.ethSpine.ports} x ${FABRIC.sw.ethSpine.speed}</td><td class="ok">RA Table 4</td></tr>
+     <tr><td><b>InfiniBand leaf</b></td><td>${FABRIC.sw.ibLeaf.model}</td><td>${f.ibLeaf}</td><td>${FABRIC.sw.ibLeaf.ports} x ${FABRIC.sw.ibLeaf.speed}</td><td class="${PC}">${PB('Table 3 — 8 per SU, 4 rails x 2','ceil(compute links / 72 downlinks), rounded to whole rails')}</td></tr>
+     <tr><td><b>InfiniBand spine</b></td><td>${FABRIC.sw.ibSpine.model}</td><td>${f.ibSpine||'—'}</td><td>${FABRIC.sw.ibSpine.ports} x ${FABRIC.sw.ibSpine.speed}</td><td class="${PC}">${PB('Table 3','ceil(leaf x uplinks / 144 radix)')}</td></tr>
+     <tr><td>Ethernet compute leaf</td><td>${FABRIC.sw.ethLeaf.model}</td><td>${f.ethComputeLeaf}</td><td>${FABRIC.sw.ethLeaf.ports} x ${FABRIC.sw.ethLeaf.speed}</td><td class="${PC}">${PB('Table 4','ceil(storage links / 64 ports)')}</td></tr>
+     <tr><td>Ethernet storage leaf</td><td>${FABRIC.sw.ethLeaf.model}</td><td>${f.ethStorageLeaf}</td><td>${FABRIC.sw.ethLeaf.ports} x ${FABRIC.sw.ethLeaf.speed}</td><td class="${PC}">${PB('Table 4','ceil(storage links / 64 ports)')}</td></tr>
+     <tr><td>Ethernet spine</td><td>${FABRIC.sw.ethSpine.model}</td><td>${f.ethSpine||'—'}</td><td>${FABRIC.sw.ethSpine.ports} x ${FABRIC.sw.ethSpine.speed}</td><td class="${PC}">${PB('Table 4','ceil(leaf uplinks / 64 ports)')}</td></tr>
      <tr><td>OOB management</td><td>${FABRIC.sw.oob.model}</td><td>${d.oobCount}</td><td>${FABRIC.sw.oob.ports} x ${FABRIC.sw.oob.speed}</td><td class="warn">one per compute rack — derived, RA rolls OOB into the SU aggregation layer</td></tr>
-     <tr><td>Mgmt leaf + OOB spine</td><td>${FABRIC.sw.ethLeaf.model}</td><td>${f.mgmtOob}</td><td>—</td><td class="ok">RA Table 4</td></tr>
+     <tr><td>Mgmt leaf + OOB spine</td><td>${FABRIC.sw.ethLeaf.model}</td><td>${f.mgmtOob}</td><td>—</td><td class="${PC}">${PB('Table 4','one aggregation pair per plane')}</td></tr>
      </tbody></table></div>`;
 
   // ---- elevation overview: tiles, click to expand ---------------------------------
@@ -4023,7 +4534,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      <span class="tn">${nm}</span>
      <span class="tt">${r.kind==='compute'?`SU${r.su} · ${d.computeVendor==='dell'?'Dell':d.computeVendor==='nvidia'?'NVIDIA':'Penguin'}`
       :r.kind==='gp'?'general-purpose':r.kind==='storage'?'storage':r.kind==='memory'?'memory tier':'network'}</span>
-     <span class="tb">${r.kind==='compute'?'72 GPU · 142 kW'
+     <span class="tb">${r.kind==='compute'?`${d.arch.gpusPerRack} GPU · ${d.arch.rackKw} kW`
       :r.kind==='gp'?`${d.gpLabel} · ${d.gpKWPerRack} kW`
       :r.kind==='storage'?`${d.vastLabel} · ${d.vKw} kW`
       :r.kind==='memory'?`${d.memLabel} · ${d.memTB} TB`
@@ -4165,7 +4676,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     }
    floorRows.forEach((row)=>{
     rowCounter++; const ri=rowCounter;
-    const y=PAD*0.55+TOPB+ri*ROWH+fi*FLOORPAD, rowLetter=String.fromCharCode(A.row.charCodeAt(0)+ri);
+    const y=PAD*0.55+TOPB+ri*ROWH+fi*FLOORPAD, rowLetter=String.fromCharCode(String(A.row||'A').charCodeAt(0)+ri);
     /* ASHRAE TC9.9 orientation. Even rows face down-screen, odd rows face up, which
      * puts intakes together (COLD) and exhausts together (HOT) in alternating aisles.
      * rear = -face, and the rear is where the cable exits — so the bundles for the two
@@ -4416,17 +4927,25 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    <div class="kn" style="margin-top:9px">Connectivity per the RA: ${d.vAuto.design.net}. The document's own OOB figures are internally inconsistent for the 2-4-3 design (states six 1Gb/s per server across four servers yet totals 48), so OOB is taken from the per-rack topology above rather than from that line.</div>`;
 
   // ---- naming preview -------------------------------------------------------------
-  const r0=rackName(1), ct=devName(r0,8,'CT01'), nvs=devName(r0,20,'NVS01');
+  /* The naming scheme has to label the devices this build ACTUALLY has. An HGX rack has
+   * no NVLink switch tray, so previewing an identifier for one — and then exporting it
+   * in the identifier CSV — invents a device the installer will go looking for. */
+  const RS=d.arch.rackScale;
+  const cLbl=RS?(d.arch.grainLabel||'Compute tray'):(d.arch.nodeU+'U compute node');
+  const cAbbr=RS?'CT01':'ND01';
+  const r0=rackName(1), ct=devName(r0,8,cAbbr), nvs=devName(r0,20,'NVS01');
   const nb=$a('advNameTbl');
   if(nb) nb.innerHTML=[
    ['Rack',r0,'cabinet label, both faces'],
-   ['Compute tray',ct,'device label at the tray ear'],
-   ['Compute fabric port',portName(ct,'IB1'),'each of 4 ConnectX-8 ports per tray'],
-   ['Storage / in-band port',portName(ct,'ST1'),'each of 2 BlueField-3 ports per tray'],
-   ['<b>Tray BMC</b>',`<b>${portName(ct,'BMC')}</b>`,'<b>out-of-band — one per compute tray</b>'],
-   ['<b>Tray management</b>',`<b>${portName(ct,'MGT')}</b>`,'<b>1GbE debug / NVOS</b>'],
-   ['NVLink switch tray',nvs,'9 per NVL72 rack'],
-   ['<b>Switch-tray BMC</b>',`<b>${portName(nvs,'BMC')}</b>`,'<b>often unlabelled in practice — the 3am problem</b>'],
+   [cLbl,ct,'device label at the '+(RS?'tray ear':'node ear')],
+   ['Compute fabric port',portName(ct,'IB1'),`each of ${d.arch.perRack.compute/d.arch.nodesPerRack} ports per ${RS?'tray':'node'} — 1 rail per GPU`],
+   ['Storage / in-band port',portName(ct,'ST1'),`each of ${d.arch.perRack.storage/d.arch.nodesPerRack} storage ports per ${RS?'tray':'node'}`],
+   ['<b>'+(RS?'Tray':'Node')+' BMC</b>',`<b>${portName(ct,'BMC')}</b>`,'<b>out-of-band — one per '+(RS?'compute tray':'node')+'</b>'],
+   ['<b>'+(RS?'Tray':'Node')+' management</b>',`<b>${portName(ct,'MGT')}</b>`,'<b>1GbE debug / NVOS</b>'],
+   ...(RS?[
+    ['NVLink switch tray',nvs,'9 per NVL72 rack'],
+    ['<b>Switch-tray BMC</b>',`<b>${portName(nvs,'BMC')}</b>`,'<b>often unlabelled in practice — the 3am problem</b>'],
+   ]:[]),
    ['IB leaf switch',devName(rackName(d.computeRacks+1),12,'IBL01'),'in the network rack'],
    ['IB leaf port',portName(devName(rackName(d.computeRacks+1),12,'IBL01'),'P001'),'144 per leaf'],
    ['Patch panel port',portName(devName(rackName(d.computeRacks+1),40,'PP01'),'F01'),'MPO-12/APC'],
@@ -4451,12 +4970,24 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   * derived from the link classes and say so. */
  function bom(d){
   const f=d.f, sp=n=>Math.ceil(n*gi('spares')/100);
+  /* One helper so a switch count cannot cite an NVIDIA table it was not read from.
+   * Vendor build -> the RA table reference. Derived build -> the arithmetic, in full,
+   * with DERIVED in the string so the XLSX styler ambers it and rule V1 can see it. */
+  const RA=(table,how)=>f.derived?`DERIVED (OURS) — ${how}. NVIDIA publishes no ${table} for ${d.arch.label}`:`NVIDIA RA ${table}`;
+  /* Rack-scale composition basis. Vendor-published only where the vendor actually
+   * published it — the tray count is the OEM's, but the 8-rack scalable-unit grouping is
+   * NVIDIA's design applied to somebody else's cabinet, and that part is DERIVED. */
+  const RS=how=>d.arch.provenance==='vendor'
+    ? `${how} — NVIDIA RA`
+    : `${how} — VENDOR-PUBLISHED rack composition for ${d.arch.label}. The scalable-unit grouping around it is DERIVED (OURS): it is NVIDIA's SU applied to this vendor's implementation, and NVIDIA publishes no reference architecture for it.`;
   const STD=[1,2,3,5,7,10,15,20,30,50,75,100,150,200,300,500];
   const stock=m=>STD.find(x=>x>=m)||500;
   const opt=d.L.filter(l=>l.media.includes('SMF'));
   const optLinks=opt.reduce((a,l)=>a+l.n,0);
   const rows=[
-   ['Rack','GB300 NVL72 compute rack',d.computeRacks,`${Math.ceil(d.suNeeded)} SU x 8 racks — RA`],
+   ['Rack',d.arch.label+' compute rack',d.computeRacks,
+     d.arch.rackScale?`${d.blockTotal} SU x ${d.arch.racksPerSU} racks — NVIDIA RA`
+       :`${d.computeRacks} racks at ${d.arch.gpusPerRack} GPU each — DERIVED (OURS), no published SU for this architecture`],
    ...(d.planes>1&&!d.torMode?[['Rack','Network rack — side A (left of row)',d.netRacksPerSide,
      `plane A of ${d.planes} · ${d.netRed==='ab100'?'sized for the FULL load':'sized for half the load'}`],
     ['Rack','Network rack — side B (right of row)',d.netRacksPerSide,
@@ -4464,20 +4995,40 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ...(d.torMode?[['Rack','Top-of-rack switching (no dedicated network racks)',d.computeRacks,
      `${d.torSwitchU}U of switching per compute rack — ToR, so node links stay in-rack on short DAC and only uplinks leave`]]:[]),
    ['Rack','Network rack (42U usable)',d.netRacks,`${NUMF(d.swU)}U of switching packed at 42U/rack — derived`],
-   ['Compute','Compute tray (4x B300 + 2x Grace)',d.computeRacks*18,'18 per NVL72 rack — RA'],
-   ['Compute','NVLink switch tray',d.computeRacks*9,'9 per NVL72 rack — RA'],
-   ['Power','Power shelf 33 kW',d.computeRacks*8,'6-8 per rack, 8 assumed — RA range'],
-   ['Switch',FABRIC.sw.ibLeaf.model+' — IB leaf',f.ibLeaf,'RA Table 3'],
-   ['Switch',FABRIC.sw.ibSpine.model+' — IB spine',f.ibSpine,'RA Table 3'],
-   ['Switch',FABRIC.sw.ethLeaf.model+' — Eth compute leaf',f.ethComputeLeaf,'RA Table 4'],
-   ['Switch',FABRIC.sw.ethLeaf.model+' — Eth storage leaf',f.ethStorageLeaf,'RA Table 4'],
-   ['Switch',FABRIC.sw.ethSpine.model+' — Eth spine',f.ethSpine,'RA Table 4'],
+   /* WHAT IS ACTUALLY IN THE RACK. A rack-scale NVL72 is trays, NVLink switch trays and
+    * power shelves. An HGX node build is NODES — it has no NVLink switch tray and no
+    * shared power shelf, because each node carries its own PSUs. Billing a Relion build
+    * for 9 switch trays and 8 power shelves a rack was the BOM half of issue #1. */
+   ...(d.arch.rackScale?[
+     /* Only ONE rack-scale architecture here is covered by NVIDIA's reference
+      * architecture. Dell's NVL72 implementation is a different vendor's product wearing
+      * the same form factor, so citing "NVIDIA RA" on its BOM lines is the laundering
+      * this change exists to stop — and rule V1 caught exactly that during the sweep. */
+     ['Compute',d.arch.label+' compute tray',d.computeRacks*d.arch.nodesPerRack,
+       RS('%d per rack'.replace('%d',d.arch.nodesPerRack))],
+     ['Compute','NVLink switch tray',d.computeRacks*9,RS('9 per NVL72 rack')],
+     ['Power','Power shelf 33 kW',d.computeRacks*8,RS('6-8 per rack, 8 assumed')],
+   ]:[
+     ['Compute',d.arch.label+' — '+d.arch.nodeU+'U node',d.computeRacks*d.arch.nodesPerRack,
+       `${d.arch.nodesPerRack} per rack (${d.arch.bound}: ${d.arch.spaceMax} by ${d.arch.usableU}U usable, ${d.arch.powerMax} by the ${d.arch.feed.label} feed) — DERIVED (OURS)`],
+     ['Power','Rack PDU — '+d.arch.feed.connector,d.computeRacks*2,
+       `A/B pair per rack. NO power shelf: ${d.arch.label} nodes carry their own PSUs`],
+   ]),
+   /* PROVENANCE, not decoration. When the fabric was computed by us these must NOT say
+    * "RA Table 3" — that would launder our arithmetic into NVIDIA's reference
+    * architecture, which is the exact failure the provenance system exists to prevent.
+    * Rule V1 asserts no vendor-labelled row survives on a derived build. */
+   ['Switch',FABRIC.sw.ibLeaf.model+' — IB leaf',f.ibLeaf,RA('Table 3','ceil(compute links / 72 downlinks), rounded to a whole multiple of '+d.rails+' rails')],
+   ['Switch',FABRIC.sw.ibSpine.model+' — IB spine',f.ibSpine,RA('Table 3','ceil(leaf x '+d.upPerLeaf+' uplinks / '+FABRIC.sw.ibLeaf.ports+' radix)')],
+   ['Switch',FABRIC.sw.ethLeaf.model+' — Eth compute leaf',f.ethComputeLeaf,RA('Table 4','ceil(storage links / '+FABRIC.sw.ethLeaf.ports+' ports)')],
+   ['Switch',FABRIC.sw.ethLeaf.model+' — Eth storage leaf',f.ethStorageLeaf,RA('Table 4','ceil(storage links / '+FABRIC.sw.ethLeaf.ports+' ports)')],
+   ['Switch',FABRIC.sw.ethSpine.model+' — Eth spine',f.ethSpine,RA('Table 4','ceil(leaf uplinks / '+FABRIC.sw.ethLeaf.ports+' ports)')],
    ['Switch',FABRIC.sw.oob.model+' — OOB management',d.oobCount,'one per compute rack — derived'],
    ['Optic','800G OSFP DR8 transceiver (MMS4X00-NM)',optLinks*2,'2 per optical link — derived'],
    ['Fibre','MPO-12/APC jumper '+stock(d.rowRun)+'m',d.ibDown+d.ethDown,`rack to hub at ${d.place==='tor'?'top of rack':d.place==='mor'?'middle of row':d.place==='left'?'left of row':'right of row'} — ${d.worstHops} hops x ${d.pitch}m + ${d.rise}m tray rise`],
    ['Fibre','MPO-12/APC jumper '+stock(d.rowRun+(d.floors>1?gi('interFloorM'):0))+'m',d.ibUp+d.ethUp,'leaf to spine — derived'],
    ...(d.memUnits?[
-    ['Memory',MEMAI.label+' — '+MEMAI.mem,d.memUnits,`${d.memPerSU} per scalable unit x ${Math.ceil(d.suNeeded)} SU — OUR default ratio, not a Penguin-published rule`],
+    ['Memory',MEMAI.label+' — '+MEMAI.mem,d.memUnits,`${d.memPerSU} per ${d.blockLabel} x ${d.blockTotal} — OUR default ratio, not a Penguin-published rule`],
     ['Rack','MemoryAI rack (42U usable)',d.mRacks,`${d.memU}U at ${MEMAI.u}U per appliance, packed at 42U/rack — derived`],
    ]:[]),
    ['Fibre',gi('trunkFibers')+'F trunk assembly — inter-floor riser',d.risers,d.risers?`riser, ${d.trunkLinks} links each — derived`:'single floor, none required'],
@@ -4496,7 +5047,102 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['Passive','MPO-12/APC patch panel (12-port)',Math.ceil((d.ibDown+d.ibUp+d.ethDown+d.ethUp)/12),'structured field, 12 links per panel — derived'],
    ['Passive','Cable manager (1U)',(d.computeRacks+d.netRacks)*2,'2 per rack — convention'],
   ];
-  return rows.filter(r=>r[2]>0).map(r=>({cat:r[0],item:r[1],qty:r[2],sp:sp(r[2]),basis:r[3]}));
+  return rationalize(rows.filter(r=>r[2]>0).map(r=>({cat:r[0],item:r[1],qty:r[2],sp:sp(r[2]),basis:r[3]})),d);
+ }
+
+ /* ═══ BOM RATIONALIZATION ═══════════════════════════════════════════════════════════
+  * This BOM is meant to be plumbed into an ordering system, and an order line needs
+  * more than a sentence. Until now every row was display strings: no stable identity,
+  * no vendor, no unit of measure, and two rows that are the SAME PART could sit apart
+  * because their prose differed — which is exactly how a purchase order ends up with
+  * two lines for one SKU and a receiving dock that cannot check the pallet.
+  *
+  * So each line gets:
+  *   id     stable, kebab-case, derived from the part not the prose. Length-varying
+  *          parts carry the length in the id, because a 10 m and a 30 m trunk are
+  *          different things to order and must NOT merge.
+  *   vendor who you raise the PO with.
+  *   mpn    the manufacturer part number, or NULL where none is published. NULL is the
+  *          honest answer and it is load-bearing: an order system has to know which
+  *          lines are quotable and which need a vendor lookup. A fabricated part number
+  *          is the worst failure available here — it looks orderable and is not.
+  *   uom    what a quantity of 1 actually is.
+  *   prov   vendor | derived | assumed, so a downstream system can refuse to quote what
+  *          this tool computed rather than read.
+  *
+  * Then identical ids MERGE — the same job skus() does for cables in the simple planner,
+  * which is why this reuses its binning shape instead of inventing a second one.
+  * ---------------------------------------------------------------------------------*/
+ const CATALOGUE={
+  'q3400-rd'   :{vendor:'NVIDIA',  mpn:'Q3400-RD',    uom:'ea', u:4, desc:'Quantum-X800 144x800G InfiniBand switch'},
+  'sn5600d'    :{vendor:'NVIDIA',  mpn:'SN5600D',     uom:'ea', u:2, desc:'Spectrum-X 64x800G Ethernet switch'},
+  'sn2201'     :{vendor:'NVIDIA',  mpn:'SN2201',      uom:'ea', u:1, desc:'48x1G + 4x SFP28 OOB management switch'},
+  'mms4x00-nm' :{vendor:'NVIDIA',  mpn:'MMS4X00-NM',  uom:'ea',      desc:'800G OSFP twin-port DR8 transceiver, 500 m'},
+  'vast-cbox'  :{vendor:'VAST Data',mpn:null,         uom:'ea', u:2, desc:'CBox — 4x CNode'},
+  'vast-dbox'  :{vendor:'VAST Data',mpn:null,         uom:'ea', u:2, desc:'DBox NVMe enclosure'},
+  'memai'      :{vendor:'Penguin Solutions',mpn:null, uom:'ea', u:4, desc:'MemoryAI KV cache server, 11 TB'},
+ };
+ const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48);
+ function rationalize(lines,d){
+  /* Identity is derived from the PART, so two rows describing the same thing in
+   * different prose collapse onto one order line. Length is part of identity for
+   * anything sold by length — merging a 5 m and a 50 m trunk would be a wrong PO. */
+  const idOf=l=>{
+   const m=/(\d+)\s*m\b/.exec(l.item);
+   const base=slug(l.item.replace(/\s*\d+m\b/,''));
+   return m?`${base}@${m[1]}m`:base;
+  };
+  const CATKEY=it=>{
+   const t=it.toLowerCase();
+   if(t.includes('q3400'))return 'q3400-rd';
+   if(t.includes('sn5600'))return 'sn5600d';
+   if(t.includes('sn2201'))return 'sn2201';
+   if(t.includes('mms4x00'))return 'mms4x00-nm';
+   if(t.includes('cbox'))return 'vast-cbox';
+   if(t.includes('dbox'))return 'vast-dbox';
+   if(t.includes('memoryai'))return 'memai';
+   return null;
+  };
+  const vendorOf=(l,cat)=>{
+   if(cat)return CATALOGUE[cat].vendor;
+   const t=l.item.toLowerCase();
+   if(/penguin|relion|altus/.test(t))return 'Penguin Solutions';
+   if(/dell|poweredge|powerswitch|powerstore/.test(t))return 'Dell Technologies';
+   if(/nvidia|gb300|gb200|dgx|nvlink/.test(t))return 'NVIDIA';
+   if(/vast/.test(t))return 'VAST Data';
+   if(/trunk|patch panel|jumper|dac|aoc|cat6|mpo|cable manager/.test(t))return 'structured cabling — multi-source';
+   return 'to be sourced';
+  };
+  /* DEFAULT TO 'derived', NOT 'vendor'.
+   *
+   * The first cut defaulted to 'vendor' whenever a basis string carried no marker, which
+   * meant a line got upgraded to "the vendor published this" purely by having a terse
+   * note — "plane A of 2, sized for half the load" came out as a VENDOR figure. Silently
+   * defaulting to the STRONGER claim is precisely the failure this whole change exists to
+   * stop. A vendor claim now has to be earned by citing a vendor source. */
+  const provOf=b=>{
+   const t=b||'';
+   if(/ASSUMED|NOT PUBLISHED|EXTRAPOLATED|UNVERIFIED/i.test(t)) return 'assumed';
+   if(/\bDERIVED\b|\bOURS?\b/i.test(t)) return 'derived';
+   if(/RA Table|NVIDIA RA|vendor-published|VENDOR-PUBLISHED|published row/i.test(t)) return 'vendor';
+   return 'derived';
+  };
+  const bin={};
+  lines.forEach(l=>{
+   const id=idOf(l), cat=CATKEY(l.item), c=cat?CATALOGUE[cat]:null;
+   if(bin[id]){
+    /* MERGED, and it says so. A silently summed line is indistinguishable from a
+     * single-source one, and the basis is the thing a reviewer checks. */
+    bin[id].qty+=l.qty; bin[id].sp+=l.sp;
+    if(bin[id].basis.indexOf(l.basis)<0) bin[id].basis+=' + '+l.basis;
+    bin[id].merged=(bin[id].merged||1)+1;
+    return;
+   }
+   bin[id]={...l, id, catalogueId:cat,
+     vendor:vendorOf(l,cat), mpn:c?c.mpn:null, uom:c?c.uom:'ea',
+     u:c?c.u:null, prov:provOf(l.basis), merged:1};
+  });
+  return Object.values(bin).map(b=>({...b,total:b.qty+b.sp}));
  }
  /* REAR VIEW. Was four hardcoded bands — manifold, busbar, cartridge, PDU — identical
   * for every rack, with no NICs, no ports and no cabling. The back of a rack is where
@@ -4535,21 +5181,55 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    B('oob',40,'—','iDRAC / OOB aggregation — Cat6A'),
    B('pdu',60,'—','Rack PDU A / B — '+(d.gpKWPerRack||0)+' kW, C13/C19'),
   ].join('');
-  const hgx = d.computeArchU && d.computeArchU>1;
+  /* ---- COMPUTE REAR: THE COMPOSITION, GROUPED BY INTERFACE ------------------------
+   * FRONT is nameplates — what the cabinet holds, by hardware. REAR is where the work
+   * happens, so it is the COMPOSITION: which cards are in the device, how many
+   * interfaces each presents, and which labelled cable lands on them.
+   *
+   * These bands used to be prose — "8x compute fabric, 2x storage, 2x mgmt" — a
+   * sentence a technician cannot count against. Now each band is ONE card type, its
+   * interface count comes from the same port topology the BOM bills, and it carries the
+   * cable class, its colour and the identifier the naming scheme prints on the flag. If
+   * the BOM says 8 OSFP a node, the rear view draws 8 and names them.
+   *
+   * Per-device counts divide out of the per-rack totals, so the picture cannot drift
+   * from the parts list — the failure mode a hand-written rear elevation always has. */
+  const A_=d.arch, n=Math.max(1,A_.nodesPerRack), hgx=!A_.rackScale;
+  const per=k=>Math.round((d.perRack[k]||0)/n);
+  const dev=hgx?'ND':'CT';
+  const card=(cls,cnt,nic,speed,note)=>{
+   if(!cnt) return '';
+   const col=d.colourMap&&d.colourMap[cls]?d.colourMap[cls]:null;
+   const swatch=col?`<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${col.hex};margin-right:5px;vertical-align:middle"></span>`:'';
+   return B(cls==='bmc'||cls==='mgmt'?'oob':cls==='storage'?'ethleaf':'compute',
+     Math.max(34,26+cnt*3),`${cnt}x`,
+     `${swatch}<b>${nic}</b> — ${cnt} x ${speed} per ${hgx?'node':'tray'} · ${cnt*n} in the rack`
+     +`<span style="color:var(--faint)"> · ${dev}01..${dev}${String(n).padStart(2,'0')} · ${note}</span>`);
+  };
   return [
-   B('manifold',46,'—',hgx?'Coolant return manifold — direct-to-chip':'Coolant return manifold — NVL72 secondary loop'),
-   hgx
-     ? B('compute',150,'—',(d.computeLabel||'Node')+' rear — per node: 8x compute fabric (1 rail/GPU), 2x storage, 2x mgmt, 1x BMC, 1x SMC')
-     : B('compute',150,'—','Per compute tray: 4x ConnectX-8 (800G, 1 rail/GPU) + 2x BlueField-3 B3240 (storage/in-band) + BMC — x18 trays'),
-   hgx ? '' : B('cart',110,'—','NVLink copper cable cartridge — spine backplane, NOT a cable-BOM item'),
-   B('bus',80,'—',dell?'48 V DC busbar · rack power shelf — ORv3-style':(hgx?'A/B PDU feeds — node PSUs':'DC busbar · power shelf output')),
-   B('oob',40,'—','Tray BMC + switch-tray BMC aggregation — Cat6A to the OOB switch'),
-   B('pdu',54,'—',dell?'ORv3 blind-mate power':'Rack PDU A / B · busway tap-off'),
-  ].join('');
+   B('manifold',40,'—',hgx?'Coolant return manifold — direct-to-chip loop':'Coolant return manifold — NVL72 secondary loop'),
+   card('compute',per('compute'),hgx?'Compute-fabric NIC':'ConnectX-8','800G',
+     `1 rail per GPU, rail-optimised — ${A_.rails} rails`),
+   card('storage',per('storage'),hgx?'Storage / in-band NIC':'BlueField-3 B3240','400G',
+     'storage and in-band, GPUDirect'),
+   card('bmc',per('bmc'),'BMC','1G','out-of-band to the in-rack OOB switch'),
+   card('mgmt',per('mgmt'),'Management','1G','debug / NVOS'),
+   hgx ? '' : B('cart',90,'—','<b>NVLink copper cable cartridge</b> — spine backplane. Deliberately NOT a cable-BOM item: it is in-rack copper, not a cable you order.'),
+   hgx ? '' : B('oob',36,'9x','<b>NVLink switch-tray BMC</b> — 9 trays, often unlabelled in practice: the 3am problem'),
+   B('bus',66,'—',dell?'48 V DC busbar · rack power shelf — ORv3-style'
+     :(hgx?`A/B PDU feeds — ${A_.feed.label}, ${A_.feed.connector}. Nodes carry their own PSUs, so there is no power shelf.`
+          :'DC busbar · power shelf output')),
+   B('pdu',48,'—',dell?'ORv3 blind-mate power':`Rack PDU A / B — ${A_.feed.connector} at ${N1(A_.rackKw)} kW drawn`),
+  ].filter(Boolean).join('');
  }
+ const N1=x=>Math.round(x*10)/10;
  function detailCard(r,i){
   const d=derive();   // vendor/label lookups below need the model; it was never passed in
-  const nm=rackName(i+1), rows=elevation(r.kind);
+  /* `d` was missing here. elevation() branches on d.computeArchU to stack HGX builds as
+   * NODES rather than NVL72 trays, so an expanded detail card fell through to the
+   * hardcoded NVL72 elevation even when the tile grid beside it had drawn the rack
+   * correctly. The other call site passed it; this one never did. */
+  const nm=rackName(i+1), rows=elevation(r.kind,d);
   let u=48, bands=[];
   for(const b of rows) for(let k=0;k<b.n;k++){
    const top=u; u-=b.u;
@@ -4558,7 +5238,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   const dl=bands.filter(b=>b.dev);
   return `<div class="rk-card">
     <div class="rk-cardh"><div><h4>${nm}</h4><div class="s">${
-  r.kind==='compute'?`Scalable Unit ${r.su} · ${d.computeLabel}`
+  /* r.su is null for architectures with no published scalable unit — we refuse to invent
+   * one — so this printed the literal "Scalable Unit null". Say what the rack IS. */
+  r.kind==='compute'?(r.su?`Scalable Unit ${r.su} · ${d.computeLabel}`
+    :`${d.computeLabel} · ${d.arch.nodesPerRack} x ${d.arch.nodeU}U nodes · ${d.arch.gpusPerRack} GPU · ${d.arch.rackKw} kW (${d.arch.bound}) — no published scalable unit`)
  :r.kind==='gp'?`General-purpose · ${d.gpLabel} · ${d.gpKWPerRack} kW — power is OUR estimate, not a Dell figure`
  :r.kind==='storage'?`Storage · ${d.vastLabel} + ${d.vCboxLabel} · ${d.vd} DBox / ${d.vc} CBox across ${d.vRacks} rack${d.vRacks===1?'':'s'}`
  :r.kind==='patch'?`Patch field · MPO-12/APC · ${d.trunkPanels} panels total, ${d.portsPerRack} MPO positions per compute rack`
@@ -4580,7 +5263,7 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
       <div class="rk-ports">
         <div class="rk-elevh">LABELLED DEVICES &amp; PORTS</div>
         <div class="rk-plist">${dl.map(b=>{
-          const dn=devName(nm,b.uPos,b.dev), ps=PORTS[b.dev.replace(/\d+$/,'')]||[];
+          const dn=devName(nm,b.uPos,b.dev), ps=portsFor(b.dev.replace(/\d+$/,''),d);
           return `<div class="rk-dev"><div class="dn">${dn}</div>
             ${ps.length?ps.map(p=>`<div class="pr"><span class="pn">${portName(dn,p[0])}</span><span class="pd">${p[1]}</span></div>`).join(''):'<div class="pr"><span class="pd">no cabled ports</span></div>'}
           </div>`;}).join('')}</div>
@@ -4614,9 +5297,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   $a('rkAdv').style.display=adv?'':'none';
   ['rkSimpleBar','rkRacks','rkAggWrap'].forEach(id=>{const el=$a(id);if(el)el.style.display=adv?'none':'';});
   document.querySelectorAll('#v-rack .rk-agg').forEach(el=>{if(el.id!=='rkAggWrap')el.style.display=adv?'none':'';});
-  $a('rkModeNote').textContent=adv
-   ? 'Derived from NVIDIA’s published SuperPOD reference architecture: up to 16 scalable units / 9,216 GPUs. Click any rack to expand its elevation and port labels.'
-   : 'Hand-configure individual racks: power, thermal, per-rack cabling and a SKU-rational BOM.';
+  /* The advanced text is written by paint(), which runs on every change — setting it
+   * here as well meant it only refreshed when you clicked a MODE button, so it went on
+   * claiming NVIDIA's SuperPOD RA after you had switched to a Penguin build. */
+  if(!adv) $a('rkModeNote').textContent='Hand-configure individual racks: power, thermal, per-rack cabling and a SKU-rational BOM.';
   if(adv){renderCtl();renderNameCtl();paint();}
  });
  document.addEventListener('click',e=>{if(e.target&&e.target.dataset&&e.target.dataset.close){SEL=null;paint();}});
@@ -4649,12 +5333,17 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
 
  // published for the Build Sheet tab
  window.__ADV_MODEL=()=>{const d=derive();
-  return {...d,racksPerRow:gi('racksPerRow'),rowStart:A.row,name:rackName,bom:bom(d),
+  /* rowStart falls back to 'A'. A saved configuration written before the row field
+   * existed has no A.row, and `undefined.charCodeAt` took the whole build sheet down. */
+  return {...d,racksPerRow:gi('racksPerRow'),rowStart:A.row||'A',name:rackName,bom:bom(d),
    trunkFibers:gi('trunkFibers'),sparesPct:gi('spares'),
    site:A.site,room:A.room,rowFirst:A.row,patRack:A.patRack,patDev:A.patDev,patPort:A.patPort,
    customLayout:Array.isArray(A.rackOrder)&&A.rackOrder.length>0,
    rackOrder:Array.isArray(A.rackOrder)?A.rackOrder.slice():null,
    devName,portName,
+   /* Rule verdicts travel WITH the model, so every export carries them and a downstream
+    * system can refuse a build that FAILs instead of quoting it. */
+   rules:rules({...d,bom:bom(d)}),
    colourMap:Object.fromEntries(Object.keys(CDEF).map(k=>[k,{hex:colOf(k),name:colName(k)}]))};};
  // import target from Size It
  /* Partner Solutions -> Advanced. The general-purpose estate becomes real racks in
@@ -4677,19 +5366,29 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
  };
  window.__advClearPartner=()=>{A.gpRacks=0;A.gpKW=0;A.gpNodes=0;save();};
  window.__advImport=(gpus,arch)=>{
-  /* Round to whole scalable units rather than clamping. A typed 1,096 is a real
-   * intent — it becomes 1,152 (2 SU) and the note says so, instead of silently
-   * becoming 576 and leaving the user to wonder where their number went. */
-  const SU=FABRIC.su.gpus;
-  const rounded=Math.max(SU,Math.ceil(gpus/SU)*SU);
-  const g=Math.max(576,Math.min(9216,rounded));
-  A.gpus=g; if(arch)A.arch=arch; save();
+  /* Round UP to a whole purchasable block rather than clamping. A typed 1,096 is a real
+   * intent — it becomes the next whole block and the note says so, instead of silently
+   * becoming something smaller and leaving the user to wonder where their number went.
+   *
+   * WHAT the block is now depends on the architecture. Rack-scale rounds to a SCALABLE
+   * UNIT because NVIDIA sells one. Everything else rounds to a RACK, because we refuse
+   * to invent an SU for a vendor who never published one. */
+  if(arch)A.arch=arch;
+  const AS=archSpec();
+  const blk=AS.rackScale?AS.gpusPerSU:AS.gpusPerRack;
+  const rounded=Math.max(blk,Math.ceil(gpus/blk)*blk);
+  const g=Math.max(AS.gpusPerRack,Math.min(AS.ceiling,rounded));
+  A.gpus=g; save();
   const b=document.querySelector('#rkMode button[data-m="advanced"]'); if(b)b.click();
   const n=$a('advImportNote');
   if(n){
-   n.innerHTML=`Imported <b>${NUMF(gpus)} GPUs</b>${arch?` from ${arch}`:''}`
-    + (g!==gpus?` — rounded up to <b>${NUMF(g)}</b> (${g/FABRIC.su.gpus} scalable unit${g/FABRIC.su.gpus===1?'':'s'} of ${NUMF(FABRIC.su.gpus)}).${gpus>9216?' The published two-layer fabric tops out at 9,216.':''}`:'.')
-    + (arch&&arch!=='gb300-nvl72'?' <b>Note:</b> Advanced mode builds on the GB300 NVL72 scalable unit, so the rack layout below is NVL72 regardless of the architecture you sized with. Only the GPU target carries across.':'');
+   const blocks=g/blk, unit=AS.rackScale?'scalable unit':'rack';
+   n.innerHTML=`Imported <b>${NUMF(gpus)} GPUs</b> as <b>${AS.label}</b>`
+    + (g!==gpus?` — rounded up to <b>${NUMF(g)}</b> (${blocks} ${unit}${blocks===1?'':'s'} of ${NUMF(blk)} GPU).`:'.')
+    + (rounded>AS.ceiling?` Capped at ${NUMF(AS.ceiling)} — ${AS.ceilingBasis}.`:'')
+    + (AS.rackScale
+        ? ` Laid out as ${AS.nodesPerRack} ${AS.grainLabel||'tray'}s per rack at ${AS.rackKw} kW, ${AS.racksPerSU} racks per SU.`
+        : ` Laid out AS ITSELF: ${AS.nodesPerRack} node${AS.nodesPerRack===1?'':'s'} per rack (${AS.bound}) at ${AS.rackKw} kW on a ${AS.feed.label} feed. <b>No scalable unit</b> — NVIDIA publishes none for this architecture, so this is sized on racks and every derived figure is badged as ours.`);
    n.className='adv-importnote '+(g!==gpus?'bad':'ok');
   }
  };
@@ -4766,10 +5465,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    $s('bsRows').innerHTML='';$s('bsRacks').innerHTML='';renderTags();return;}
   const perRow=Math.max(1,d.racksPerRow);
   $s('bsSum').innerHTML=`<div class="mem-hero" style="margin-bottom:6px">
-    <div class="mem-k" style="--e:var(--cool)"><div class="n" style="color:var(--cool)">${N(d.realGpus)}</div><div class="l">GPUs</div><div class="s">${Math.ceil(d.suNeeded)} scalable units</div></div>
+    <div class="mem-k" style="--e:var(--cool)"><div class="n" style="color:var(--cool)">${N(d.realGpus)}</div><div class="l">GPUs</div><div class="s">${d.blockTotal} ${d.blockLabel}${d.blockTotal===1?'':'s'}</div></div>
     <div class="mem-k" style="--e:var(--grace)"><div class="n" style="color:var(--grace)">${d.racks.length}</div><div class="l">racks total</div><div class="s">${d.computeRacks} compute · ${d.netRacks} network</div></div>
     <div class="mem-k" style="--e:var(--ok)"><div class="n" style="color:var(--ok)">${Math.ceil(d.racks.length/perRow)}</div><div class="l">rows at ${perRow} racks each</div><div class="s">naive fill — not a floor plan</div></div>
-    <div class="mem-k" style="--e:var(--warn)"><div class="n" style="color:var(--warn)">${N(d.computeRacks*142)}<span style="font-size:13px;color:var(--faint)"> kW</span></div><div class="l">compute rack load</div><div class="s">142 kW per NVL72 · excludes network</div></div>
+    <div class="mem-k" style="--e:var(--warn)"><div class="n" style="color:var(--warn)">${N(d.computeRacks*d.arch.rackKw)}<span style="font-size:13px;color:var(--faint)"> kW</span></div><div class="l">compute rack load</div><div class="s">${d.arch.rackKw} kW per ${d.arch.label} rack · excludes network</div></div>
    </div>`;
   // rows
   const rows={};
@@ -4780,23 +5479,30 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    return `<tr><td><b>${letter}</b></td><td>${rs.length}</td>
      <td style="font-family:var(--mono);font-size:11px;color:var(--cool)">${d.name(rs[0].i)} … ${d.name(rs[rs.length-1].i)}</td>
      <td>${comp?`${comp} compute`:''}${comp&&net?' + ':''}${net?`${net} network`:''}</td>
-     <td>${N(comp*72)}</td><td>${N(comp*142)} kW</td>
+     <td>${N(comp*d.arch.gpusPerRack)}</td><td>${N(comp*d.arch.rackKw)} kW</td>
      <td class="desc">${comp?`SU ${[...new Set(rs.filter(x=>x.kind==='compute').map(x=>x.su))].join(', ')}`:'switching and patch fields'}</td></tr>`;}).join('');
   // per-rack manifest
   $s('bsRacks').innerHTML=d.racks.map((r,i)=>{
    const letter=String.fromCharCode(d.rowStart.charCodeAt(0)+Math.floor(i/perRow));
-   const dev=r.kind==='compute'?18+9+8+4:4+4+2+8;
-   const ports=r.kind==='compute'?72+36+27+18:0;
+   /* Device and port counts come from the architecture now. An NVL72 rack is 18 trays +
+    * 9 NVLink switch trays + 8 power shelves + 4 manifolds/OOB; an HGX rack is N nodes
+    * plus its ToR leaf, OOB and PDUs, and has no switch trays or shelves at all. */
+   const A_=d.arch;
+   const dev=r.kind==='compute'
+     ? (A_.rackScale ? A_.nodesPerRack+9+8+4 : A_.nodesPerRack+2+1+2)
+     : 4+4+2+8;
+   const pr=d.perRack;
+   const ports=r.kind==='compute'?pr.compute+pr.storage+pr.bmc+pr.mgmt:0;
    return `<tr><td style="font-family:var(--mono);color:var(--cool)">${d.name(i+1)}</td><td>${letter}</td>
      <td>${r.su||'—'}</td><td>${r.kind}</td><td>${dev}</td><td>${ports?N(ports):'—'}</td>
-     <td>${r.kind==='compute'?'142 kW':'~8 kW'}</td></tr>`;}).join('');
+     <td>${r.kind==='compute'?A_.rackKw+' kW':'~8 kW'}</td></tr>`;}).join('');
   // phased buildout
   const pb=$s('bsPhases');
   if(pb){
    const ph={};
    d.racks.forEach(r=>{const k=r.phase||1;(ph[k]=ph[k]||{n:0,penguin:0,vast:0,nvidia:0,gpus:0,kw:0});
      ph[k].n++; ph[k][r.vendor]++;
-     if(r.kind==='compute'){ph[k].gpus+=72;ph[k].kw+=142;} else if(r.kind==='storage'){ph[k].kw+=Math.round((d.vKw||0)/Math.max(1,d.vRacks));} else ph[k].kw+=8;});
+     if(r.kind==='compute'){ph[k].gpus+=d.arch.gpusPerRack;ph[k].kw+=d.arch.rackKw;} else if(r.kind==='storage'){ph[k].kw+=Math.round((d.vKw||0)/Math.max(1,d.vRacks));} else ph[k].kw+=8;});
    pb.innerHTML=Object.entries(ph).map(([k,v])=>`<tr><td><b>Phase ${k}</b></td><td>${N(v.n)}</td>
      <td style="color:#22d3ee">${v.penguin||0}</td><td style="color:#a855f7">${v.vast||0}</td><td style="color:#94a3b8">${v.nvidia||0}</td>
      <td>${N(v.gpus)}</td><td>${N(v.kw)} kW</td>
@@ -4804,9 +5510,11 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   }
   const bb=$s('bsBom');
   if(bb) bb.innerHTML=(d.bom||[]).length
-   ? d.bom.map(b=>`<tr><td>${b.cat}</td><td><b>${b.item}</b></td><td>${N(b.qty)}</td>
-       <td style="color:var(--faint)">${b.sp?'+'+N(b.sp):'—'}</td><td class="ok">${N(b.qty+b.sp)}</td>
-       <td class="desc">${b.basis}</td></tr>`).join('')
+   ? d.bom.map(b=>`<tr><td>${b.cat}<div style="font-family:var(--mono);font-size:10px;color:var(--faint)">${b.id}</div></td>
+       <td><b>${b.item}</b><div style="font-size:10.5px;color:var(--faint)">${b.vendor} · ${b.mpn?`<span style="font-family:var(--mono)">${b.mpn}</span>`:'<span style="color:var(--warn)">no published part number — vendor lookup required</span>'}${b.merged>1?` · <span style="color:var(--cool)">${b.merged} lines merged</span>`:''}</div></td>
+       <td>${N(b.qty)}</td>
+       <td style="color:var(--faint)">${b.sp?'+'+N(b.sp):'—'}</td><td class="ok">${N(b.total)} <small style="color:var(--faint)">${b.uom}</small></td>
+       <td class="desc"><span class="pn-b ${b.prov==='vendor'?'v':'e'}">${b.prov}</span> ${b.basis}</td></tr>`).join('')
    : '<tr><td colspan="6" class="desc">Configure Advanced mode on the Rack Planner tab.</td></tr>';
   renderTags();
  }
@@ -4849,7 +5557,9 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
     d.aislesOn?d.aisleAt(rowIdx):'n/a',
     tg, rowL+'-T'+tg, d.trunkSide,
     r.su||'',r.phase||1,r.kind,
-    comp?72:0, r.kind==='memory'?Math.round(d.memKw/Math.max(1,d.mRacks)):(comp?142:8), 42,
+    comp?d.arch.gpusPerRack:0,
+    r.kind==='memory'?Math.round(d.memKw/Math.max(1,d.mRacks)):(comp?d.arch.rackKw:8),
+    d.arch.rackU,
     comp?d.portsPerRack:0,
     comp?d.perRack.bmc:1,
     comp?1:1].join(',');
@@ -4917,7 +5627,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    const first=String(row[0]||'').trim().toUpperCase();
    if(first==='NOTE'||first==='SOURCE'||first==='TIE-IN') return 4;
    const joined=row.map(x=>String(x==null?'':x)).join(' ');
-   if(/ASSUMED|NOT PUBLISHED|EXTRAPOLATED|\bOURS\b|UNVERIFIED/.test(joined)) return 3;
+   /* DERIVED joins the amber set. Rack composition and switch counts for any architecture
+    * NVIDIA never published an RA for are ours, and a reader scanning the workbook must
+    * not mistake them for vendor figures because they sit in the same column. */
+   if(/ASSUMED|NOT PUBLISHED|EXTRAPOLATED|\bOURS\b|\bDERIVED\b|UNVERIFIED/.test(joined)) return 3;
    if(first==='TOTAL'||first.startsWith('LICENSED TO')||first==='EVALUATION COPY') return 2;
    return 0;
   };
@@ -4999,6 +5712,56 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   * one. Rather than carry a second hand-rolled XLSX writer, expose this one. */
  window.__XLSX=xlsx;
  $s('bsCsv').onclick=()=>{const c=csv();if(c)dl('build-sheet-'+new Date().toISOString().slice(0,10)+'.csv',c,'text/csv');};
+
+ /* ---- THE ORDER-SYSTEM SEAM -------------------------------------------------------
+  * A versioned envelope, deliberately in the same shape as the `penguin-config/1` file
+  * saved configurations already use, so whatever consumes this has ONE convention to
+  * learn and a version field to branch on when it changes.
+  *
+  * The rule verdicts ride along on purpose. A downstream system should be able to
+  * REFUSE to quote a build that FAILs its electrical or cable-reach checks rather than
+  * discovering it at commissioning — and `unquotable` names the lines with no published
+  * part number, which is the other thing a buyer finds out too late. */
+ window.__BOM=()=>{
+  const d=model(); if(!d) return null;
+  const R=d.rules||[];
+  return {
+   format:'penguin-bom/1', version:1,
+   generated:new Date().toISOString(),
+   identity:(window.__IDENTITY&&window.__IDENTITY())||{},
+   build:{
+    architecture:d.arch.key, label:d.arch.label,
+    provenance:d.arch.provenance, basis:d.arch.basis,
+    gpus:d.realGpus, computeRacks:d.computeRacks, totalRacks:d.racks.length,
+    nodesPerRack:d.arch.nodesPerRack, gpusPerRack:d.arch.gpusPerRack,
+    rackKw:d.arch.rackKw, boundBy:d.arch.bound,
+    scalableUnits:d.arch.rackScale?d.blockTotal:null,
+    feed:{id:d.arch.feed.k,label:d.arch.feed.label,kw:d.arch.feed.kw,
+          connector:d.arch.feed.connector,perRack:d.arch.feedsPerRack,mode:d.arch.feedMode},
+    fabric:{derived:!!d.f.derived,basis:d.f.basis,
+            ibLeaf:d.f.ibLeaf,ibSpine:d.f.ibSpine,
+            ethComputeLeaf:d.f.ethComputeLeaf,ethStorageLeaf:d.f.ethStorageLeaf,ethSpine:d.f.ethSpine}
+   },
+   consistency:{
+    fail:R.filter(r=>r.v==='FAIL').length,
+    warn:R.filter(r=>r.v==='WARN').length,
+    quotable:R.every(r=>r.v!=='FAIL'),
+    rules:R.map(r=>({id:r.id,category:r.cat,verdict:r.v,title:r.title,detail:r.detail}))
+   },
+   /* Lines with mpn:null are NOT orderable as-is. Surfaced as a count so an integration
+    * can gate on it instead of silently emitting PO lines with an empty part field. */
+   unquotable:d.bom.filter(b=>!b.mpn).length,
+   lines:d.bom.map(b=>({
+    id:b.id, catalogueId:b.catalogueId||null, category:b.cat, description:b.item,
+    vendor:b.vendor, mpn:b.mpn, uom:b.uom, rackU:b.u||null,
+    qty:b.qty, spares:b.sp, orderQty:b.total,
+    provenance:b.prov, mergedFrom:b.merged>1?b.merged:1, basis:b.basis
+   }))
+  };
+ };
+ $s('bsBomJson').onclick=()=>{const b=window.__BOM(); if(!b)return;
+  dl('bom-'+(b.build.architecture||'build')+'-'+new Date().toISOString().slice(0,10)+'.json',
+     JSON.stringify(b,null,1),'application/json');};
  /* Eight sheets, each one already pivot-shaped: dimensions in columns, measures numeric.
   * The Racks sheet is the grain — one row per physical cabinet — and every other sheet
   * either rolls up from it or describes a decision that produced it. */
@@ -5011,7 +5774,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ...(window.__IDROWS?window.__IDROWS(4):[]),
    ['Metric','Value','Unit','Basis'],
    ['Target GPUs',d.realGpus,'GPUs','rounded up to whole scalable units'],
-   ['Scalable units',Math.ceil(d.suNeeded),'SU','576 GPUs per SU'],
+   [d.arch.rackScale?'Scalable units':'Compute racks (no SU published)',d.blockTotal,
+    d.arch.rackScale?'SU':'racks',
+    d.arch.rackScale?d.blockGpus+' GPUs per SU — NVIDIA RA'
+      :d.blockGpus+' GPUs per rack — DERIVED (OURS), no vendor SU exists for this architecture'],
    ['Compute racks',d.computeRacks,'racks','8 per SU — NVIDIA RA'],
    ['Network racks',d.netRacks,'racks','derived from switch U at 42U/rack'],
    ['VAST storage racks',d.vRacks,'racks','VAST/NVIDIA RA, extrapolated past 256 GPUs'],
@@ -5033,7 +5799,14 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    ['','','',''],
    ['NOTE','Sizing-grade. Vendor figures are labelled on the References tab. 95% cap — this is not a quote, an electrical stamp or a mechanical stamp.','','']]});
   sh.push({name:'Racks',rows:rowsCsv});
-  sh.push({name:'BOM',rows:[['Category','Item','Qty','Basis'],...d.bom.map(r=>[r[0],r[1],r[2],r[3]])]});
+  /* This read r[0]..r[3] off OBJECTS. bom() has always returned {cat,item,qty,sp,basis},
+   * so every cell on this sheet came out undefined and the workbook shipped a BOM tab of
+   * blanks — a header row over nothing. It looked like a BOM, which is why nobody caught
+   * it. Now it is the rationalized line, with the fields an order system needs. */
+  sh.push({name:'BOM',rows:[
+   ['Part ID','Category','Item','Vendor','MPN','UoM','Qty','Spares','Order qty','Provenance','Merged lines','Basis'],
+   ...d.bom.map(b=>[b.id,b.cat,b.item,b.vendor,b.mpn||'NOT PUBLISHED — vendor lookup required',
+     b.uom,b.qty,b.sp,b.total,b.prov.toUpperCase(),b.merged>1?b.merged:'',b.basis])]});
   /* BOM PER RACK. The flat BOM answers "what do I order"; this answers "what goes in
    * THIS rack" — which is the question the installer standing in front of it has, and
    * the one a receiving dock needs to check a pallet against. Composition is derived
@@ -5043,9 +5816,17 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   d.racks.forEach((r,i)=>{
    const nm=d.name(i+1), L=[];
    if(r.kind==='compute'){
-    const dell=d.computeVendor==='dell';
-    L.push([d.computeLabel+' — compute tray',18,1,6.4,'18 trays per rack — NVIDIA RA']);
-    if(dell){
+    const dell=d.computeVendor==='dell', A_=d.arch;
+    L.push([d.computeLabel+' — '+(A_.grainLabel||A_.nodeU+'U node'),A_.nodesPerRack,A_.nodeU,A_.nodeKw,
+      A_.rackScale?A_.nodesPerRack+' trays per rack — NVIDIA RA'
+        :A_.nodesPerRack+' nodes per rack, '+A_.bound+' — DERIVED (OURS)']);
+    if(!A_.rackScale){
+     /* An HGX rack has no NVLink switch tray and no shared power shelf. Saying so on the
+      * manifest matters more than omitting it: the installer needs to know the absence
+      * is deliberate, not a missing line. */
+     L.push(['ToR leaf switch',2,2,'','A/B pair — node links stay in-rack']);
+     L.push(['Rack PDU A / B — '+A_.feed.connector,2,'','',A_.feed.label+' · '+A_.feed.kw+' kW — nodes carry their own PSUs, no power shelf']);
+    }else if(dell){
      L.push(['ORv3-style blind-mate power + liquid manifold',1,'','','OCP ORv3 base spec is a 48 V busbar at ~18 kW; Dell 300 kW+ racks are ORv3-INSPIRED, not base-spec']);
     }else{
      L.push(['NVLink switch tray',9,1,'','9 switch trays — NVIDIA RA']);
@@ -5153,7 +5934,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      const p=i+1, rs=d.racks.filter(r=>r.phase===p);
      const c=rs.filter(r=>r.kind==='compute').length;
      return [p,rs.length,c,rs.filter(r=>r.kind==='network').length,
-       rs.filter(r=>r.kind==='storage').length,c*72,c*142+(rs.length-c)*8];})]});
+       rs.filter(r=>r.kind==='storage').length,
+       c*d.arch.gpusPerRack, c*d.arch.rackKw+(rs.length-c)*8];})]});
   sh.push({name:'Naming',rows:[['Element','Example','Pattern','Note'],
    ['Site',d.site,'{site}','user input'],['Room',d.room,'{room}','user input'],
    ['First row',d.rowFirst,'{row}','rows increment alphabetically'],
@@ -5168,7 +5950,8 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
   dl('build-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({
    tool:'penguin-build-sheet-v1',generated:new Date().toISOString(),
    identity:window.__IDENTITY?window.__IDENTITY():null,
-   gpus:d.realGpus,scalable_units:Math.ceil(d.suNeeded),fabric:d.f,
+   gpus:d.realGpus,scalable_units:d.arch.rackScale?d.blockTotal:null,
+   compute_racks:d.computeRacks,architecture:d.arch.key,fabric:d.f,
    site:{floors:d.floors,rows_per_floor:d.rowsPerFloor,total_rows:d.totalRows,
      rows_per_floor_is_constraint:d.rowsPerFloorSet>0,racks_per_floor:d.perFloorRacks,racks_per_row:perRow,
      network_placement:d.place,worst_case_reach_m:d.rowRun,rack_pitch_m:d.pitch,tray_rise_m:d.rise},
