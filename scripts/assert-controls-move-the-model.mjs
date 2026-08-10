@@ -56,6 +56,7 @@ const EXEMPT = {
   'rack/rkMode': 'simple-vs-advanced view switch; each mode is swept on its own pass',
   'tree/dtMode': 'decision-tree walk mode — guidance, not sizing',
   'tree/dtWork': 'decision-tree workload lens — guidance, not sizing',
+  'size/cfgName': 'names a saved snapshot; the snapshot carries state, the name does not size anything',
   'partner/licKey': 'licence key field — moves the export byline once activated, not the sizing',
   'rack/advAiAsk': 'assistant prompt box — asks a question, does not size anything',
 };
