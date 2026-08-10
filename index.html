@@ -2978,6 +2978,13 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   * NOTE the default is 300 A, not the 250 A that "looks like" the NVL72's 142 kW.
   * 415 V 3ph 250 A derates to 140.9 kW, which is 1.1 kW SHORT of an NVL72 — rule E1
   * fails it, correctly. A rack you cannot actually energise is not a smaller rack. */
+ /* ---- LATENCY CONSTANTS -------------------------------------------------------------
+  * 4.9 ns/m is light in single-mode glass: c divided by a refractive index of about 1.47,
+  * so roughly 204,000 km/s. NOT microseconds — at 5 us/m a 10 m jumper would cost 50 us
+  * and no fabric would work. 450 ns is a typical cut-through leaf traversal and is OURS,
+  * not a vendor figure; a store-and-forward switch is worse and a specific model may be
+  * better. Both are used for the compute fabric and the KV cache tier. */
+ const NS_PER_M=4.9, NS_PER_HOP=450;
  const PF=0.98, DERATE=0.8, S3=Math.sqrt(3);
  /* ---- REGION SETS THE VOLTAGE AND THE PLUG -----------------------------------------
   * A rack feed is not a universal quantity. The same breaker delivers different power in
@@ -3413,6 +3420,23 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   // MemoryAI BMC/mgmt folds into the existing bmc class rather than inventing a second one
   const bmcRow=L.find(x=>x.cls==='bmc'); if(bmcRow) bmcRow.n+=memBMC+memMGT;
 
+  /* ---- WHAT THE FABRIC COSTS IN TIME ------------------------------------------------
+   * Two terms, and which one dominates decides where the gear goes. Propagation is the
+   * cable; hops are the switches. Same-rail traffic crosses ONE leaf in a rail-optimised
+   * design — cross-rail goes over NVLink inside the node and never touches the fabric —
+   * so leaf-only is 1 hop and leaf-spine-leaf is 3.
+   *
+   * At a 10 m pod run the switch dominates 9:1 and the spine decision is worth 1.8 us of
+   * round trip. Propagation only equals one hop at 92 m one-way, and past that distance
+   * is the whole story — which is why this matters for campus dark fibre and barely at
+   * all inside a row. */
+  const fabricHops=(f.ibSpine||0)>0?3:1;
+  const propNs=Math.round(2*rowRun*NS_PER_M);
+  const hopNs=2*fabricHops*NS_PER_HOP;
+  const fabricRtNs=propNs+hopNs;
+  const latencyDominatedBy=propNs>hopNs?'fibre':'switch';
+  const propParityM=Math.round(NS_PER_HOP/NS_PER_M);
+
   const totalLinks=L.reduce((a,x)=>a+x.n,0);
   const spares=Math.ceil(totalLinks*gi('spares')/100);
 
@@ -3593,7 +3617,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * Propagation is 4.9 ns/m in single-mode glass; the switch-hop figure is a typical
    * cut-through InfiniBand/Ethernet leaf latency and is OURS, not a vendor number.
    * Row-to-row pitch assumes rack depth plus a working aisle. */
-  const ROWPITCH=2.4, NS_PER_M=4.9, NS_PER_HOP=450;
+  const ROWPITCH=2.4;
   let memReachM=0, memHops=0, memCrossFloor=false, memNs=0;
   if(mRacks){
    const pos=i=>{const r=Math.floor(i/perRow); return {row:r,col:i%perRow,floor:Math.floor(r/rowsPerFloor)};};
@@ -3623,6 +3647,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    memOn,memPerSU,memUnits,memU,mRacks,memKw,memFE,memBMC,memMGT,memCON,memTB,
    memReachM,memHops,memCrossFloor,memNs,
    fibrePerRack,portsPerRack,sideDiv,effHops,aislesOn,faceOf,aisleAt,
+   fabricHops,propNs,hopNs,fabricRtNs,latencyDominatedBy,propParityM,
    rowRun,place,pitch,rise,worstHops,hubF,upPerLeaf,ibBlocking,offSpineFrac,perFloorRacks,phases,suPerPhase,suTotal,rowsPerFloor,totalRows,rowsPerFloorSet,
    memLabel:MEMAI.label, memAppU:MEMAI.u, memAppKw:MEMAI.kw,
    swIb:FABRIC.sw.ibLeaf.model, swIbU:FABRIC.sw.ibLeaf.u,
@@ -3790,6 +3815,17 @@ ${c.iso?`<h2>Multi-tenancy</h2>
        : `${f.ibLeaf} leaf, no spine. Every rail is one hop inside the unit, so no spine is bought and no uplink optics are cabled. This is the pod-scale shape.`)
     : ((f.ibSpine||0)?`Leaf-spine-leaf for anything crossing a leaf.`
        :`Leaf + spine selected, but this build fits one leaf layer, so no spine is emitted.`)));
+
+  /* Latency is not bandwidth. "Non-blocking line-rate" is a statement about throughput;
+   * a collective still pays the round trip, and the two are decided by different things.
+   * This reports the split so the spine decision has a number behind it. */
+  out.push(R('N9','Network', d.latencyDominatedBy==='switch'?true:null,
+   `Fabric round trip — ${N1_(d.fabricRtNs/1000)} \u00b5s (${d.fabricHops} hop${d.fabricHops===1?'':'s'})`,
+   `${d.propNs} ns propagation over ${N1_(d.rowRun)} m of glass at 4.9 ns/m, plus ${d.hopNs} ns for ${d.fabricHops} switch traversal${d.fabricHops===1?'':'s'} at 450 ns each — both directions. `
+   +(d.latencyDominatedBy==='switch'
+     ? `The SWITCH dominates at this distance; propagation only catches one hop at ${d.propParityM} m one-way. Hop count is the lever, which is why leaf-only is worth ${N1_((2*2*450)/1000)} \u00b5s against leaf-spine-leaf.`
+     : `The FIBRE dominates — past ${d.propParityM} m one-way the cable costs more than the switch, and moving gear closer beats removing a hop. On campus dark fibre this is the whole story.`)
+   +` The 450 ns hop is OURS, a typical cut-through figure, not a vendor number.`));
 
   const oobPorts=d.oobCount*FABRIC.sw.oob.ports;
   out.push(R('N6','Network', oobPorts>=d.bmc,

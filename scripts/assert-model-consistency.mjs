@@ -29,7 +29,7 @@ const URL_ = (() => { const i = process.argv.indexOf('--url'); return i > -1 ? p
   || 'file://' + new URL('../index.html', import.meta.url).pathname;
 const VERBOSE = process.argv.includes('--verbose');
 
-const ARCHES = ['relion-xe4418', 'altus-xe4318', 'gb300-nvl72', 'dgx-b300', 'dell-xe9680l', 'dell-xe9712'];
+const ARCHES = ['relion-xe4418', 'altus-xe4318', 'altus-xe4318v2', 'gb300-nvl72', 'dgx-b300'];
 const LADDER = ['60', '100', '200', '250', '300', '400', '48dc-orv3'];
 
 const b = await chromium.launch();
@@ -147,6 +147,10 @@ const PROVOCATIONS = [
     why: 'Top-of-rack with 8 rails needs 8 leaf switches in every rack, or rail optimisation is gone.' },
   { id: 'N3', want: 'WARN', state: { advArch: 'gb300-nvl72', advFeed: '300', ibUplinksPerLeaf: '24' },
     why: '24 uplinks against 72 downlinks is 1:3 oversubscription — legal, and a decision.' },
+  { id: 'N9', want: 'WARN', state: { advArch: 'relion-xe4418', advFeed: '200', cableRunM: '200' },
+    why: 'Past 92 m one-way the fibre costs more than a switch hop — moving gear beats removing a hop.' },
+  { id: 'N9', want: 'PASS', state: { advArch: 'relion-xe4418', advFeed: '200', cableRunM: '10' },
+    why: 'CONTROL: at pod scale the switch dominates 9:1 and hop count is the lever.' },
   { id: 'C3', want: 'FAIL', state: { advArch: 'gb300-nvl72', advFeed: '300', cableRunM: '600' },
     why: 'A 600 m run exceeds the 500 m DR8 optical budget. (floors/risers are gone with the floor planner.)' },
   { id: 'C5', want: 'FAIL', state: { advArch: 'gb300-nvl72', advFeed: '300', cableRunM: '200' },
