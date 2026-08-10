@@ -5,12 +5,12 @@ happily produce a rack that cannot be energised, a DAC that cannot reach, or a f
 more links than the leaf has ports. The model has always *encoded* these limits. Until
 `e357a97` it never *checked* them — so a violation looked exactly like a valid design.
 
-21 rules now run on every repaint and travel with the model into every export.
+22 rules now run on every repaint and travel with the model into every export.
 
-**18 evaluate on every build.** Three are conditional, because a rule that cannot apply
+**19 evaluate on every build.** Three are conditional, because a rule that cannot apply
 should not occupy a row: **E5** only when an ORv3-class platform or the 48 V DC feed is in
 play, **C4** only in top-of-rack mode, **V2** only on a derived build. So a typical panel
-shows 19–21 rows, not always 21.
+shows 20–22 rows, not always 22.
 
 ```mermaid
 flowchart LR
@@ -43,6 +43,26 @@ This is not theatre. It has already caught four real defects:
 | DGX B300 packed dense | E4 read the word "liquid" in `"air/liquid"` and passed any density silently |
 | ToR with 8 rails | the harness itself was setting `.value` on a `<div>` and testing the default configuration |
 | Dell NVL72 | V1 keyed on rack provenance, so it reported an **honest** RA citation as laundering |
+| 512 GPUs on a 250 A feed | the planner forced every rack full and returned **560** — the floor-tile rounding this tool exists to expose, done to its own node builds |
+
+---
+
+## Site
+
+### S1 — the constraint the customer states first
+Total build load — compute + network + patch + memory tier + general-purpose — against the
+site power budget you enter, with headroom reported either way, because *"it fits"* and
+*"it fits with 3% left"* are different answers to the same question.
+
+| | |
+|---|---|
+| over budget | **FAIL** — the room cannot energise this build |
+| above 90% | **WARN** — no room for a phase 2, a denser refresh, or a hot day |
+| at or under 90% | **PASS**, with the headroom stated |
+
+Network and patch racks are estimated at **8 kW each — ours**, not a measured figure. That
+estimate is what turns a 96%-of-budget design into a 104% one, which is why it is counted
+rather than left to the compute number alone.
 
 ---
 
@@ -72,6 +92,20 @@ Three states, not two, because several platforms ship air **or** liquid:
 | pure liquid / DTC | **PASS** — it is built for this |
 | `air/liquid` (e.g. DGX B300) | **WARN** — you are committing to the DTC variant, and with it a coolant loop, a CDU and a facility water tie-in. Price the liquid SKU. |
 | pure air | **FAIL** — not deliverable |
+
+### E3 — the purchasable block
+A rack-scale SKU is bought whole: NVIDIA does not list a partially populated NVL72, so a
+target that does not land on a scalable-unit boundary buys silicon to fill the gap, and the
+rule quantifies it.
+
+A node build is bought by the **node**. A partially populated cabinet is the normal end of a
+row and costs nothing, so E3 reports the shape — *"64 nodes across 7 racks: 6 full and one
+carrying 4"* — rather than flagging it.
+
+That distinction was a live bug until 2026-08-10: the planner computed racks from the GPU
+target and multiplied back, forcing every rack full. Asking for 512 GPUs on a feed holding
+10 nodes a rack returned **560** — six nodes and 48 GPUs nobody ordered. Which is exactly the
+floor-tile rounding the Size It tab exists to expose, being done quietly by the planner.
 
 ### E5 — ORv3 busbar
 OCP Open Rack v3's **base** specification is a 48 V busbar rated around 18 kW. Vendor racks
@@ -164,7 +198,6 @@ ids are left unused rather than renumbered so this table stays honest:
 
 | id | Would check | Why it is not there yet |
 |---|---|---|
-| **E3** | a rack-scale SKU is purchased whole — flag a partial NVL72 | `partial` already exists in the Size It `size()` function but is not surfaced as a rule in the Advanced planner |
 | **C2** | media class vs reach — passive DAC ≤ 2 m, ACC ≤ 3 m, AOC ≤ 5 m, else optics | `media()` already selects correctly; the rule would assert nothing downstream overrode it |
 | **P2** | the floor closes on metres — rows × row pitch + terminating aisle = stated depth | the geometry is computed and rendered but not asserted |
 

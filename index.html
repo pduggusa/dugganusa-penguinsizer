@@ -3138,21 +3138,23 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   *             One leaf layer needs no spine at all — a spine with nothing to join is
   *             cost with no topology behind it.
   *   Ethernet  SN5600D at 64 ports, same shape, storage and in-band separately.        */
- function fabricDerived(AS,computeRacks){
-  const perRack=AS.perRack;
+ function fabricDerived(AS,computeRacks,nodesTotal){
+  const perRack=AS.perRack, ppn=AS.portsPerNode;
   const upPerLeaf=Math.max(1,Math.min(72,gi('ibUplinksPerLeaf')||72));
-  const computeLinks=computeRacks*perRack.compute;
+  /* Nodes installed, not racks x a full-rack count — a partial last rack must not size
+   * the fabric for endpoints that are not there. */
+  const computeLinks=nodesTotal*ppn.compute;
   const IBDOWN=72, IBRADIX=FABRIC.sw.ibLeaf.ports, ETH=FABRIC.sw.ethLeaf.ports;
   const rails=Math.max(1,AS.rails);
   let ibLeaf=Math.ceil(computeLinks/IBDOWN);
   ibLeaf=Math.ceil(ibLeaf/rails)*rails;                 // keep rails whole
   const ibSpine=ibLeaf<=rails?0:Math.ceil(ibLeaf*upPerLeaf/IBRADIX);
-  const storageLinks=computeRacks*perRack.storage;
+  const storageLinks=nodesTotal*(ppn.storage||0);
   const ethComputeLeaf=Math.max(1,Math.ceil(storageLinks/ETH));
   const ethStorageLeaf=Math.max(1,Math.ceil(storageLinks/ETH));
   const ethSpine=ethComputeLeaf<=1?0:Math.ceil((ethComputeLeaf+ethStorageLeaf)*FABRIC.uplink.ethComputeLeafLinks/ETH);
   return {su:null,exact:false,single:ibSpine===0,derived:true,basisSU:null,
-   gpus:computeRacks*AS.gpusPerRack,
+   gpus:nodesTotal*AS.nodeGpus,
    ibLeaf,ibSpine,ethComputeLeaf,ethStorageLeaf,ethSpine,
    storageBW:storageLinks+'x'+FABRIC.sw.ethLeaf.speed,mgmtOob:'2+2',
    basis:`DERIVED (OURS) — these counts are NOT read from NVIDIA RA Table 3/4, which is keyed on the NVL72 scalable unit. They are computed from published switch radix and the ${computeLinks.toLocaleString()} compute links this ${AS.label} build presents`,
@@ -3341,7 +3343,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    nodeKw:gr.pkw, nodeGpus:gr.gpu, grainLabel:gr.label, fixedU, fixedKw:gr.fixedKw||0,
    racksPerSU: rackScale?(a.su||8):null,
    gpusPerSU:  rackScale?a.per*(a.su||8):null,
-   rails, perRack, usableU, rackU, reserveU,
+   rails, perRack, portsPerNode:pp, usableU, rackU, reserveU,
    pduPerRack, pduOrient:pduHoriz?'horizontal':'vertical', pduU,
    feed, feedsPerRack:feeds, feedMode:red, feedKw,
    cooling:a.cool||'', liquid:/liquid|DTC/i.test(a.cool||''),
@@ -3378,14 +3380,31 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * Nothing else has one, and we refuse to invent one — a number we made up sitting in
    * a slot NVIDIA owns reads as NVIDIA's however it is badged. Those size on RACKS. */
   const suNeeded=AS.rackScale?gpus/AS.gpusPerSU:null;
+  /* ---- ROUND TO NODES, NOT TO RACKS ------------------------------------------------
+   * This used to compute racks from the GPU target and then multiply back — so every
+   * rack was forced FULL. Ask for 512 GPUs on a feed that holds 10 nodes a rack and you
+   * got 7 racks x 10 nodes = 560 GPUs, six nodes and 48 GPUs nobody ordered.
+   *
+   * Which is precisely the floor-tile rounding the Size It tab exists to expose. That
+   * tab reports "stranded GPUs — accelerators you buy because of rounding and did not
+   * ask for", and the Advanced planner was quietly doing it to every node build.
+   *
+   * A rack-scale SKU genuinely IS bought whole — NVIDIA does not list a partially
+   * populated NVL72, and that rounding is real. A 4U node is not: a partially populated
+   * cabinet is the normal end of a row. So node builds round to whole NODES and the last
+   * rack carries the remainder. */
+  const nodesNeeded=AS.rackScale?null:Math.max(1,Math.ceil(gpus/AS.nodeGpus));
   const computeRacks=AS.rackScale
     ? Math.ceil(suNeeded)*AS.racksPerSU
-    : Math.max(1,Math.ceil(gpus/AS.gpusPerRack));
-  const realGpus=AS.rackScale?Math.ceil(suNeeded)*AS.gpusPerSU:computeRacks*AS.gpusPerRack;
+    : Math.max(1,Math.ceil(nodesNeeded/AS.nodesPerRack));
+  const realGpus=AS.rackScale?Math.ceil(suNeeded)*AS.gpusPerSU:nodesNeeded*AS.nodeGpus;
+  const nodesTotal=AS.rackScale?computeRacks*AS.nodesPerRack:nodesNeeded;
+  const lastRackNodes=AS.rackScale?AS.nodesPerRack:(nodesNeeded-(computeRacks-1)*AS.nodesPerRack);
+  const partialRack=!AS.rackScale && lastRackNodes<AS.nodesPerRack;
   /* Fabric: the RA table when there IS one, our own arithmetic when there is not, and
    * the difference is carried on f.derived so every basis cell downstream can say which
    * it is reading. */
-  const f=AS.rackScale?fabricFor(suNeeded):fabricDerived(AS,computeRacks);
+  const f=AS.rackScale?fabricFor(suNeeded):fabricDerived(AS,computeRacks,nodesTotal);
   /* THE PURCHASABLE BLOCK. Rack-scale sells scalable units; everything else sells racks.
    * Phasing, the MemoryAI ratio and every "per SU" figure in the UI hang off this, so
    * naming it once keeps `Math.ceil(suNeeded)` — which is NaN when there is no SU —
@@ -3450,7 +3469,11 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * to the constant this replaces. For a Relion it resolves to that rack's real ports,
    * which is the entire point of issue #1. */
   const perRack=AS.perRack;
-  const ibDown=computeRacks*perRack.compute;
+  /* Per-NODE ports x the nodes actually installed. Multiplying a full-rack port count by
+   * the rack count bills the empty slots of a partial rack — cable, optics, transceivers
+   * and panels for nodes that are not there. */
+  const ppn=AS.portsPerNode;
+  const ibDown=nodesTotal*ppn.compute;
   /* IB leaf radix is 144 with 72 downlinks, so 72 uplinks is non-blocking (1:1) and
    * anything less is deliberate oversubscription. Exposed as a selector because that
    * ratio is a real design decision with a real cost, not a constant. DERIVED from the
@@ -3458,9 +3481,9 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const upPerLeaf=Math.max(1,Math.min(72,gi('ibUplinksPerLeaf')||72));
   const ibBlocking=(72/upPerLeaf);
   const ibUp=f.ibSpine>0?f.ibLeaf*upPerLeaf:0;
-  const ethDown=computeRacks*perRack.storage;
+  const ethDown=nodesTotal*(ppn.storage||0);
   const ethUp=f.ethSpine>0?f.ethComputeLeaf*FABRIC.uplink.ethComputeLeafLinks:0;
-  const bmc=computeRacks*perRack.bmc;
+  const bmc=nodesTotal*(ppn.bmc||0)+(AS.rackScale?computeRacks*9:0);
   const oobUp=oobCount*2;
 
   /* Network placement drives reach, and reach drives optics and trunk sizing.
@@ -3811,6 +3834,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    totalKw:+(computeRacks*AS.rackKw + (netRacks+racks.filter(r=>r.kind==='patch').length)*8 + memKw + (gi('gpKW')||0)).toFixed(1),
    computeVendor,computeLabel,
    gpus,realGpus,suNeeded,blockTotal,blockRacks,blockLabel,blockGpus,
+   nodesTotal,lastRackNodes,partialRack,
    f,computeRacks,netRacks,oobCount,swU,perRack,
    ibDown,ibUp,ethDown,ethUp,bmc,oobUp,L,totalLinks,spares,floors,perFloorRacks,
    interFloor,trunkLinks,risers,racks};
@@ -3871,6 +3895,24 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     :pureLiquid?`Direct-to-chip liquid, which is what carries this density.`
     :dual?`${A_.label} ships air OR liquid. At ${N1_(A_.rackKw)} kW/rack the air variant will NOT carry it — this build commits you to the direct-to-chip option, and with it a coolant loop, a CDU and a facility water tie-in. Price the liquid SKU, not the air one.`
     :`Air-cooled above ~${AIRCAP} kW/rack is not deliverable. This needs direct-to-chip liquid, or fewer nodes per rack.`));
+
+  /* Partial rack. On a rack-scale SKU this is a real cost — NVIDIA does not list a
+   * partially populated NVL72, so the rounding buys silicon you did not ask for. On a
+   * node build it is simply the end of a row and costs nothing. Two different answers,
+   * which is why the rule reports the shape rather than just flagging "partial". */
+  if(A_.rackScale){
+   const whole=(d.gpus % A_.gpusPerSU)===0;
+   out.push(R('E3','Commercial', whole?true:null,
+    `Purchasable block — ${A_.label} is bought by the ${d.blockLabel}`,
+    whole?`Your target lands on a whole ${d.blockLabel} boundary, so nothing is bought to fill a gap.`
+     :`Rounded up to ${d.blockTotal} ${d.blockLabel}s: ${N1_(d.realGpus)} GPU against the ${N1_(d.gpus)} you asked for, so ${N1_(d.realGpus-d.gpus)} GPU are bought by the rounding. The rack IS the SKU here — NVIDIA does not list a partially populated NVL72 — so this is a real cost, not an artefact.`));
+  } else {
+   out.push(R('E3','Commercial', true,
+    `Purchasable block — ${A_.label} is bought by the node`,
+    d.partialRack
+     ? `${d.nodesTotal} nodes across ${d.computeRacks} racks: ${d.computeRacks-1} full and one carrying ${d.lastRackNodes}. Nodes are NOT rounded up to fill the last cabinet, so you buy exactly the ${N1_(d.realGpus)} GPU the target needs.`
+     : `${d.nodesTotal} nodes fill ${d.computeRacks} racks exactly. Nothing bought to fill a gap.`));
+  }
 
   if(/xe8812|orv3/i.test(A_.key)||A_.feed.k==='48dc-orv3')
    out.push(R('E5','Electrical', null, 'ORv3 busbar — base spec is ~18 kW',
@@ -4987,8 +5029,10 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      ['Compute','NVLink switch tray',d.computeRacks*9,RS('9 per NVL72 rack')],
      ['Power','Power shelf 33 kW',d.computeRacks*8,RS('6-8 per rack, 8 assumed')],
    ]:[
-     ['Compute',d.arch.label+' — '+d.arch.nodeU+'U node',d.computeRacks*d.arch.nodesPerRack,
-       `${d.arch.nodesPerRack} per rack (${d.arch.bound}: ${d.arch.spaceMax} by ${d.arch.usableU}U usable, ${d.arch.powerMax} by the ${d.arch.feed.label} feed) — DERIVED (OURS)`],
+     ['Compute',d.arch.label+' — '+d.arch.nodeU+'U node',d.nodesTotal,
+       `${d.arch.nodesPerRack} per rack (${d.arch.bound}: ${d.arch.spaceMax} by ${d.arch.usableU}U usable, ${d.arch.powerMax} by the ${d.arch.feed.label} feed)`
+       +(d.partialRack?`. ${d.computeRacks-1} full + 1 rack carrying ${d.lastRackNodes} — nodes are NOT rounded up to fill the last cabinet`:'. All racks fully populated')
+       +` — DERIVED (OURS)`],
      ['Compute',`NO power shelf — ${d.arch.label} nodes carry their own PSUs`,0,'stated so its absence reads as deliberate, not as a missing line'],
    ]),
    /* PROVENANCE, not decoration. When the fabric was computed by us these must NOT say
@@ -5347,20 +5391,23 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
    * to invent an SU for a vendor who never published one. */
   if(arch)A.arch=arch;
   const AS=archSpec();
-  const blk=AS.rackScale?AS.gpusPerSU:AS.gpusPerRack;
+  /* The purchasable block, and for a node build that is the NODE — not the rack. Rounding
+   * an imported 512 up to a whole rack was the same floor-tile rounding the Size It tab
+   * exists to expose, applied on the way in from that very tab. */
+  const blk=AS.rackScale?AS.gpusPerSU:AS.nodeGpus;
   const rounded=Math.max(blk,Math.ceil(gpus/blk)*blk);
   const g=Math.max(AS.gpusPerRack,Math.min(AS.ceiling,rounded));
   A.gpus=g; save();
   const b=document.querySelector('#rkMode button[data-m="advanced"]'); if(b)b.click();
   const n=$a('advImportNote');
   if(n){
-   const blocks=g/blk, unit=AS.rackScale?'scalable unit':'rack';
+   const blocks=g/blk, unit=AS.rackScale?'scalable unit':'node';
    n.innerHTML=`Imported <b>${NUMF(gpus)} GPUs</b> as <b>${AS.label}</b>`
     + (g!==gpus?` — rounded up to <b>${NUMF(g)}</b> (${blocks} ${unit}${blocks===1?'':'s'} of ${NUMF(blk)} GPU).`:'.')
     + (rounded>AS.ceiling?` Capped at ${NUMF(AS.ceiling)} — ${AS.ceilingBasis}.`:'')
     + (AS.rackScale
         ? ` Laid out as ${AS.nodesPerRack} ${AS.grainLabel||'tray'}s per rack at ${AS.rackKw} kW, ${AS.racksPerSU} racks per SU.`
-        : ` Laid out AS ITSELF: ${AS.nodesPerRack} node${AS.nodesPerRack===1?'':'s'} per rack (${AS.bound}) at ${AS.rackKw} kW on a ${AS.feed.label} feed. <b>Sized on racks</b>, and every derived figure is badged as ours.${AS.vendorSU?` <b>Note:</b> ${AS.vendorSU.vendor} publishes the ${AS.vendorSU.name} — ${AS.vendorSU.published} — which this tool does not model yet, so this will not land on a pre-validated boundary by accident.`:''}`);
+        : ` Laid out AS ITSELF: up to ${AS.nodesPerRack} node${AS.nodesPerRack===1?'':'s'} per rack (${AS.bound}) at ${AS.rackKw} kW on a ${AS.feed.label} feed. <b>Rounded to whole NODES, not whole racks</b> — the last cabinet carries the remainder rather than buying nodes to fill it. Every derived figure is badged as ours.${AS.vendorSU?` <b>Note:</b> ${AS.vendorSU.vendor} publishes the ${AS.vendorSU.name} — ${AS.vendorSU.published} — which this tool does not model yet, so this will not land on a pre-validated boundary by accident.`:''}`);
    n.className='adv-importnote '+(g!==gpus?'bad':'ok');
   }
  };
