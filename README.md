@@ -21,6 +21,7 @@ every cable with its length and endpoint, and a SKU request sheet to send the ve
 | **[docs/MODEL-AND-FLOW.md](docs/MODEL-AND-FLOW.md)** | How a GPU target becomes a floor plan |
 | **[docs/BUSINESS-RULES.md](docs/BUSINESS-RULES.md)** | All 21 consistency rules and what they refuse |
 | **[docs/BOM-AND-ORDERING.md](docs/BOM-AND-ORDERING.md)** | The BOM, its summary, and the `penguin-bom/1` order seam |
+| **[docs/VENDOR-DOCS.md](docs/VENDOR-DOCS.md)** | All 21 Penguin GPU datasheets — the citation trail |
 
 ## Architectures
 - **Penguin Solutions Relion XE4418GTS-DTC** — Intel Xeon 6 + B300 HGX (4U, direct-to-chip liquid)
