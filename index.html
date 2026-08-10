@@ -3142,13 +3142,13 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  // ---- state ----------------------------------------------------------------------
  const LS='penguin-adv-planner-v1';
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
-   ||{gpus:4608,arch:'gb300-nvl72',feed:'300',feedsPerRack:1,rackU:48,reserveU:4,
-      siteKw:1200,region:'uk',pduOrient:'vertical',pduPerRack:2,fabricTiers:'leaf-only',cableRunM:10,
+   ||{gpus:512,arch:'relion-xe4418',feed:'200',feedsPerRack:1,rackU:48,reserveU:4,
+      siteKw:1200,floorLoadKgM2:1220,region:'uk',pduOrient:'vertical',pduPerRack:2,fabricTiers:'leaf-only',cableRunM:10,
       floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       netPlacement:'eor',netRed:'ab50',rackPitchM:0.6,
       rackDepthM:1.2, coldAisleM:1.2, hotAisleM:0.9, serviceM:1.0,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
       trunkRacks:4,trunkPorts:24,trunkSide:'right',rackOrder:null,aisles:1,
-      memAI:1,memPerSU:1,loadCap:80,
+      memAI:1,memPerSU:0,loadCap:80,
       row:'A'};
  let SEL=null;
  const save=()=>{try{localStorage.setItem(LS,JSON.stringify(A));}catch(e){}};
@@ -3338,6 +3338,15 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    gpusPerSU:  rackScale?a.per*(a.su||8):null,
    rails, perRack, portsPerNode:pp, usableU, rackU, reserveU,
    pduPerRack, pduOrient:pduHoriz?'horizontal':'vertical', pduU,
+   /* ---- WHAT IT WEIGHS, WHICH IS A STRUCTURAL QUESTION BEFORE IT IS A NETWORK ONE ----
+    * Per-node and rack-fixed weights are VENDOR-PUBLISHED in SPEC and were already used
+    * by the simple planner; the whole-floor planner never carried them. A populated NVL72
+    * is around 1,500 kg and a Relion rack around 960 kg, and a 600 x 1200 mm footprint is
+    * 0.72 m² — so both land well past the 1,220 kg/m² a typical raised floor is rated
+    * for. That is a conversation with a structural engineer, and it is cheaper to have it
+    * before the order than after the delivery. RACK_TARE is the empty cabinet. */
+   nodeWeightKg:(s&&s.weight)||0, rackFixedWeightKg:(s&&s.fixedWeight)||0,
+   rackWeightKg: Math.round(nodesPerRack*((s&&s.weight)||0)+((s&&s.fixedWeight)||0)+160),
    feed, feedsPerRack:feeds, feedMode:red, feedKw,
    cooling:a.cool||'', liquid:/liquid|DTC/i.test(a.cool||''),
    /* The GPU ceiling is a FABRIC limit, not a rack limit. Rack-scale rides NVIDIA's
@@ -3653,21 +3662,12 @@ ${c.iso?`<h2>Multi-tenancy</h2>
      ordered=ordered.concat(A_).concat(B_);
     } else ordered=ordered.concat(net);
    }
-   /* Patch panels occupy real U. Network racks absorb some; anything beyond that gets
-    * its own patch rack rather than being a BOM line with no home. */
-    const panelsPerNetRack=8, panelU=1, panelsPerPatchRack=40;
-    /* trunkPanels is derived further down, so compute the same quantity from inputs
-     * that exist here: one MPO position per 800G link, divided by panel port count. */
-    const mpoPositions=computeRacks*((perRack&&perRack.compute)||72);
-    const panelsEst=Math.ceil(mpoPositions/Math.max(1,gi('trunkPorts')||24));
-    const absorbed=net.length*panelsPerNetRack;
-    const overflow=Math.max(0,panelsEst-absorbed);
-    const patchRacks=Math.ceil(overflow/panelsPerPatchRack);
-    for(let i=0;i<patchRacks;i++)
-     racks.push({kind:'patch',vendor:'passive',su:null,phase:1,idx:0,key:'p'+(i+1)});
-    const pat=racks.filter(r=>r.kind==='patch');
+   /* No patch racks. They were derived from trunk-panel arithmetic — MPO positions
+    * divided by panel ports, minus what the network racks absorb — and that whole
+    * structured-trunking layer is gone. A dedicated patch cabinet is a choice a
+    * cabling contractor makes on a real floor, not something a pod BOM invents. */
    /* Packed, not padded. These tails were 17 of the 21 phantom racks. */
-   ordered=ordered.concat(pat).concat(mem).concat(gp);
+   ordered=ordered.concat(mem).concat(gp);
    racks.length=0; ordered.forEach((r,i)=>{ r.idx=i+1; racks.push(r); });
   }
 
@@ -3821,6 +3821,10 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     * 96%-of-budget design into a 104% one. Estimated at 8 kW for a network or patch
     * rack — OURS, and stated as such. */
    siteKw:Math.max(0,gi('siteKw')||0),
+   rackWeightKg:AS.rackWeightKg,
+   totalWeightKg:Math.round(computeRacks*AS.rackWeightKg+(netRacks+mRacks)*400),
+   floorLoadKgM2:Math.max(0,gi('floorLoadKgM2')||0),
+   rackFootprintM2:+((gi('rackPitchM')||0.6)*(gi('rackDepthM')||1.2)).toFixed(2),
    computeKw:+(computeRacks*AS.rackKw).toFixed(1),
    netKw:+((netRacks+ (racks.filter(r=>r.kind==='patch').length))*8).toFixed(1),
    totalKw:+(computeRacks*AS.rackKw + (netRacks+racks.filter(r=>r.kind==='patch').length)*8 + memKw + (gi('gpKW')||0)).toFixed(1),
@@ -4025,6 +4029,19 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    A_.rackScale?`Rack-scale: the cabinet IS the SKU and its contents are vendor-fixed.`
     :`${A_.nodesPerRack} x ${A_.nodeU}U nodes${A_.fixedU?' + '+A_.fixedU+'U rack overhead':''}.`));
 
+  /* Point load, not average. A floor rated for 1,220 kg/m² across a room says nothing
+   * about what it takes under one 0.72 m² cabinet, and the cabinet is where the load is.
+   * This is the check that turns a clean floor plan into a structural conversation. */
+  if(d.floorLoadKgM2>0){
+   const pt=Math.round(d.rackWeightKg/Math.max(0.1,d.rackFootprintM2));
+   out.push(R('P2','Physical', pt<=d.floorLoadKgM2,
+    `Floor point load — ${N1_(pt)} kg/m² under each ${A_.label} rack, floor rated ${N1_(d.floorLoadKgM2)}`,
+    `${N1_(d.rackWeightKg)} kg populated over a ${d.rackFootprintM2} m² footprint. Total build ${N1_(d.totalWeightKg)} kg across ${d.racks.length} cabinets.`
+    +(pt>d.floorLoadKgM2
+      ? ` OVER the rating by ${N1_(pt-d.floorLoadKgM2)} kg/m². This needs load spreading, a structural review, or a slab — it is not a networking problem and it does not get solved on delivery day.`
+      : ` Within the stated rating. Confirm the POINT load with the building, not the average: a room rating is not a per-cabinet rating.`)));
+  }
+
   out.push(R('P3','Physical', d.coldA>=1.2&&d.hotA>=0.9?true:null,
    `Aisle widths — cold ${d.coldA} m, hot ${d.hotA} m`,
    `ASHRAE TC9.9 works to 1.2 m cold (front-to-front) and 0.9 m hot (back-to-back). Below that you are trading service access and recirculation margin for floor area — a decision, not an oversight.`));
@@ -4197,6 +4214,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'siteKw',l:'Site power budget (kW)',step:50,hint:'what the room can actually deliver'},
   {k:'racksPerRow',l:'Racks per row',step:1,hint:'row length — sets the cable run'},
   {k:'cableRunM',l:'Cable run to leaf (m)',step:1,hint:'node to leaf, including tray rise'},
+  {k:'floorLoadKgM2',l:'Floor rating (kg/m²)',step:100,hint:'1220 = 250 lb/ft², a typical raised floor'},
   {k:'pduPerRack',l:'PDUs per rack',step:1,hint:'2 = A/B feed paths'},
   {k:'rackU',l:'Rack height (U)',step:1,hint:'48 = AI cabinet · 42 = traditional'},
   {k:'reserveU',l:'Reserved U',step:1,hint:'patch, PDU, growth — off the top of usable'},
