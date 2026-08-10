@@ -3816,10 +3816,10 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'floors',l:'Floors',step:1,hint:'vertical spread'},
   {k:'racksPerRow',l:'Racks per row',step:1,hint:'rows are computed'},
   {k:'rackPitchM',l:'Rack pitch (m)',step:0.1,hint:'0.6 = 600mm — column width'},
-  {k:'rackDepthM',l:'Rack depth (m)',step:0.1,hint:'1.2 = 1200mm'},
-  {k:'coldAisleM',l:'Cold aisle (m)',step:0.1,hint:'front-to-front per ASHRAE TC9.9'},
-  {k:'hotAisleM',l:'Hot aisle (m)',step:0.1,hint:'back-to-back'},
-  {k:'serviceM',l:'End service space (m)',step:0.1,hint:'each end of a row'},
+  {k:'rackDepthM',l:'Rack depth (m)',step:0.1,hint:'1200mm — AI cabinets often 1200-1400'},
+  {k:'coldAisleM',l:'Cold aisle (m)',step:0.1,hint:'1.2m / 4ft recommended — front-to-front, ASHRAE TC9.9'},
+  {k:'hotAisleM',l:'Hot aisle (m)',step:0.1,hint:'0.9m / 3ft minimum — back-to-back'},
+  {k:'serviceM',l:'End service space (m)',step:0.1,hint:'1.0m each end — door swing and trunk landing'},
   {k:'trayRiseM',l:'Tray rise (m)',step:1,hint:'up+over+down'},
   {k:'interFloorM',l:'Inter-floor run (m)',step:5,hint:'riser length'},
   {k:'trunkFibers',l:'Trunk fibres',step:12,hint:'12/24/48/96/144'},
@@ -4237,6 +4237,14 @@ Allowed tokens, exactly as written: {site} {room} {row} {rack} for RACK; {rack} 
      const vtag=mem?'M':r.vendor==='dell'?'D':r.vendor==='penguin'?'P':r.vendor==='vast'?'V':'N';
      // the front (intake) face gets a pale strip — it is the edge that must see the cold aisle
      const fy = face>0 ? y+RH-Math.max(2,3*zoom) : y;
+     if(r.kind==='empty'){
+      svg.push(`<g pointer-events="none" opacity=".5">
+        <rect x="${x}" y="${y}" width="${RW}" height="${RH}" rx="${3*zoom}" fill="none"
+              stroke="#33415a" stroke-width="${Math.max(1,1*zoom)}" stroke-dasharray="${4*zoom} ${4*zoom}"/>
+        <text x="${x+RW/2}" y="${y+RH/2+3*zoom}" text-anchor="middle" fill="#3d4d63"
+              font-size="${Math.max(7,9*zoom)}" font-family="ui-monospace,monospace">·</text></g>`);
+      return;
+     }
      if(podTag) svg.push(`<g pointer-events="none">
        <line x1="${x-Math.max(2,3*zoom)}" y1="${y-Math.max(4,6*zoom)}" x2="${x-Math.max(2,3*zoom)}" y2="${y+RH+Math.max(4,6*zoom)}"
              stroke="#f59e0b" stroke-width="${Math.max(1,1.5*zoom)}" stroke-dasharray="${3*zoom} ${3*zoom}" opacity=".75"/>
