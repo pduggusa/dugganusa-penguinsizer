@@ -30,7 +30,7 @@ const URL_ = (() => { const i = process.argv.indexOf('--url'); return i > -1 ? p
 const VERBOSE = process.argv.includes('--verbose');
 
 const ARCHES = ['relion-xe4418', 'altus-xe4318', 'gb300-nvl72', 'dgx-b300', 'dell-xe9680l', 'dell-xe9712'];
-const LADDER = ['208-3-60', '415-3-60', '415-3-100', '415-3-200', '415-3-250', '415-3-300', '415-3-400', '48dc-orv3'];
+const LADDER = ['60', '100', '200', '250', '300', '400', '48dc-orv3'];
 
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1700, height: 1300 } });
@@ -60,6 +60,11 @@ async function configure(state) {
       const el = document.getElementById(i);
       if (el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) {
         el.value = v;
+        /* A <select> given a value it has no <option> for sets itself to "" and reports no
+         * error. That is how this harness swept 48 "configurations" that were all the same
+         * one: the feed keys changed under it, every assignment silently no-opped, and it
+         * reported the default as coherent 48 times over. Assert the value STUCK. */
+        if (el.tagName === 'SELECT' && String(el.value) !== String(v)) return 'rejected:' + v;
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
         return 'field';
@@ -76,7 +81,8 @@ async function configure(state) {
         any.dispatchEvent(new Event('input', { bubbles: true })); return 'ak'; }
       return false;
     }, [id, val]);
-    if (!ok) throw new Error(`control "${id}" did not accept "${val}" — provocation would silently test the default`);
+    if (!ok || String(ok).startsWith('rejected:'))
+      throw new Error(`control "${id}" did not accept "${val}" — it would silently test the default instead`);
     await p.waitForTimeout(320);
   }
   return p.evaluate(() => {
@@ -131,31 +137,31 @@ bad.slice(0, 8).forEach(x => console.log('    ✗ ' + x));
 /* Each entry: a configuration chosen so ONE named rule must not come back PASS, and
  * why that is the right answer. If it passes, the rule is asleep. */
 const PROVOCATIONS = [
-  { id: 'E1', want: 'FAIL', state: { advArch: 'gb300-nvl72', advFeed: '415-3-250' },
+  { id: 'E1', want: 'FAIL', state: { advArch: 'gb300-nvl72', advFeed: '250' },
     why: 'GB300 draws 142 kW; 415 V 3ph 250 A derates to 140.9 kW. 1.1 kW short is still short.' },
-  { id: 'E4', want: 'WARN', state: { advArch: 'dgx-b300', advFeed: '415-3-400', rackU: '60' },
+  { id: 'E4', want: 'WARN', state: { advArch: 'dgx-b300', advFeed: '400', advRackU: '52' },
     why: 'DGX B300 ships air OR liquid; above the air envelope the build commits to the DTC variant.' },
-  { id: 'E4', want: 'PASS', state: { advArch: 'gb300-nvl72', advFeed: '415-3-400' },
+  { id: 'E4', want: 'PASS', state: { advArch: 'gb300-nvl72', advFeed: '400' },
     why: 'CONTROL: NVL72 is pure direct-to-chip liquid, so 142 kW is what it is built for.' },
-  { id: 'N2', want: 'FAIL', state: { advArch: 'relion-xe4418', advFeed: '415-3-300', rkPlace: 'tor' },
+  { id: 'N2', want: 'FAIL', state: { advArch: 'relion-xe4418', advFeed: '300', rkPlace: 'tor' },
     why: 'Top-of-rack with 8 rails needs 8 leaf switches in every rack, or rail optimisation is gone.' },
-  { id: 'N3', want: 'WARN', state: { advArch: 'gb300-nvl72', advFeed: '415-3-300', ibUplinksPerLeaf: '24' },
+  { id: 'N3', want: 'WARN', state: { advArch: 'gb300-nvl72', advFeed: '300', ibUplinksPerLeaf: '24' },
     why: '24 uplinks against 72 downlinks is 1:3 oversubscription — legal, and a decision.' },
-  { id: 'C3', want: 'FAIL', state: { advArch: 'gb300-nvl72', advFeed: '415-3-300', floors: '4', interFloorM: '600' },
-    why: 'A 600 m riser plus the row run exceeds the 500 m DR8 optical budget.' },
-  { id: 'C5', want: 'FAIL', state: { advArch: 'gb300-nvl72', advFeed: '415-3-300', trayRiseM: '200' },
+  { id: 'C3', want: 'FAIL', state: { advArch: 'gb300-nvl72', advFeed: '300', cableRunM: '600' },
+    why: 'A 600 m run exceeds the 500 m DR8 optical budget. (floors/risers are gone with the floor planner.)' },
+  { id: 'C5', want: 'FAIL', state: { advArch: 'gb300-nvl72', advFeed: '300', cableRunM: '200' },
     why: 'A 200 m run puts the OOB uplink past DAC and past AOC — the BOM part is wrong at that reach.' },
-  { id: 'V2', want: 'WARN', state: { advArch: 'relion-xe4418', advFeed: '415-3-300' },
+  { id: 'V2', want: 'WARN', state: { advArch: 'relion-xe4418', advFeed: '300' },
     why: 'A derived composition is our arithmetic, not a vendor-blessed validated configuration.' },
-  { id: 'S1', want: 'FAIL', state: { advArch: 'gb300-nvl72', advFeed: '415-3-300', gpus: '4608', siteKw: '500' },
+  { id: 'S1', want: 'FAIL', state: { advArch: 'gb300-nvl72', advFeed: '300', gpus: '4608', siteKw: '500' },
     why: 'A 4,608-GPU NVL72 build draws far more than a 500 kW room can deliver.' },
-  { id: 'S1', want: 'WARN', state: { advArch: 'relion-xe4418', advFeed: '415-3-200', gpus: '512', siteKw: '1000' },
+  { id: 'S1', want: 'WARN', state: { advArch: 'relion-xe4418', advFeed: '200', gpus: '512', siteKw: '1000' },
     why: 'Fits, but over 90% of the site budget — no room for a phase 2 or a hot day.' },
-  { id: 'S1', want: 'PASS', state: { advArch: 'relion-xe4418', advFeed: '415-3-200', gpus: '512', siteKw: '1200' },
+  { id: 'S1', want: 'PASS', state: { advArch: 'relion-xe4418', advFeed: '200', gpus: '512', siteKw: '1200' },
     why: 'CONTROL: the RFQ case — 512 B300 in a 1.2 MW room, comfortably inside budget.' },
-  { id: 'E1', want: 'PASS', state: { advArch: 'gb300-nvl72', advFeed: '415-3-300' },
+  { id: 'E1', want: 'PASS', state: { advArch: 'gb300-nvl72', advFeed: '300' },
     why: 'CONTROL: the same rule must PASS on the 300 A feed, or it is stuck-on-fail.' },
-  { id: 'V2', want: null, state: { advArch: 'gb300-nvl72', advFeed: '415-3-300' },
+  { id: 'V2', want: null, state: { advArch: 'gb300-nvl72', advFeed: '300' },
     why: 'CONTROL: no blessed-config warning on a vendor-published architecture.' },
 ];
 
