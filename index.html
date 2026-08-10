@@ -669,7 +669,7 @@
             <button class="rk-btn primary" id="advImportBtn">↙ Import target from Size It</button>
             <span class="adv-importnote" id="advImportNote">Pulls the GPU count currently set on the Size It tab and rebuilds the whole design against it.</span>
           </div>
-          <p class="lede" style="margin-top:10px">Architecture: <select id="advArch" class="rk-btn" style="padding:5px 9px"></select> Rack feed: <select id="advFeed" class="rk-btn" style="padding:5px 9px"></select> PDU: <select id="advPdu" class="rk-btn" style="padding:5px 9px"><option value="vertical">0U vertical (rear channel)</option><option value="horizontal">1U horizontal (costs rack U)</option></select> Fabric: <select id="advTiers" class="rk-btn" style="padding:5px 9px"><option value="leaf-only">Leaf only (pod scale)</option><option value="leaf-spine">Leaf + spine</option></select> <span id="advArchNote"></span></p>
+          <p class="lede" style="margin-top:10px">Architecture: <select id="advArch" class="rk-btn" style="padding:5px 9px"></select> Region: <select id="advRegion" class="rk-btn" style="padding:5px 9px"></select> Rack feed: <select id="advFeed" class="rk-btn" style="padding:5px 9px"></select> PDU: <select id="advPdu" class="rk-btn" style="padding:5px 9px"><option value="vertical">0U vertical (rear channel)</option><option value="horizontal">1U horizontal (costs rack U)</option></select> Fabric: <select id="advTiers" class="rk-btn" style="padding:5px 9px"><option value="leaf-only">Leaf only (pod scale)</option><option value="leaf-spine">Leaf + spine</option></select> <span id="advArchNote"></span></p>
           <div class="adv-ctl" id="advCtl"></div>
           <div class="adv-rules" id="advRules"></div>
           <div class="adv-out" id="advOut"></div>
@@ -3121,8 +3121,12 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const leafOnly=(A.fabricTiers||'leaf-only')==='leaf-only';
   const ibSpine=(leafOnly||ibLeaf<=rails)?0:Math.ceil(ibLeaf*upPerLeaf/IBRADIX);
   const storageLinks=nodesTotal*(ppn.storage||0);
+  /* ONE front-end leaf group, not two. This emitted ethComputeLeaf AND ethStorageLeaf,
+   * both `ceil(storageLinks / 64)` — the same number twice, so a build was quoted double
+   * the front-end switching it needs. And with storage OUTSIDE the solution there is only
+   * one front-end fabric: the nodes' storage NICs reaching the customer's array. */
   const ethComputeLeaf=Math.max(1,Math.ceil(storageLinks/ETH));
-  const ethStorageLeaf=Math.max(1,Math.ceil(storageLinks/ETH));
+  const ethStorageLeaf=0;
   const ethSpine=(leafOnly||ethComputeLeaf<=1)?0:Math.ceil((ethComputeLeaf+ethStorageLeaf)*FABRIC.uplink.ethComputeLeafLinks/ETH);
   return {su:null,exact:false,single:ibSpine===0,derived:true,basisSU:null,
    gpus:nodesTotal*AS.nodeGpus,
@@ -3138,8 +3142,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  // ---- state ----------------------------------------------------------------------
  const LS='penguin-adv-planner-v1';
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
-   ||{gpus:4608,arch:'gb300-nvl72',feed:'415-3-300',feedsPerRack:1,rackU:48,reserveU:4,
-      siteKw:1200,pduOrient:'vertical',pduPerRack:2,fabricTiers:'leaf-only',cableRunM:10,
+   ||{gpus:4608,arch:'gb300-nvl72',feed:'300',feedsPerRack:1,rackU:48,reserveU:4,
+      siteKw:1200,region:'uk',pduOrient:'vertical',pduPerRack:2,fabricTiers:'leaf-only',cableRunM:10,
       floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       netPlacement:'eor',netRed:'ab50',rackPitchM:0.6,
       rackDepthM:1.2, coldAisleM:1.2, hotAisleM:0.9, serviceM:1.0,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
@@ -3167,24 +3171,40 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   * 415 V 3ph 250 A derates to 140.9 kW, which is 1.1 kW SHORT of an NVL72 — rule E1
   * fails it, correctly. A rack you cannot actually energise is not a smaller rack. */
  const PF=0.98, DERATE=0.8, S3=Math.sqrt(3);
+ /* ---- REGION SETS THE VOLTAGE AND THE PLUG -----------------------------------------
+  * A rack feed is not a universal quantity. The same breaker delivers different power in
+  * a 400 V European hall and a 480 V North American one, and the inlet on the PDU is a
+  * different orderable part in each. Quoting a build into the wrong region gets both the
+  * capacity and the part number wrong, and the part number is the one that shows up on a
+  * loading dock.
+  *
+  * Voltages and frequencies are the standard three-phase distribution figures for each
+  * region. The connector families are the standards in normal datacentre use — IEC 60309
+  * everywhere for three-phase, with the regional single-phase standard named because that
+  * is what the console, the OOB switch and anything else in the rack will land on. */
+ const REGIONS={
+  'na'   :{label:'North America', V:480, hz:60, three:'IEC 60309 (pin & sleeve)', single:'NEMA 5-15/L6-30'},
+  'eu'   :{label:'Europe',        V:400, hz:50, three:'IEC 60309 (CEE form)',     single:'CEE 7/3 Schuko'},
+  'uk'   :{label:'United Kingdom',V:415, hz:50, three:'IEC 60309',                single:'BS 1363'},
+  'anz'  :{label:'Australia / NZ',V:415, hz:50, three:'IEC 60309',                single:'AS/NZS 3112'},
+  'jp'   :{label:'Japan',         V:200, hz:60, three:'IEC 60309',                single:'JIS C 8303'},
+  'in'   :{label:'India',         V:415, hz:50, three:'IEC 60309',                single:'IS 1293'},
+ };
+ const regionOf=()=>REGIONS[A.region||'uk']||REGIONS.uk;
  const feedKW=(V,A_,three)=>+(A_*DERATE*V*(three?S3:1)*PF/1000).toFixed(1);
- const FEEDS=[
-  {k:'208-3-60', V:208,ph:3,amps:60,  why:'legacy air-cooled hall'},
-  {k:'415-3-60', V:415,ph:3,amps:60,  why:'common high-density air'},
-  {k:'415-3-100',V:415,ph:3,amps:100, why:'rear-door heat exchanger / liquid-assist'},
-  {k:'415-3-200',V:415,ph:3,amps:200, why:'direct-to-chip liquid'},
-  {k:'415-3-250',V:415,ph:3,amps:250, why:'does NOT carry a 142 kW NVL72 — 1.1 kW short'},
-  {k:'415-3-300',V:415,ph:3,amps:300, why:'default — carries an NVL72 with margin'},
-  {k:'415-3-400',V:415,ph:3,amps:400, why:'busway tap-off'},
-  {k:'48dc-orv3', V:48,ph:1,amps:0,  kw:18, why:'OCP Open Rack v3 BASE busbar. Dell’s 300 kW+ racks are ORv3-INSPIRED, not base-spec — do not size a busbar from the OCP document'}
- ].map(f=>({...f, kw: f.kw!=null?f.kw:feedKW(f.V,f.amps,f.ph===3),
-   label: f.amps? `${f.V} V ${f.ph}φ ${f.amps} A` : '48 V DC busbar (ORv3 base)',
-   /* The connector follows the breaker, same ladder the simple planner uses. It is a
-    * BOM line — a 63 A IEC 60309 and a busway tap-off are different parts to order. */
-   connector: !f.amps ? 'busbar blind-mate'
-     : f.amps<=16?'IEC 60309 16A' : f.amps<=32?'IEC 60309 32A' : f.amps<=63?'IEC 60309 63A'
-     : f.amps<=125?'IEC 60309 125A' : 'busway tap-off'}));
- const feedOf=()=>FEEDS.find(f=>f.k===A.feed)||FEEDS.find(f=>f.k==='415-3-300');
+ /* Amperages are the ladder; the VOLTAGE comes from the region, so the same 200 A entry
+  * is 133 kW in Europe and 160 kW in North America. That is the point. */
+ const FEED_AMPS=[60,100,200,250,300,400];
+ const FEEDS_FOR=r=>FEED_AMPS.map(a=>({
+   k:String(a), amps:a, V:r.V, hz:r.hz, ph:3,
+   kw:feedKW(r.V,a,true),
+   label:`${r.V} V 3\u03c6 ${a} A`,
+   connector:a<=16?'IEC 60309 16A':a<=32?'IEC 60309 32A':a<=63?'IEC 60309 63A':a<=125?'IEC 60309 125A':'busway tap-off',
+   family:r.three, single:r.single, region:r.label
+ })).concat([{k:'48dc-orv3',amps:0,V:48,hz:0,ph:1,kw:18,label:'48 V DC busbar (ORv3 base)',
+   connector:'busbar blind-mate',family:'OCP ORv3 busbar',single:'n/a',region:r.label,
+   why:'OCP Open Rack v3 BASE busbar. Vendor racks quoting 300 kW+ are ORv3-INSPIRED, not base-spec'}]);
+ const feedOf=()=>{const F=FEEDS_FOR(regionOf()); return F.find(f=>f.k===String(A.feed))||F.find(f=>f.k==='300')||F[0];};
 
  /* ---- THE ARCHITECTURE, NOT THE NVL72 ---------------------------------------------
   * This is the fix for issue #1. derive() used to take `arch` and use it for a vendor
@@ -4204,8 +4224,11 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   if(psel){psel.value=A.pduOrient||'vertical';
     psel.onchange=e=>{A.pduOrient=e.target.value;save();paint();};}
   const fsel=$a('advFeed');
-  if(fsel){fsel.innerHTML=FEEDS.map(f=>`<option value="${f.k}"${(A.feed||'415-3-300')===f.k?' selected':''}>${f.label} — ${f.kw} kW</option>`).join('');
+  if(fsel){fsel.innerHTML=FEEDS_FOR(regionOf()).map(f=>`<option value="${f.k}"${String(A.feed||'300')===f.k?' selected':''}>${f.label} — ${f.kw} kW</option>`).join('');
     fsel.onchange=e=>{A.feed=e.target.value;save();paint();};}
+  const rsel=$a('advRegion');
+  if(rsel){rsel.innerHTML=Object.entries(REGIONS).map(([k,v])=>`<option value="${k}"${(A.region||'uk')===k?' selected':''}>${v.label} — ${v.V} V ${v.hz} Hz</option>`).join('');
+    rsel.onchange=e=>{A.region=e.target.value;save();renderCtl();paint();};}
   $a('advCtl').innerHTML=F.map(f=>`<div class="mem-f"><label>${f.l}</label>
     <input type="number" data-ak="${f.k}" value="${A[f.k]}" step="${f.step}"/><div class="hint">${f.hint}</div></div>`).join('');
   $a('advCtl').querySelectorAll('[data-ak]').forEach(el=>el.addEventListener('input',e=>{
@@ -4724,6 +4747,22 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    ['Switch',FABRIC.sw.ethLeaf.model+' — Eth storage leaf',f.ethStorageLeaf,RA('Table 4','ceil(storage links / '+FABRIC.sw.ethLeaf.ports+' ports)')],
    ['Switch',FABRIC.sw.ethSpine.model+' — Eth spine',f.ethSpine,RA('Table 4','ceil(leaf uplinks / '+FABRIC.sw.ethLeaf.ports+' ports)')],
    ['Switch',FABRIC.sw.oob.model+' — OOB management',d.oobCount,'one per compute rack — derived'],
+   /* ---- THE MANAGEMENT PLANE, WHICH IS THE VALUE POINT ---------------------------
+    * A pod of GPUs is hardware anyone can quote. Bare-metal allocation, secure image
+    * deployment, health monitoring and multi-tenancy on that hardware is the part that
+    * is Penguin's, and it was missing from every BOM this tool produced.
+    *
+    * BOTH UNKNOWNS ARE CALLED OUT ON THE LINE rather than resolved by guessing:
+    *  - the licence unit is not published, so the quantity is stated as per-node with
+    *    the alternative named. A wrong quantity on a repeatable order motion is worse
+    *    than a blank part number, because it looks like it was checked.
+    *  - Penguin documents the head node as a VIRTUAL MACHINE and wants three or more
+    *    for HA, so whether hardware sits under it is a scope question, not a fact. */
+   ['Software','ClusterWareAI\u2122 platform — bare-metal allocation, secure image deployment, health monitoring, multi-tenancy',
+     d.nodesTotal,
+     `Quantity shown PER COMPUTE NODE (${d.nodesTotal}). Penguin does NOT publish the licence unit — if it is per cluster this line is 1, if per socket it is ${d.nodesTotal*2}. CONFIRM THE UNIT before this becomes a quote. Part number NOT PUBLISHED`],
+   ['Software','ClusterWareAI head node — HA set',3,
+     'Penguin documents the head node as a VIRTUAL MACHINE, and HA wants three or more. Whether physical hardware sits under it is a SCOPE question for this order, not something this tool can decide — called out at 3 so it is discussed rather than forgotten'],
    ['Optic','800G OSFP DR8 transceiver (MMS4X00-NM)',optLinks*2,'2 per optical link — derived'],
    ['Fibre','MPO-12/APC jumper '+stock(d.rowRun)+'m',d.ibDown+d.ethDown,`rack to hub at ${d.place==='tor'?'top of rack':d.place==='mor'?'middle of row':d.place==='left'?'left of row':'right of row'} — ${d.worstHops} hops x ${d.pitch}m + ${d.rise}m tray rise`],
    ['Fibre','MPO-12/APC jumper '+stock(d.rowRun+(d.floors>1?gi('interFloorM'):0))+'m',d.ibUp+d.ethUp,'leaf to spine — derived'],
@@ -4736,7 +4775,13 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    ['Passive','MPO-12/APC patch panel (12-port)',Math.ceil((d.ibDown+d.ibUp+d.ethDown+d.ethUp)/12),'structured field, 12 links per panel — derived'],
    ['Passive','Cable manager (1U)',(d.computeRacks+d.netRacks)*2,'2 per rack — convention'],
   ];
-  return rationalize(rows.filter(r=>r[2]>0).map(r=>({cat:r[0],item:r[1],qty:r[2],sp:sp(r[2]),basis:r[3]})),d);
+  /* SPARES ARE FOR THINGS THAT BREAK OR GET CUT WRONG. Applying the spares percentage to
+   * every category put 68 software licences and a 4-node "HA set of 3" in the BOM — you do
+   * not buy 5% extra of a licence, and a three-node HA cluster with a spare is four nodes.
+   * Spares apply to cable, optics and passive infrastructure. */
+  const NO_SPARES=new Set(['Software','Enclosure','Rack']);
+  return rationalize(rows.filter(r=>r[2]>0).map(r=>({cat:r[0],item:r[1],qty:r[2],
+    sp:NO_SPARES.has(r[0])?0:sp(r[2]),basis:r[3]})),d);
  }
 
  /* ═══ BOM RATIONALIZATION ═══════════════════════════════════════════════════════════
