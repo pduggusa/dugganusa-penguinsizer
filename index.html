@@ -673,37 +673,6 @@
           <div class="adv-ctl" id="advCtl"></div>
           <div class="adv-rules" id="advRules"></div>
           <div class="adv-out" id="advOut"></div>
-          <h3 class="mem-h">Wiring diagram — rows, hub placement and cable runs</h3>
-          <p class="lede">Every rack in the build, laid out in rows at your <b style="color:var(--ink)">racks-per-row</b> setting, with the network hub drawn where your <b style="color:var(--ink)">placement</b> setting puts it. Cable bundles are drawn to scale — <b style="color:var(--ink)">thickness is link count, colour is the cable colour you set</b>. <b style="color:var(--ink)">Drag any rack</b> to a different position and the layout, the naming sequence and every export follow it. Aisles are drawn <b style="color:var(--ink)">front-to-front and back-to-back</b> per ASHRAE TC9.9, so the cold aisle is where the intakes face each other. Click a rack to expand its labels and per-class link breakdown.</p>
-          <div class="wd-tools">
-            <label class="wd-t">Scale <input type="range" id="wdZoom" min="40" max="160" step="10" value="100"/></label>
-            <label class="wd-t"><input type="checkbox" id="wdLabels"/> always show labels</label>
-            <label class="wd-t"><input type="checkbox" id="wdAisles" checked/> hot / cold aisles</label>
-            <label class="wd-t">Trunks land
-              <select id="wdSide"><option value="left">left of row</option><option value="right" selected>right of row</option><option value="both">both ends</option></select></label>
-            <label class="wd-t">Show
-              <select id="wdLayer">
-                <option value="all">everything</option>
-                <option value="compute">compute fabric only</option>
-                <option value="storage">storage fabric only</option>
-                <option value="mgmt">management + BMC only</option>
-                <option value="uplink">leaf → spine uplinks only</option>
-                <option value="none">racks only — no cabling</option>
-              </select></label>
-            <label class="wd-t">Racks
-              <select id="wdKind">
-                <option value="all">all kinds</option>
-                <option value="compute">compute</option>
-                <option value="network">network</option>
-                <option value="storage">storage</option>
-                <option value="memory">memory tier</option>
-                <option value="patch">patch fields</option>
-                <option value="gp">general purpose</option>
-              </select></label>
-            <button class="rk-btn" id="wdReset" style="display:none">↺ reset layout</button>
-            <span class="wd-hint" id="wdHint">click a rack for detail · drag to move it</span>
-          </div>
-          <div class="wd-wrap"><div id="advWiring"></div></div>
           <h3 class="mem-h">Device artwork — drawn here, or bring your own stencils</h3>
           <p class="lede">Faceplates below are <b style="color:var(--ink)">drawn from the published port topology and U-heights</b> — port counts, cage types and bay counts are real, so a 48-port SN2201 draws 48 ports. They are deliberately <b style="color:var(--ink)">not</b> vendor stencil art: VisioCafe and vendor Visio collections are the vendors' copyrighted artwork and are not ours to redistribute. If you have already built or licensed stencils, drop them in here — they replace the drawn faceplate for that device type, they never leave this browser, and they are cleared with the button below.</p>
           <div class="art-grid" id="advArt"></div>
@@ -3170,7 +3139,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const LS='penguin-adv-planner-v1';
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:4608,arch:'gb300-nvl72',feed:'415-3-300',feedsPerRack:1,rackU:48,reserveU:4,
-      siteKw:1200,pduOrient:'vertical',pduPerRack:2,fabricTiers:'leaf-only',
+      siteKw:1200,pduOrient:'vertical',pduPerRack:2,fabricTiers:'leaf-only',cableRunM:10,
       floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       netPlacement:'eor',netRed:'ab50',rackPitchM:0.6,
       rackDepthM:1.2, coldAisleM:1.2, hotAisleM:0.9, serviceM:1.0,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
@@ -3512,7 +3481,12 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   const trunkSide=A.trunkSide||'right';
   const sideDiv=(trunkSide==='both'&&place!=='tor')?2:1;
   const effHops=Math.ceil(worstHops/sideDiv);
-  const rowRun = place==='tor' ? 2 : +(effHops*pitch + rise).toFixed(1);
+  /* ---- ONE CABLE RUN, NOT A FLOOR PLAN --------------------------------------------
+   * Reach used to be derived from rack pitch, hop count, tray rise, trunk landing side
+   * and inter-floor riser length — a floor planner's worth of input to produce a single
+   * number that every link class then used. It is an input now. Top-of-rack is still a
+   * special case because the run genuinely collapses to an in-rack jumper. */
+  const rowRun = place==='tor' ? 2 : Math.max(1,gi('cableRunM')||10);
 
   // ---- MemoryAI KV cache tier ----------------------------------------------------
   /* On by default because it is the thing this tool exists to argue for — but it is a
@@ -4201,27 +4175,14 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const F=[
   {k:'gpus',l:'Target GPUs',step:576,hint:'rounds up to whole racks of the architecture'},
   {k:'siteKw',l:'Site power budget (kW)',step:50,hint:'what the room can actually deliver'},
+  {k:'racksPerRow',l:'Racks per row',step:1,hint:'row length — sets the cable run'},
+  {k:'cableRunM',l:'Cable run to leaf (m)',step:1,hint:'node to leaf, including tray rise'},
   {k:'pduPerRack',l:'PDUs per rack',step:1,hint:'2 = A/B feed paths'},
   {k:'rackU',l:'Rack height (U)',step:1,hint:'48 = AI cabinet · 42 = traditional'},
   {k:'reserveU',l:'Reserved U',step:1,hint:'patch, PDU, growth — off the top of usable'},
   {k:'feedsPerRack',l:'Feeds per rack',step:1,hint:'capacity feeds SUM · 2N feeds do not'},
-  {k:'floors',l:'Floors',step:1,hint:'vertical spread'},
-  {k:'racksPerRow',l:'Racks per row',step:1,hint:'rows are computed'},
-  {k:'rackPitchM',l:'Rack pitch (m)',step:0.1,hint:'0.6 = 600mm — column width'},
-  {k:'rackDepthM',l:'Rack depth (m)',step:0.1,hint:'1200mm — AI cabinets often 1200-1400'},
-  {k:'coldAisleM',l:'Cold aisle (m)',step:0.1,hint:'1.2m / 4ft recommended — front-to-front, ASHRAE TC9.9'},
-  {k:'hotAisleM',l:'Hot aisle (m)',step:0.1,hint:'0.9m / 3ft minimum — back-to-back'},
-  {k:'serviceM',l:'End service space (m)',step:0.1,hint:'1.0m each end — door swing and trunk landing'},
-  {k:'trayRiseM',l:'Tray rise (m)',step:1,hint:'up+over+down'},
-  {k:'interFloorM',l:'Inter-floor run (m)',step:5,hint:'riser length'},
-  {k:'trunkFibers',l:'Trunk fibres',step:12,hint:'12/24/48/96/144'},
   {k:'memPerSU',l:'MemoryAI per SU',step:1,hint:'0 = none · our default, not a vendor rule'},
-  {k:'loadCap',l:'Link load cap %',step:5,hint:'80 = never fill a trunk'},
-  {k:'trunkRacks',l:'Racks per trunk',step:1,hint:'racks sharing one uplink'},
-  {k:'trunkPorts',l:'Panel ports / trunk',step:12,hint:'patch-panel positions'},
   {k:'ibUplinksPerLeaf',l:'IB uplinks / leaf',step:6,hint:'72 = non-blocking'},
-  {k:'rowsPerFloor',l:'Rows per floor',step:1,hint:'0 = auto/even'},
-  {k:'phases',l:'Build phases',step:1,hint:'staged rollout'},
   {k:'spares',l:'Spares %',step:1,hint:'on all links'},
  ];
  function renderArtOnce(){try{renderArt();}catch(e){}}
@@ -4400,24 +4361,10 @@ ${c.iso?`<h2>Multi-tenancy</h2>
      <div class="kh">MemoryAI KV cache tier — currently excluded</div>
      <div class="kn">No MemoryAI appliances are in this build, so none appear in the rack count, the cable plant or the BOM. If your workload is long-context or high-concurrency inference, this is the tier that keeps GPUs from idling on memory. <label class="wd-t" style="margin-left:6px;display:inline-flex"><input type="checkbox" id="memToggle"/> include it</label></div>
    </div>`}
-   <div class="adv-key" id="advFloorPanel" style="margin-bottom:12px">
-     <div class="kh">Per-floor asset split &amp; uplink oversubscription</div>
-     <div class="kg" style="gap:18px">
-       <span class="ki"><b>${d.totalRows}</b> rows total (computed: ${d.racks.length} racks &divide; ${gi('racksPerRow')} per row) · <b>${d.floors}</b> floor${d.floors===1?'':'s'} · <b>${d.rowsPerFloor}</b> rows each · <b>${NUMF(d.perFloorRacks)}</b> racks ${d.rowsPerFloorSet>0?'<em style="color:var(--cool)">(rows/floor drives floor count)</em>':'(even split)'}</span>
-       <span class="ki"><b>${d.upPerLeaf}</b> IB uplinks/leaf · blocking <b>${d.ibBlocking===1?'1:1 non-blocking':'1:'+d.ibBlocking.toFixed(1)}</b></span>
-       <span class="ki">spine on floor 1 · <b>${Math.round(d.offSpineFrac*100)}%</b> of leaf traffic crosses a riser</span>
-     </div>
-     <div class="kn">Riser count scales with the floors that <b>do not</b> hold the spine — a two-floor build sends half its leaf traffic up, a four-floor build sends three quarters. Lowering uplinks per leaf cuts riser cost and buys oversubscription; 72 is non-blocking against the 144-port radix.</div>
-   </div>
    <div class="adv-cable-sum">
      <div class="acs"><span class="k">Total links</span><span class="v">${NUMF(d.totalLinks)}</span></div>
      <div class="acs"><span class="k">Spares at ${gi('spares')}%</span><span class="v">${NUMF(d.spares)}</span></div>
      <div class="acs"><span class="k">Transceivers (2 per optical link)</span><span class="v">${NUMF(d.L.filter(l=>l.media.includes('SMF')).reduce((a,l)=>a+l.n,0)*2)}</span></div>
-     <div class="acs"><span class="k">Inter-floor links</span><span class="v ${d.interFloor?'warn':''}">${d.interFloor?NUMF(d.interFloor):'none — single floor'}</span></div>
-     <div class="acs"><span class="k">${gi('trunkFibers')}F risers needed</span><span class="v ${d.risers?'warn':''}">${d.risers||'—'}${d.risers&&d.risers>d.risersRaw?` <em style="color:var(--faint);font-size:10px">(${d.risersRaw} at 100%)</em>`:''}</span></div>
-     <div class="acs"><span class="k">Fibres per trunk in use</span><span class="v">${d.trunkLinks} links x 8 = ${d.trunkLinks*8} of ${gi('trunkFibers')}</span></div>
-     <div class="acs"><span class="k">Link load cap</span><span class="v">${Math.round(d.loadCap*100)}%</span></div>
-     <div class="acs"><span class="k">Row trunk assemblies</span><span class="v">${NUMF(d.rowTrunks)} <em style="color:var(--faint);font-size:10px">(${d.assembliesPerGroup}/pod)</em></span></div>
    </div>
    <h3 class="mem-h" style="margin-top:22px">Complete bill of materials — every asset class</h3>
    <div class="mem-tbl-wrap" style="margin-bottom:12px"><table class="mem-tbl">
@@ -4425,14 +4372,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     ${bom(d).map(b=>`<tr><td>${b.cat}</td><td><b>${b.item}</b></td><td>${NUMF(b.qty)}</td>
       <td style="color:var(--faint)">${b.sp?'+'+NUMF(b.sp):'—'}</td><td class="ok">${NUMF(b.qty+b.sp)}</td>
       <td class="desc">${b.basis}</td></tr>`).join('')}
-    </tbody></table></div>
-   <div class="callout" style="margin-top:12px">
-     <div class="callout-h">How the trunk maths works</div>
-     <p><b>Nothing here is sized to 100%.</b> Trunks and risers are provisioned so their offered load sits at no more than <b>${Math.round(d.loadCap*100)}%</b> of link capacity. A trunk sized exactly to its traffic has no headroom for a failed strand, no room to rebalance after a leaf reboots, and no margin for growth — and an aggregation point is precisely where you cannot route around a hot spot without re-cabling. At ${Math.round(d.loadCap*100)}% a pod of ${d.trunkRacks} racks offering ${NUMF(d.groupLinks)} links needs <b>${d.assembliesPerGroup} assembl${d.assembliesPerGroup===1?'y':'ies'}</b> rather than one${d.risers&&d.risers>d.risersRaw?`, and the riser count rises from ${d.risersRaw} to <b>${d.risers}</b>`:''}. That difference is the margin.</p>
-     <p>An 800G DR8 link over MPO-12/APC uses <b>8 of the 12 fibres</b> — four transmit, four receive. So a trunk carries <b>floor(fibres ÷ 8)</b> links, and the spare fibres in each MPO-12 are strand overhead you pay for and do not light. At ${gi('trunkFibers')}F that is <b>${d.trunkLinks} link${d.trunkLinks===1?'':'s'} per trunk</b>.</p>
-     <p>Reach is your input, not a survey. NVIDIA's DR8 optics are rated to <b>500 m over single-mode</b>, and MPO-12/APC type-B crossover jumpers are manufactured 1–500 m, so anything inside 500 m is a single hop with no mid-span. Beyond that you are into a different optic, not a longer cable.</p>
-     ${d.floors>1?`<p class="callout-x">You have set <b>${d.floors} floors</b>, so leaf-to-spine crosses a riser. This model assumes <b>the spine layer sits on one floor</b> and every other floor trunks up to it — the common design, but confirm it against your actual room allocation before ordering ${d.risers} trunks.</p>`:''}
-   </div>`;
+    </tbody></table></div>`;
 
   // ---- WIRING DIAGRAM ---------------------------------------------------------------
   /* Row-level plan view. Racks laid out at the user's racks-per-row, the network hub
@@ -4790,14 +4730,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    ...(d.memUnits?[
     ['Memory',MEMAI.label+' — '+MEMAI.mem,d.memUnits,`${d.memPerSU} per ${d.blockLabel} x ${d.blockTotal} — OUR default ratio, not a Penguin-published rule`],
    ]:[]),
-   ['Fibre',gi('trunkFibers')+'F trunk assembly — inter-floor riser',d.risers,d.risers?`riser, ${d.trunkLinks} links each — derived`:'single floor, none required'],
-   /* Horizontal trunking is a user input now, so it has to appear as orderable parts:
-    * the trunk assemblies themselves and the patch panels that terminate them. A trunk
-    * with no panel is a coil of fibre on a floor. */
-   ['Fibre',gi('trunkFibers')+'F trunk assembly — horizontal, row to '+(d.trunkSide==='both'?'both ends':d.trunkSide),d.rowTrunks,
-     `${d.trunkGroups} per row x ${d.totalRows} rows — one per ${d.trunkRacks}-rack group`],
-   ['Fibre',d.trunkPorts+'-port MPO patch panel',d.trunkPanels,
-     `${d.panelsPerTrunk} per pod x ${d.trunkPods} pods — ${d.portsPerRack} MPO positions/rack x ${d.trunkRacks} racks, ${d.trunkPorts} per panel`],
    ['Copper','Cat6A patch 3m',d.bmc,'BMC / OOB — derived'],
    ['Copper','Cat6 rollover console',(d.L.find(x=>x.cls==='console')||{n:0}).n,'Serial console — derived'],
    ['Copper','SFP28 DAC/AOC',d.oobUp,'SN2201 uplinks — derived'],
