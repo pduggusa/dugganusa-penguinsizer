@@ -464,7 +464,7 @@
   .dt-ip{font-size:13.5px;font-weight:650;color:var(--ink);margin:4px 0 8px}
   .dt-id{font-size:12px;color:var(--dim);line-height:1.55} .dt-id b{color:var(--ink)}
   .dt-if{font-size:11px;color:var(--faint);line-height:1.5;margin-top:8px;border-top:1px solid #16212e;padding-top:7px} .dt-if b{color:var(--dim)}
-  /* ---- Partner Solutions (Dell) ---- */
+  /* ---- reference cards ---- */
   .pn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:13px;margin:12px 0}
   .pn-ctl,.pn-out,.pn-power,.pn-cable{margin:12px 0}
   .pn-f{display:block;margin:9px 0}
@@ -1019,62 +1019,6 @@
         <h2 class="sec">📚 References — the published numbers, and who published them</h2>
         <p class="lede">Every figure this tool leans on, with its source. <b style="color:var(--ink)">Vendor numbers are labelled as vendor numbers</b> and separated from what the tool derives itself — so when you quote something in front of a customer, you know exactly which kind of claim you're making and who stands behind it.</p>
 
-        <h3 class="mem-h">Dell — PowerEdge, PowerStore, PowerMax and PowerSwitch <span class="note">(Partner Solutions tab)</span></h3>
-        <div class="ref-g">
-          <div class="ref-c" style="--e:var(--ok)">
-            <h4>PowerEdge 17th generation — what you can buy today</h4>
-            <div class="src">Dell · product pages + Installation &amp; Service Manuals · vendor-published</div>
-            <div class="ref-n"><span class="k">R770 — Intel Xeon 6</span><span class="v">2U · 2 socket</span></div>
-            <div class="ref-n"><span class="k">R670 / R6725 / R7725</span><span class="v">1U / 1U / 2U</span></div>
-            <div class="ref-n"><span class="k">R770 PSU range</span><span class="v">800 W – 3200 W</span></div>
-            <div class="ref-n"><span class="k">R770 top Xeon 6 SKU listed</span><span class="v">6787P · 86C/172T</span></div>
-            <div class="ref-n"><span class="k">R7725 max memory</span><span class="v">6 TB DDR5</span></div>
-            <div class="ref-n"><span class="k">R7725 launch</span><span class="v">November 2025</span></div>
-            <a href="https://www.dell.com/en-us/shop/dell-poweredge-servers/poweredge-r770-rack-server/spd/poweredge-r770" target="_blank" rel="noopener">R770 specifications →</a>
-            <a href="https://www.dell.com/support/manuals/en-us/poweredge-r7725/per7725_ism/psu-specifications" target="_blank" rel="noopener">R7725 PSU table →</a>
-            <div class="ref-warn">The PSU table is transcribed verbatim, including Dell's own BTU/hr per PSU (3200 W → 12,000 BTU/hr) rather than a W × 3.412 conversion. <b>A PSU rating is a ceiling, not a draw.</b> Dell publishes no typical per-workload operating wattage, which is why the Partner tab's load factor is ours and editable. AMD cores-per-socket is <b>not</b> a verified Dell figure — confirm the SKU.</div>
-          </div>
-          <div class="ref-c" style="--e:var(--warn)">
-            <h4>PowerEdge 18th generation — announced, not sizeable</h4>
-            <div class="src">Dell Technologies World · 19 May 2026 · announcement only</div>
-            <div class="ref-n"><span class="k">R9825 · R9815 · M9825</span><span class="v">2H 2026</span></div>
-            <div class="ref-n"><span class="k">XE5845 · XE7845</span><span class="v">Q1 2027</span></div>
-            <div class="ref-n"><span class="k">R9810 · R8815 · R6815 · R7815 · R7815xd · R7825</span><span class="v">2027</span></div>
-            <div class="ref-n"><span class="k">Silicon</span><span class="v">AMD EPYC "Venice" · one Intel "Diamond Rapids"</span></div>
-            <div class="ref-n"><span class="k">Dell's performance claim</span><span class="v">up to 70% over 17G</span></div>
-            <div class="ref-n"><span class="k">Published power / thermal data</span><span class="v" style="color:var(--hot)">none</span></div>
-            <a href="https://www.dell.com/en-us/dt/corporate/newsroom/announcements/detailpage.press-releases~usa~2026~05~dell-technologies-reimagines-the-modern-data-center-for-the-ai-era.htm" target="_blank" rel="noopener">Announcement →</a>
-            <div class="ref-warn">The Partner tab <b>refuses to emit a wattage, thermal load or rack count</b> for an 18G model. A percentage performance claim is not a power figure, and sizing a room off one is how you build a hall that cannot cool what you bought.</div>
-          </div>
-          <div class="ref-c" style="--e:var(--ok)">
-            <h4>PowerStore &amp; PowerMax</h4>
-            <div class="src">Dell · Hardware Information Guide / Site Planning Guide · vendor-published</div>
-            <div class="ref-n"><span class="k">PowerStore form factor</span><span class="v">2U base enclosure</span></div>
-            <div class="ref-n"><span class="k">PowerStore input</span><span class="v">240 VAC ±10% single phase</span></div>
-            <div class="ref-n"><span class="k">3200T / 5200T / 9200T max draw</span><span class="v">1393.6 / 1734.4 / 1919.4 W</span></div>
-            <div class="ref-n"><span class="k">Published heat range</span><span class="v">4,338 – 6,985 BTU/hr</span></div>
-            <div class="ref-n"><span class="k">3200T weight</span><span class="v">35.8 kg empty · 41.7 kg full</span></div>
-            <div class="ref-n"><span class="k">PowerMax 2500 single / dual node pair</span><span class="v">3,131 / 6,262 VA</span></div>
-            <div class="ref-n"><span class="k">PowerMax bay</span><span class="v">199.2 × 60 × 114.8 cm · 306–408 kg</span></div>
-            <a href="https://www.dell.com/support/manuals/en-us/powerstore-1000/pwrstr-hwg/power-requirements-for-the-base-enclosure" target="_blank" rel="noopener">PowerStore power →</a>
-            <a href="https://www.dell.com/support/manuals/en-us/powermax/pmax2_plang/system-specifications" target="_blank" rel="noopener">PowerMax site planning →</a>
-            <div class="ref-warn">PowerMax figures are <b>VA at &gt;35 °C</b> — deliberately elevated, covering battery recharge and high-ambient cooling. Treated as W at unity power factor, which the tool states rather than silently applying. <b>Usable TB and IOPS per array are your inputs, not vendor facts</b>: effective capacity depends on the reduction ratio you actually achieve. No separate PowerMax 8500 power table was verified — size that from a quote.</div>
-          </div>
-          <div class="ref-c" style="--e:var(--cool)">
-            <h4>PowerSwitch &amp; PowerFlex</h4>
-            <div class="src">Dell · spec sheets · vendor-published where marked</div>
-            <div class="ref-n"><span class="k">Z9864F-ON</span><span class="v">2U · 64× 800GbE OSFP112</span></div>
-            <div class="ref-n"><span class="k">Z9864F-ON breakout / latency</span><span class="v">320 ports · &lt;700 ns</span></div>
-            <div class="ref-n"><span class="k">Z9864F-ON throughput</span><span class="v">20.3 Bpps</span></div>
-            <div class="ref-n"><span class="k">Dell's stated fabric scale</span><span class="v">8,000 GPU nodes, two-tier</span></div>
-            <div class="ref-n"><span class="k">S5448F-ON</span><span class="v">48× 100GbE + 8× 400GbE · 250 W typ</span></div>
-            <div class="ref-n"><span class="k">PowerFlex certified nodes</span><span class="v">R660 / R760 / R6625 / R7625 (16G)</span></div>
-            <a href="https://www.delltechnologies.com/asset/en-us/products/networking/technical-support/dell-powerswitch-z9864f-on-spec-sheet.pdf" target="_blank" rel="noopener">Z9864F-ON spec sheet →</a>
-            <a href="https://www.dell.com/en-us/shop/ipovw/networking-z-series" target="_blank" rel="noopener">Z-series overview →</a>
-            <div class="ref-warn">Not verified here and flagged in the tool: <b>Z9864F-ON typical power</b>, and the <b>S5448F-ON rack height</b> (1U is our assumption for the class). PowerFlex 4.5 certifies <b>16th-generation</b> nodes — 17G certification was not confirmed, so check before planning a 17G PowerFlex estate.</div>
-          </div>
-        </div>
-
         <h3 class="mem-h">Penguin Solutions — MemoryAI KV cache server</h3>
         <div class="ref-g">
           <div class="ref-c" style="--e:var(--ok)">
@@ -1328,11 +1272,8 @@ const GPU={B300:{name:"B300 Blackwell Ultra",hbm:288,fp4:15.3,tdp:1.4,capexId:"c
             * on this card therefore reads "n/a (FP8)" instead of a fabricated number, and
             * the exaFLOPS sizing mode refuses to quantise against it. */
            H200:{name:"H200 Hopper",hbm:141,fp4:null,fp8:4.0,tdp:0.7,capexId:"capex200",hopper:true},
-           /* NVIDIA Vera Rubin, as carried by Dell's XE8812. Dell publishes the RACK:
-            * 144 GPUs, 300 kW+, 100% direct-liquid-cooled, ORv3. Per-GPU HBM and FP4 are
-            * not published, so they stay null and every per-GPU-denominated figure reads
-            * n/a rather than guessing. The rack numbers are real and are what size it. */
-           VR200:{name:"Vera Rubin",hbm:null,fp4:null,tdp:null,capexId:"capex300",announced:true}};
+           };
+
 /* `per` = GPUs in the purchasable block (NVIDIA's floor tile). `grain` = the smallest unit that
  * physically exists inside it — the GB300 NVL72's 18 compute trays (4× B300 + 2× Grace each),
  * or simply the node for HGX builds. NVIDIA's own sizers quantize to `per`; we size to `grain`. */
@@ -1341,11 +1282,6 @@ const ARCH=[
   grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14,fixedKw:0}},
  {key:"altus-xe4318",label:"Penguin Altus XE4318GTS-DTC",who:"AMD EPYC 9005/9004 + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"EPYC 9005/9004",cpuper:2,nvl:8,pkw:10.5,cool:"liquid DTC",edge:"var(--warn)",
   grain:{gpu:8,cpu:2,per:1,label:"node",pkw:10.5,fixedKw:0}},
- /* Dell's NVIDIA architectures, so the comparison is honest about who else builds this.
-  * Form factor, GPU count and cooling are VENDOR-PUBLISHED. Node power is DERIVED —
-  * (GPUs x NVIDIA's published accelerator TDP) + ~2 kW host — because Dell publishes
-  * PSU ratings, and a PSU rating is a ceiling, not a draw. The Partner Solutions tab
-  * carries the same derivation and says so on its face. */
  /* VERIFIED against "Altus XE4318GTSv2-DTC" (Penguin datasheet, 11.2025), read
   * 2026-08-10 — docs/VENDOR-DOCS.md. 4U rackmount; 2x AMD EPYC 9005/9004 at 500 W max
   * TDP; 8-GPU SXM NVIDIA HGX B300; 8 x 800 Gb/s OSFP InfiniBand XDR / dual 400 Gb/s
@@ -1360,11 +1296,7 @@ const ARCH=[
  {key:"gb300-nvl72",label:"NVIDIA GB300 NVL72",who:"rack-scale · SuperPOD block",gpu:"B300",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:142,cool:"liquid DTC",su:8,edge:"var(--grace)",
   grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:6.4,fixedKw:26.8},sku:"rack"},
  {key:"dgx-b300",label:"NVIDIA DGX B300",who:"HGX 8-GPU node · 10U",gpu:"B300",per:8,unit:"node",u:10,cpu:"Xeon 6776P",cpuper:2,nvl:8,pkw:14,cool:"air/liquid",edge:"var(--cool)",
-  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14,fixedKw:0}},
- {key:"dell-xe9680l",label:"Dell PowerEdge XE9680L",who:"Intel Xeon 6 + B200 HGX · 4U DTC",gpu:"B200",per:8,unit:"node 4U",u:4,cpu:"Xeon 5th Gen",cpuper:2,nvl:8,pkw:10,cool:"liquid DTC",edge:"var(--cool)",
-  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:10,fixedKw:0},derivedKw:true},
- {key:"dell-xe9712",label:"Dell PowerEdge XE9712",who:"GB200 NVL72 · rack-scale liquid",gpu:"B200",per:72,unit:"rack",u:48,cpu:"Grace",cpuper:36,nvl:72,pkw:120,cool:"liquid DTC",su:8,edge:"var(--grace)",
-  grain:{gpu:4,cpu:2,per:18,label:"compute tray",pkw:5,fixedKw:30},sku:"rack",derivedKw:true}
+  grain:{gpu:8,cpu:2,per:1,label:"node",pkw:14,fixedKw:0}}
 ];
 const MODELS=[
  {n:"Llama 3.1 405B",p:405,t:15},{n:"DeepSeek-V3 671B",p:671,t:14.8},{n:"Mistral Large 2",p:123,t:12},
@@ -1521,8 +1453,7 @@ function renderSize(rows){
     <div class="metric"><span class="k">Compute · HBM</span><span class="v big">${r.fp4} EF <small>FP4 · ${r.hbm}TB HBM</small></span></div>
     <div class="metric"><span class="k">Power · footprint</span><span class="v">${commas(r.power)}kW · ${r.racks} rack<span class="chip ${r.chip}">${r.limit}</span></span></div>
     ${!r.g.fp4?`<div class="metric"><span class="k">FP4 exaFLOPS</span><span class="v" style="color:var(--warn)">n/a — ${r.g.hopper?'Hopper is FP8, there is no FP4 datapath':'not published for '+r.g.name}</span></div>`:''}
-    ${r.a.derivedKw?`<div class="metric"><span class="k">⚠ Power basis</span><span class="v" style="color:var(--warn)">DERIVED, not posted</span></div>
-    <div class="note" style="margin:2px 0 6px">Dell publishes PSU ratings, not a per-node operating draw — so this kW is <b>(GPUs × the accelerator's published TDP) + ~2 kW host</b>. Penguin and NVIDIA figures on the other cards are <b>posted</b>. <b style="color:var(--warn)">Do not read this as a like-for-like win:</b> ideal TDP arithmetic tends to land under a real measured figure, so the derived card is flattered. Put a Redfish-measured draw in before you take it to a customer.</div>`:''}
+
     ${r.limit==="space-limited"?`<div class="note" style="margin:2px 0 6px;color:var(--ok)">📐 <b>Space-limited</b> — you run out of U before you run out of power, so there is power headroom on this floor. That is the shape where <b>Partner Solutions</b> pays: denser general-purpose kit consolidated into the slack, <i>provided the platform can actually address the workload</i>. Check it on posted numbers, not derived ones.</div>`:''}
     <div class="metric"><span class="k">CapEx · ${val("years")}yr TCO</span><span class="v">${usd(r.capex)} · <b class="big" style="font-size:13px">${usd(r.tco)}</b></span></div>
     <div class="metric"><span class="k">$/GPU-hr · $/EF</span><span class="v">$${r.ownedHr.toFixed(2)} · ${usd(r.perEF)}</span></div>
@@ -1541,7 +1472,7 @@ function renderSize(rows){
  document.querySelectorAll("#cards [data-build]").forEach(b=>b.onclick=()=>{
   const g=+b.dataset.build, arch=b.dataset.arch;
   if(!window.__advImport&&!window.__archImport){alert("Rack planner not ready — open the Rack Planner tab once, then retry.");return;}
-  const rackScale=(arch==='gb300-nvl72'||arch==='dell-xe9712'||arch==='dell-xe8812');
+  const rackScale=(arch==='gb300-nvl72');
   const plan=window.__archPlan?window.__archPlan(arch,g):null;
   if(!rackScale&&plan&&plan.racksNeeded<=plan.max&&window.__archImport){
    if(!window.__archImport(arch,g))return;
@@ -1659,54 +1590,6 @@ sync();
     fixedPorts:[{cls:"bmc", n:9,speed:"1G", desc:"NVLink switch-tray BMC / OOB (9 switch trays)"},
                 {cls:"mgmt",n:2,speed:"25G",desc:"In-rack SN2201 OOB switch uplink"}],
     note:"NVLink5 GPU↔GPU = in-rack copper cartridge backplane, not cabled."},
-  /* ---- Dell general-purpose estate (Partner Solutions tab) --------------------
-   * Form factors, PowerStore max draw and the S5448F-ON typical power are
-   * VENDOR-PUBLISHED. Per-node kW is NOT: a PSU rating is a ceiling, not a draw,
-   * and Dell publishes no typical per-workload wattage. The pkw figures below are
-   * OURS — a mid-range PSU at a ~0.55 general-purpose load factor — and are meant
-   * to be overridden with a measured draw. Set the load factor on the Partner
-   * Solutions tab and hand off from there to carry a workload-specific number. */
-  "dell-r670":  {label:"Dell PowerEdge R670 (Intel Xeon 6)", unit:"node", nodeU:1, gpuPer:0, pkw:0.8, weight:20,
-    pkwEstimated:true, ports:{compute:2,storage:2,mgmt:1,bmc:1},
-    note:"1U two-socket. 0.8 kW ESTIMATED (1500 W PSU x 0.55 load) — not a Dell figure."},
-  "dell-r770":  {label:"Dell PowerEdge R770 (Intel Xeon 6)", unit:"node", nodeU:2, gpuPer:0, pkw:1.3, weight:30,
-    pkwEstimated:true, ports:{compute:2,storage:2,mgmt:1,bmc:1},
-    note:"2U two-socket. Dell publishes 800-3200 W PSUs and Xeon 6 to 86C/172T. 1.3 kW ESTIMATED (2400 W x 0.55)."},
-  "dell-r6725": {label:"Dell PowerEdge R6725 (AMD EPYC)",    unit:"node", nodeU:1, gpuPer:0, pkw:0.8, weight:20,
-    pkwEstimated:true, ports:{compute:2,storage:2,mgmt:1,bmc:1},
-    note:"1U two-socket AMD. 0.8 kW ESTIMATED — not a Dell figure."},
-  "dell-r7725": {label:"Dell PowerEdge R7725 (AMD EPYC)",    unit:"node", nodeU:2, gpuPer:0, pkw:1.3, weight:30,
-    pkwEstimated:true, ports:{compute:2,storage:2,mgmt:1,bmc:1},
-    note:"2U two-socket AMD, up to 6 TB DDR5. Full Titanium PSU table published (3200 W = 12,000 BTU/hr). 1.3 kW ESTIMATED."},
-  "dell-ps3200t":{label:"Dell PowerStore 3200T",             unit:"appliance", nodeU:2, gpuPer:0, pkw:1.4, weight:42,
-    ports:{compute:0,storage:4,mgmt:2,bmc:2},
-    note:"1393.6 W max draw and 41.7 kg full are VENDOR-PUBLISHED. Input 240 VAC +/-10% single phase."},
-  "dell-s5448f":{label:"Dell PowerSwitch S5448F-ON",         unit:"switch", nodeU:1, gpuPer:0, pkw:0.25, weight:11,
-    ports:{compute:0,storage:0,mgmt:2,bmc:1},
-    note:"250 W typical is VENDOR-PUBLISHED. 48x 100GbE SFP56-DD + 8x 400GbE QSFP56-DD. 1U is our assumption for the class."},
-  /* ---- Dell GPU platforms (XE8xxx / XE9xxx) ----------------------------------
-   * Form factor, GPU count and accelerator options are VENDOR-PUBLISHED. Node kW is
-   * DERIVED: (GPU count x the silicon vendor's published accelerator TDP) + 2 kW host.
-   * That arithmetic is transparent and is why these carry a number at all — unlike
-   * the general-purpose PowerEdge rows above, where nothing but a PSU ceiling exists. */
-  "dell-xe9680": {label:"Dell PowerEdge XE9680 (8x H100/H200)", unit:"node", nodeU:6, gpuPer:8, pkw:7.6, weight:100,
-    pkwEstimated:true, ports:{compute:8,storage:2,mgmt:2,bmc:1},
-    note:"6U, eight 700 W SXM5 accelerators. 7.6 kW DERIVED (8 x 700 W + 2 kW host). Air-cooled on HPR fans — leave liquid fraction at 0."},
-  "dell-xe9680l":{label:"Dell PowerEdge XE9680L (8x B200, DTC)",unit:"node", nodeU:4, gpuPer:8, pkw:10.0,weight:110,
-    pkwEstimated:true, ports:{compute:8,storage:2,mgmt:2,bmc:1},
-    note:"4U direct-liquid-cooled, up to eight HGX B200. Six 3000 W Titanium PSUs. 10.0 kW DERIVED (8 x 1000 W + 2 kW host). Set liquid fraction ~0.8."},
-  "dell-xe8640": {label:"Dell PowerEdge XE8640 (4x H100)",      unit:"node", nodeU:4, gpuPer:4, pkw:4.8, weight:75,
-    pkwEstimated:true, ports:{compute:4,storage:2,mgmt:2,bmc:1},
-    note:"2-socket 4U, four H100 700 W SXM5, NVLink-interconnected. 4.8 kW DERIVED."},
-  "dell-xe8812": {label:"Dell PowerEdge XE8812 (Vera Rubin NVL4)", unit:"NVL4 node", nodeU:1, gpuPer:4, pkw:8.3, weight:35,
-    rackScale:true, maxNodes:36, fixedU:10, fixedKw:0, fixedWeight:220,
-    ports:{compute:4,storage:2,mgmt:1,bmc:1},
-    fixedPorts:[{cls:"mgmt",n:2,speed:"25G",desc:"ORv3 rack manager / integrated rack controller uplink"},
-                {cls:"bmc", n:2,speed:"1G", desc:"Rack-level OOB"}],
-    note:"Dell publishes 144 GPUs and 300 kW+ per ORv3-style rack, 100% direct-to-chip liquid. 36 NVL4 nodes/rack and 8.3 kW/node are arithmetic on those published rack figures. NOTE: OCP&rsquo;s Open Rack v3 BASE spec is a 48 V DC busbar rated to about 18 kW — Dell&rsquo;s 300 kW+ is ORv3-INSPIRED, not base-spec ORv3, so do not size a busbar from the OCP document. Fanless — set liquid fraction to 1.0. Available early 2027."},
-  "dell-xe7745": {label:"Dell PowerEdge XE7745 (8x PCIe 600 W)",unit:"node", nodeU:4, gpuPer:8, pkw:6.8, weight:75,
-    pkwEstimated:true, ports:{compute:4,storage:2,mgmt:2,bmc:1},
-    note:"4U air-cooled, up to eight double-wide 600 W PCIe accelerators (e.g. RTX Pro 6000 Blackwell SE). NVIDIA-Certified, named in Spectrum-X solution IDs and aligned to the 2-8-5-200 Enterprise RA. 6.8 kW DERIVED."}
  };
  const BREAKERS=[16,20,30,32,40,50,60,63,80,100,125,150,175,200,225,250,300,350,400];
  const nextBreaker=a=>BREAKERS.find(b=>b>=a)||Math.ceil(a/50)*50;
@@ -1822,11 +1705,8 @@ sync();
  /* Vendor-grouped architecture picker. Also marks which entries carry a DERIVED
   * power figure, so the distinction survives into the place people actually pick from. */
  const ARCHGROUPS=[
-  {g:'Penguin Solutions', keys:['relion-xe4418','altus-xe4318']},
-  {g:'NVIDIA',            keys:['dgx-b300','gb300-nvl72']},
-  {g:'Dell — GPU',        keys:['dell-xe9680','dell-xe9680l','dell-xe8640','dell-xe8812','dell-xe7745']},
-  {g:'Dell — general purpose',keys:['dell-r670','dell-r770','dell-r6725','dell-r7725']},
-  {g:'Dell — storage & fabric',keys:['dell-ps3200t','dell-s5448f']}
+  {g:'Penguin Solutions', keys:['relion-xe4418','altus-xe4318','altus-xe4318v2']},
+  {g:'NVIDIA',            keys:['dgx-b300','gb300-nvl72']}
  ];
  function archSelect(i,cur){
   const seen=new Set();
@@ -2077,23 +1957,15 @@ sync();
      ?`Simple mode holds ${MAX_RACKS}, so ${MAX_RACKS} will be built covering ${(MAX_RACKS*per*s.gpuPer).toLocaleString()} of ${gpus.toLocaleString()} GPUs.\n\n`
      :'')+
    `This replaces the current ${state.racks.length} rack${state.racks.length===1?'':'s'}.`;
-  /* Fabric. Every node needs a leaf port per rail plus storage and management, so a
-   * build with no switch in it is not a build. 48 usable ports per S5448F-ON, two
-   * minimum for redundancy — the same A/B thinking the advanced planner applies. */
-  const portsNeeded=nodesNeeded*((SPEC[arch].ports&&SPEC[arch].ports.compute)||2);
-  const leaves=Math.max(2,Math.ceil(portsNeeded/48));
-  const swArch='dell-s5448f';
-  const netRacksNeeded=SPEC[swArch]?Math.ceil(leaves/Math.max(1,calc({...defRack(),arch:swArch,nodes:null}).maxSpace)):0;
-  if(!confirm(msg+`\n\nPlus fabric: ${leaves} leaf switch${leaves===1?'':'es'} for ${portsNeeded} node ports, in ${netRacksNeeded} network rack${netRacksNeeded===1?'':'s'}.`))return false;
+  /* Fabric lives in ADVANCED. The simple planner used to append leaf switches as extra
+   * racks of a Dell PowerSwitch SKU, which went with the Dell catalogue — and left this
+   * silently adding no fabric at all, because SPEC['dell-s5448f'] no longer resolves and
+   * every use of it was guarded. Simple mode is for hand-editing a handful of compute
+   * racks; the fabric, its leaf counts and its cable plant are Advanced's job. */
+  if(!confirm(msg))return false;
   let left=Math.min(nodesNeeded,racks*per);
   state.racks=Array.from({length:racks},()=>{const n=Math.min(per,left);left-=n;
     return {...defRack(),arch,nodes:n,liquidFrac:liquid};}).filter(r=>r.nodes>0);
-  if(SPEC[swArch]&&state.racks.length<MAX_RACKS){
-   const perNet=Math.max(1,calc({...defRack(),arch:swArch,nodes:null}).maxSpace);
-   let sw=leaves;
-   while(sw>0&&state.racks.length<MAX_RACKS){const nn=Math.min(perNet,sw);sw-=nn;
-    state.racks.push({...defRack(),arch:swArch,nodes:nn,liquidFrac:0});}
-  }
   if(!state.racks.length)state.racks=[defRack()];
   const sb=document.querySelector('#rkMode button[data-m="simple"]'); if(sb)sb.click();
   setDirty(true);persist();render();
@@ -3063,8 +2935,17 @@ ${c.iso?`<h2>Multi-tenancy</h2>
 
  // ---- state ----------------------------------------------------------------------
  const LS='penguin-adv-planner-v1';
- let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
-   ||{gpus:512,arch:'relion-xe4418',feed:'200',feedsPerRack:1,rackU:48,reserveU:4,
+ /* ---- DEFAULTS MERGE INTO SAVED STATE, THEY DO NOT LOSE TO IT ----------------------
+  * This read localStorage and fell back to the defaults ONLY when nothing was stored. So
+  * every control added after a user's first visit came back undefined for them — and
+  * renderCtl wrote value="undefined" into a number input, which the browser rejects with
+  * "The specified value cannot be parsed, or is out of range", once per control, on every
+  * repaint. A returning user got a broken planner and a console full of it; a fresh one
+  * saw nothing wrong, which is why it survived.
+  *
+  * Saved values win where they exist. Defaults fill the rest. */
+ const A_DEFAULTS=
+   {gpus:512,arch:'relion-xe4418',feed:'200',feedsPerRack:1,rackU:48,reserveU:4,
       siteKw:1200,floorLoadKgM2:1220,nodeKgOverride:0,region:'uk',pduOrient:'vertical',pduPerRack:2,fabricTiers:'leaf-only',cableRunM:10,
       floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       netPlacement:'eor',netRed:'ab50',rackPitchM:0.6,
@@ -3072,6 +2953,11 @@ ${c.iso?`<h2>Multi-tenancy</h2>
       trunkRacks:4,trunkPorts:24,trunkSide:'right',rackOrder:null,aisles:1,
       memAI:1,memPerSU:0,loadCap:80,
       row:'A'};
+ let A=(()=>{
+   let saved=null;
+   try{ const j=JSON.parse(localStorage.getItem(LS)); if(j&&typeof j==='object') saved=j; }catch(e){}
+   return {...A_DEFAULTS, ...(saved||{})};
+ })();
  let SEL=null;
  const save=()=>{try{localStorage.setItem(LS,JSON.stringify(A));}catch(e){}};
  const gi=k=>{const n=parseFloat(A[k]);return isNaN(n)?0:n;};
@@ -4191,7 +4077,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   if(rsel){rsel.innerHTML=Object.entries(REGIONS).map(([k,v])=>`<option value="${k}"${(A.region||'uk')===k?' selected':''}>${v.label} — ${v.V} V ${v.hz} Hz</option>`).join('');
     rsel.onchange=e=>{A.region=e.target.value;save();renderCtl();paint();};}
   $a('advCtl').innerHTML=F.map(f=>`<div class="mem-f"><label>${f.l}</label>
-    <input type="number" data-ak="${f.k}" value="${A[f.k]}" step="${f.step}"/><div class="hint">${f.hint}</div></div>`).join('');
+    <input type="number" data-ak="${f.k}" value="${A[f.k]??A_DEFAULTS[f.k]??0}" step="${f.step}"/><div class="hint">${f.hint}</div></div>`).join('');
   $a('advCtl').querySelectorAll('[data-ak]').forEach(el=>el.addEventListener('input',e=>{
    A[e.target.dataset.ak]=e.target.value;save();paint();}));
  }

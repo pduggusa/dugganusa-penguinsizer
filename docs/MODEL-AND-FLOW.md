@@ -1,17 +1,15 @@
-# The model — how a GPU target becomes a floor plan
+# The model — how a GPU target becomes a bill of materials
 
-## The bug this design exists to prevent
+## What this sizes
 
-Until `e357a97`, the Advanced planner took an architecture and used it for a vendor tag and
-a label. Every number downstream was a GB300 NVL72 constant: 8 racks per scalable unit,
-576 GPU per SU, 72 GPU and 142 kW a rack, a literal `{compute:72, storage:36, bmc:27,
-mgmt:18}` port topology, 4 rails.
+A **Penguin Solutions AI pod**. You give it a GPU count, a region, a rack feed and a rack
+height; it gives you nodes, cabinets, PDUs, fabric, cables, the management plane, and a
+parts list you can send somewhere.
 
-So you could build a Penguin Relion at scale and receive an NVL72 floor plan with Penguin's
-name on it. The tool was honest about it — it threw a dialog saying the layout would not be
-what you asked for — but a disclaimer is not a feature.
-
-The fix is one object, `archSpec()`, that every downstream number reads.
+It is built around a repeatable order motion. The 512-GPU RFQ that shaped it —
+*64 nodes, NVL8 racks due to load limits, non-blocking line-rate InfiniBand back-end,
+dedicated front-end for storage access, OOB cluster management, 1.2 MW room* — is the
+default when you open the page.
 
 ---
 
@@ -19,296 +17,205 @@ The fix is one object, `archSpec()`, that every downstream number reads.
 
 ```mermaid
 flowchart TB
-  subgraph SIZE ["Size It"]
-    T["target: GPUs / EF FP4 / SUs / nodes"] --> Q{"quantization"}
-    Q -->|tray / node| GR["round to grain<br/>what physically exists"]
-    Q -->|floor tile| TI["round to vendor block<br/>reports stranded GPUs"]
-  end
+  IN["GPU target · region · rack feed<br/>rack height · PDU orientation"] --> AS["archSpec()<br/>THE single source"]
 
-  GR --> ROUTE
-  TI --> ROUTE
-  ROUTE{"racks needed<br/>&le; 5 ?"}
-  ROUTE -->|yes, and not rack-scale| SIMPLE["Simple planner<br/>calc() per rack"]
-  ROUTE -->|no| ADV["Advanced planner<br/>derive()"]
+  AS --> N["nodes = ceil(gpus / GPUs per node)"]
+  AS --> R["nodes per rack = min(space, power)<br/>and WHICH bound it is reported"]
+  N --> RK["racks = ceil(nodes / nodes per rack)<br/>last rack carries the remainder"]
+  R --> RK
 
-  subgraph ADVBOX ["Advanced"]
-    ADV --> AS["archSpec()<br/>THE single source"]
-    AS --> COMP["rack composition<br/>nodes · GPU · kW · ports · rails"]
-    AS --> FAB{"published RA?"}
-    FAB -->|rack-scale| FT["fabricFor()<br/>RA Tables 3/4 · vendor"]
-    FAB -->|everything else| FD["fabricDerived()<br/>switch radix · OURS"]
-    COMP --> LAY["layout · rows · aisles · trunks"]
-    FT --> LAY
-    FD --> LAY
-    LAY --> RULES["rules() · 21 checks"]
-    LAY --> BOM["bom() → rationalize()"]
-  end
+  AS --> FAB{"published RA?"}
+  FAB -->|rack-scale| FT["fabricFor()<br/>NVIDIA RA Tables 3/4 · vendor"]
+  FAB -->|node build| FD["fabricDerived()<br/>switch radix · OURS · leaf-only"]
 
-  RULES --> OUT["Build Sheet · exports"]
+  RK --> M["derive()<br/>links · power · weight · layout"]
+  FT --> M
+  FD --> M
+
+  M --> RU["rules() · 24 checks"]
+  M --> BOM["bom() → rationalize()"]
+  RU --> OUT["Build Sheet · 6 exports"]
   BOM --> OUT
 
   style AS fill:#0e3a44,stroke:#22d3ee,color:#e6f6fb
   style FD fill:#2a1f08,stroke:#fbbf24,color:#e6f6fb
   style FT fill:#0b2a20,stroke:#34d399,color:#e6f6fb
-  style RULES fill:#2a1218,stroke:#f87171,color:#e6f6fb
+  style RU fill:#2a1218,stroke:#f87171,color:#e6f6fb
 ```
 
 ---
 
 ## `archSpec()` — the single source
 
-Everything that used to be an NVL72 constant now comes from here.
+Before `e357a97` the planner took an architecture and used it for a vendor tag and a label
+while every number downstream — 8 racks per SU, 72 GPU and 142 kW a rack, a literal
+`{compute:72, storage:36, bmc:27, mgmt:18}`, 4 rails — was a GB300 NVL72 constant. Building
+a Penguin Relion returned an NVL72 floor plan with Penguin's name on it.
+
+Everything now comes from one object.
 
 ```mermaid
 flowchart TB
-  IN["ARCH entry + SPEC ports<br/>+ selected feed + rack U"] --> K{"ARCH.sku === 'rack' ?"}
-
-  K -->|yes · rack-scale SKU| RS["nodesPerRack = grain.per<br/>gpusPerRack = ARCH.per<br/>rackKw = ARCH.pkw<br/>racksPerSU = ARCH.su<br/>bound = 'rack-scale'"]
-  K -->|no · node build| ND["spaceMax = floor((rackU - reserveU - fixedU) / ARCH.u)<br/>powerMax = floor((feedKw - fixedKw) / grain.pkw)<br/>nodesPerRack = min(spaceMax, powerMax, SPEC.maxNodes)<br/>bound = whichever bound it"]
-
+  IN["ARCH entry + SPEC ports<br/>+ region + feed + rack U + PDU"] --> K{"ARCH.sku === 'rack' ?"}
+  K -->|rack-scale SKU| RS["nodesPerRack = grain.per<br/>gpusPerRack, rackKw vendor-fixed<br/>racksPerSU = ARCH.su"]
+  K -->|node build| ND["usableU = rackU - reserveU - pduU<br/>spaceMax = floor(usableU / ARCH.u)<br/>powerMax = floor(feedKw / node kW)<br/>nodesPerRack = min(both)"]
   RS --> P["perRack = SPEC.ports x nodesPerRack<br/>+ fixedPorts of class BMC only"]
   ND --> P
-  P --> R["rails = grain.gpu<br/>one NIC port per GPU, rail-optimised"]
-  R --> PR{"key === 'gb300-nvl72' ?"}
-  PR -->|yes| V["provenance: vendor<br/>ceiling 9,216 · NVIDIA RA"]
-  PR -->|no| D["provenance: derived<br/>ceiling 10,368 · OURS"]
+  P --> W["rackWeightKg = nodes x node kg<br/>+ fixed + 160 kg tare"]
+  W --> PR{"gb300-nvl72 ?"}
+  PR -->|yes| V["provenance: vendor"]
+  PR -->|no| D["provenance: derived"]
 
   style V fill:#0b2a20,stroke:#34d399,color:#e6f6fb
   style D fill:#2a1f08,stroke:#fbbf24,color:#e6f6fb
 ```
 
-### The non-regression anchor
+### Non-regression anchor
 
-For `gb300-nvl72` this derivation must reproduce the constants it replaced, **exactly**.
-It does, and that is checked by `scripts/adv-fingerprint.mjs`:
+For `gb300-nvl72` this reproduces the constants it replaced exactly — 18 trays, 72 GPU,
+142 kW, 8 racks/SU, 4 rails, `{72, 36, 27, 18}`. `scripts/adv-fingerprint.mjs` diffs it.
 
-| | before | after |
+Two subtleties that each cost a bug:
+
+`perRack` folds `SPEC.fixedPorts` **for class `bmc` only** — the fixed `mgmt` entry is the
+in-rack OOB *uplink*, which `derive()` already counts as `oobUp`. Folding both bills it twice.
+
+`nodeU` is the height of what the rack is **full of** — `SPEC.nodeU` (1U) for a rack-scale
+tray, `ARCH.u` for a node. Reading `ARCH.u` for rack-scale gives 48, the *cabinet* height,
+which made rule P1 compute 18 × 48U into a 44U rack.
+
+---
+
+## Round to nodes, not to racks
+
+The planner used to compute racks from the GPU target and multiply back, forcing every rack
+full. 512 GPUs on a feed holding 10 nodes a rack returned **560** — six nodes nobody ordered.
+
+That is the floor-tile rounding the Size It tab exists to expose, being done quietly by the
+planner. A rack-scale SKU genuinely is bought whole; a 4U node is not, and a partially
+populated cabinet is the normal end of a row.
+
+| Feed | | Delivered |
 |---|---|---|
-| compute racks | 64 | 64 |
-| perRack | `{72, 36, 27, 18}` | `{72, 36, 27, 18}` |
-| total links | 14,462 | 14,462 |
-| fabric | 64 leaf / 36 spine | 64 leaf / 36 spine |
-| rails | 4 | 4 |
+| 300 A | 11/rack × 6 racks, last rack 9 | **512** |
+| 250 A | 10/rack × 7 racks, last rack 4 | **512** |
+| 200 A | 8/rack × 8 racks, exact | **512** |
 
-### One subtlety that bit, twice
-
-`perRack` folds `SPEC.fixedPorts` **for class `bmc` only**. The SPEC's fixed `mgmt` entry
-is the in-rack SN2201 OOB *uplink*, and `derive()` already counts that as `oobUp`. Folding
-it in both places bills the OOB uplinks twice:
-
-```
-fold ALL fixedPorts → {compute:72, storage:36, mgmt:20, bmc:27}   MISMATCH
-fold bmc only       → {compute:72, storage:36, mgmt:18, bmc:27}   MATCH
-```
-
-And `nodeU` is the height of the thing the rack is **full of** — `SPEC.nodeU` (1U) for a
-rack-scale tray, `ARCH.u` for a node. Reading `ARCH.u` for rack-scale gives 48, the height
-of the whole *cabinet*, which made rule P1 compute 18 × 48U into a 44U rack and fail every
-NVL72 build.
+The cable plant follows **installed nodes**, not racks × a full-rack port count — otherwise a
+partial rack bills optics and panels for nodes that are not there.
 
 ---
 
-## Rack power is a feed, not a number
+## Region sets the voltage and the plug
 
-A free-text kW box lets somebody type 137 and receive a floor plan no electrician can
-deliver. Capacity is arithmetic on a breaker:
+A rack feed is not a universal quantity.
 
 ```
-amps    = kW × 1000 / (V × √3 × pf)     ← calc(), the simple planner, unchanged
+amps    = kW × 1000 / (V × √3 × pf)     ← calc(), unchanged
 breaker = nextBreaker(amps / 0.8)       ← 80% continuous derate
-────────────────────────────────────────────────────────────────────────────
-kW      = A × 0.8 × V × √3 × pf         ← the feed ladder, the same relation inverted
+──────────────────────────────────────────────────────────────
+kW      = A × 0.8 × V × √3 × pf         ← the ladder, inverted
 ```
 
-Running it in both directions from one relation is what stops the two planners disagreeing
-about what a 250 A feed carries. `pf = 0.98`, derate `0.8`.
+Same relation both directions, so the two planners cannot disagree about what a 250 A feed
+carries. `pf = 0.98`, derate `0.8`. Six regions — NA 480 V, EU 400 V, UK/ANZ/India 415 V,
+Japan 200 V — each naming its three-phase and single-phase connector standards.
 
-**The default is 300 A, not 250 A.** 415 V 3φ 250 A derates to 140.9 kW, which *looks* like
-the NVL72's 142 kW and is 1.1 kW short of it. Rule E1 fails it, correctly.
+The same 200 A breaker, same 512 GPUs:
 
-**Capacity feeds sum; redundancy feeds do not.** Under 2N each path carries the whole load
-alone, so two 250 A feeds in 2N buy resilience, not headroom. Rule E2 enforces the
-distinction — conflating them is how a rack gets commissioned onto a breaker that trips.
+| Region | Feed | Nodes/rack | Racks |
+|---|---|---|---|
+| UK 415 V | 112.7 kW | 8 | 8 |
+| North America 480 V | 130.4 kW | 9 | 8 |
+| Europe 400 V | 108.6 kW | 7 | **10** |
 
-### What the feed actually changes
-
-Nodes per rack is `min(space, power)`, and *which* bound it is reported, not just consumed:
-
-| feed | Relion 4U/14 kW | Altus 4U/10.5 kW | DGX B300 10U/14 kW | XE9680L 4U/10 kW |
-|---|---|---|---|---|
-| 300 A · 169.1 kW | 11 space | 11 space | 4 space | 11 space |
-| 250 A · 140.9 kW | **10 POWER** | 11 space | 4 space | 11 space |
-| 200 A · 112.7 kW | **8 POWER** | **10 POWER** | 4 space | 11 balanced |
-| 100 A · 56.4 kW | **4 POWER** | **5 POWER** | 4 balanced | **5 POWER** |
-
-At a generous feed everything 4U lands at 11 — 44 usable U ÷ 4 — and that is the honest
-answer, not a bug. Turning the feed down is what makes power bite.
+**Data-centre UPS is assumed upstream.** This models the rack feed from the PDU back to the
+busway; ride-through, generator and switchgear are the facility's.
 
 ---
 
-## The scalable unit — why we size on racks, and what that does *not* claim
+## Fabric: leaf only at pod scale
 
-NVIDIA publishes the GB300 NVL72 scalable unit, the 8-racks-per-SU figure, and RA Tables 3
-and 4. They publish **none of that** for a Relion or an Altus.
+A single scalable unit needs no spine — every rail is one hop inside the unit, and NVIDIA's
+own RA narrative says so for the 1-SU case. The IB side already knew this. The Ethernet side
+did not, and emitted a spine for every three leaves, so a 576-GPU pod was quoted three
+SN5600D spines it cannot use.
 
-Two options existed. Derive an NVL72-shaped SU from the fabric and keep the vocabulary
-everywhere, or size those builds on racks.
+Leaf-only is the default. Leaf + spine is one selector away, and rule **N5** checks the
+choice rather than agreeing with it — a leaf count exceeding the rail grouping has cross-leaf
+traffic with nowhere to go, and that FAILs.
 
-**We size on racks.** A number we invented, sitting in a slot NVIDIA owns, reads as
-NVIDIA's however it is badged. Non-rack-scale builds size directly on **racks**, and every
-surface says so — the UI, the BOM basis strings, the CSV, the workbook and the JSON, where
-`scalable_units` is `null` and `compute_racks` carries the answer instead.
+Derived radix arithmetic, stated so it can be argued with:
 
-### A correction worth keeping visible
+- **IB leaf** = `ceil(compute links / 72)` — 144-radix, half down — rounded **up to a whole
+  multiple of rails**, because a rail on a fraction of a leaf is not rail-optimised
+- **IB spine** = `ceil(leaf × uplinks / 144)`, zero in leaf-only
+- **Front-end Ethernet** = `ceil(storage links / 64)`. **One** leaf group, not two: storage is
+  outside the solution, so the front-end exists to reach the customer's array
 
-The first version of this document said those architectures have **no scalable unit**. That
-was wrong, and it was wrong about the hero product.
-
-**Penguin publishes one: the OriginAI pod.** Checked 2026-08-10, and two figures are live
-on penguinsolutions.com at different dates:
-
-| Source | Figure |
-|---|---|
-| OriginAI product page (current) | a **1/4-pod entry configuration of 64 GPUs**, scaling to **90+ pods and over 24,000 GPUs** |
-| 2024 OriginAI expansion release | pre-validated **1-pod, 4-pod and 16-pod** configurations spanning **256 to more than 16,000 GPUs** |
-
-They do not reconcile to a fixed GPUs-per-pod — 16 pods at 256 GPUs is 4,096, not 16,000 —
-which says a pod is a **modular rack building block** whose GPU count depends on what is in
-the racks, not a constant. Both are recorded with their dates rather than resolved by
-picking one, because picking one silently is how a superseded figure outlives its
-generation.
-
-Neither is modelled yet. So the honest claim is: *this tool sizes on racks and does not snap
-to Penguin's pod boundaries*, which means a build here can land **between** pre-validated
-configurations. Rule **V2** says exactly that, by name, on every Penguin build.
-
-The general lesson, since it caused the error: **"we do not model X" and "the vendor does
-not publish X" are different claims**, and the second one needs more than one page of a
-vendor site before you make it. `VENDOR_SU` in the source records what each vendor
-publishes, with where it is stated — and an absent entry means *we have not checked*, not
-*nothing exists*.
-
-```mermaid
-flowchart LR
-  A{"rack-scale?"} -->|yes| B["block = scalable unit<br/>racks = ceil(SU) x racksPerSU<br/>phases by SU"]
-  A -->|no| C["block = rack<br/>racks = ceil(gpus / gpusPerRack)<br/>phases by rack<br/>su = null everywhere"]
-  B --> D["ceiling 9,216 GPU<br/>NVIDIA RA, 16 SU"]
-  C --> E["ceiling 10,368 GPU<br/>OURS: 144²/2, two-layer<br/>fat tree of 144-radix switches"]
-
-  style B fill:#0b2a20,stroke:#34d399,color:#e6f6fb
-  style C fill:#2a1f08,stroke:#fbbf24,color:#e6f6fb
-```
-
----
-
-## Fabric: read it, or derive it and say so
-
-```mermaid
-flowchart TB
-  S{"published RA<br/>for this architecture?"}
-  S -->|rack-scale| A["fabricFor(su)<br/>RA Table 3 (InfiniBand)<br/>RA Table 4 (Ethernet)<br/>transcribed verbatim"]
-  S -->|everything else| B["fabricDerived(archSpec, racks)"]
-
-  A --> A1["exact row → cite it<br/>between rows → round UP<br/>never interpolate a spine count"]
-  B --> B1["IB leaf = ceil(computeLinks / 72)<br/>rounded up to a whole multiple of rails"]
-  B1 --> B2["IB spine = ceil(leaf x uplinks / 144)<br/>0 when one leaf layer suffices"]
-  B2 --> B3["Eth leaf = ceil(storageLinks / 64)<br/>Eth spine from leaf uplinks"]
-  B3 --> B4["derived: true<br/>every basis string says DERIVED"]
-
-  A1 --> C["fabric table · BOM · exports"]
-  B4 --> C
-  C --> V["rule V1: no line may cite an RA table<br/>on a fabric we computed"]
-
-  style A fill:#0b2a20,stroke:#34d399,color:#e6f6fb
-  style B fill:#2a1f08,stroke:#fbbf24,color:#e6f6fb
-  style V fill:#2a1218,stroke:#f87171,color:#e6f6fb
-```
-
-Radix arithmetic, stated so it can be argued with:
-
-- **IB leaf** — Q3400-RD is 144×800G. Rail-optimised runs half down, half up: 72 downlinks
-  per leaf. Leaf count rounds **up to a whole multiple of rails**, because a rail landing
-  on a fraction of a leaf is not rail-optimised.
-- **IB spine** — each leaf offers `ibUplinksPerLeaf` uplinks; a 144-port spine absorbs 144
-  of them. One leaf layer needs no spine at all, and buying one would be cost with no
-  topology behind it.
-- **Ethernet** — SN5600D at 64 ports, same shape, storage and in-band separately.
-
-One corroboration worth stating and not over-reading: at 1,152 GPU the derived arithmetic
-independently lands on NVIDIA's Table 3 row — 16 leaf, 8 spine. That is one row. It is
-encouraging, not proof.
+Everything derived returns `derived: true` and says `DERIVED` in its basis, so the XLSX
+styler ambers it and rule **V1** can see it.
 
 ### Provenance is not one flag
 
-`archSpec().provenance` describes the **rack**. `f.derived` describes the **fabric**. They
-differ, and conflating them produced a false alarm:
+`archSpec().provenance` describes the **rack**; `f.derived` describes the **fabric**.
 
 | | rack composition | fabric |
 |---|---|---|
 | GB300 NVL72 | NVIDIA — vendor | NVIDIA RA — vendor |
-| Dell XE9712 | **Dell's cabinet** — vendor-published, but NVIDIA publishes no RA for it | NVIDIA's NVL72 SuperPOD fabric — genuinely RA |
+| Dell XE9712 | Dell's cabinet — vendor-published | NVIDIA's NVL72 fabric — genuinely RA |
 | Relion / Altus / DGX | ours | ours |
 
-Rule V1 is scoped to the **fabric**, because that is the precise claim: an RA table may be
-cited only when the counts were read from one.
+V1 is scoped to the fabric: **an RA table may be cited only when the counts were read from one.**
 
 ---
 
-## Layout
+## Vendor scalable units we do not model
 
-Only the racks you fill are drawn. Padding survives in exactly one place, because there it
-encodes a rule rather than tidiness: the two network planes are pushed to opposite ends so
-a shared rack, patch field or PDU pair cannot take both — the difference between redundancy
-and paperwork.
+Penguin publishes the **OriginAI pod** — a 1/4-pod entry at 64 GPUs, pre-validated
+1/4/16-pod configurations from 256 to 16,000+ GPUs, and a stated ceiling of 90+ pods and
+24,000+ GPUs. This tool sizes on racks and does **not** snap to those boundaries, so a build
+can land between pre-validated configurations. Rule **V2** says so by name.
 
-```mermaid
-flowchart LR
-  C["compute racks"] --> N["network<br/>plane A … gap … plane B"]
-  N --> P["patch"] --> M["memory"] --> G["general purpose"]
-  G --> R["rows at racks-per-row<br/>ASHRAE TC9.9 front-to-front / back-to-back"]
-  R --> D["drag any rack to reposition<br/>order persists by rack key"]
-```
-
-Rows are laid front-to-front and back-to-back per ASHRAE TC9.9, so aisles alternate cold,
-hot, cold. Orientation is per-row and decides which edge cables leave from, so it is a
-model value and not a decoration.
-
-Reach is horizontal run **plus the vertical tray rise** — up, over and down. That is the
-term people leave out and then discover their 3 m DACs do not reach.
+*"We do not model X"* and *"the vendor does not publish X"* are different claims. `VENDOR_SU`
+records what each vendor publishes and where it is stated; an absent entry means **we have
+not checked**.
 
 ---
 
 ## Where each piece lives
 
-Single file, `index.html`, zero dependencies. The advanced planner is one IIFE.
+Single file, `index.html`, zero dependencies, 10 tabs.
 
 | Function | Does |
 |---|---|
-| `archSpec()` | rack composition from the architecture and the feed — the single source |
-| `feedKW()` / `FEEDS` | the breaker ladder and its capacity arithmetic |
-| `fabricFor(su)` | RA Tables 3/4, transcribed |
-| `fabricDerived(as, racks)` | switch counts from radix — ours |
-| `derive()` | the whole model: racks, links, layout, floor, trunking |
-| `rules(d)` | the 21 consistency checks |
-| `bom(d)` → `rationalize()` | line items with stable part identity |
-| `elevation(kind, d)` / `rearBands(r, d)` | front nameplates, rear composition |
-| `window.__ADV_MODEL()` | the derived model, for exports and harnesses |
-| `window.__BOM()` | `penguin-bom/1` for an ordering system |
+| `archSpec()` | rack composition from architecture, region, feed, rack U and PDU |
+| `FEEDS_FOR(region)` | the breaker ladder and its capacity arithmetic |
+| `fabricFor` / `fabricDerived` | RA tables, or radix arithmetic labelled ours |
+| `derive()` | links, power, weight, layout, site totals |
+| `rules(d)` | 24 consistency checks |
+| `bom(d)` → `rationalize()` | line items with stable part identity and fabric tags |
+| `elevation` / `rearBands` / `portsFor` | front nameplates, rear composition, port endpoints |
+| `window.__ADV_MODEL()` / `window.__BOM()` | the model, and `penguin-bom/1` |
 
 ## Harnesses
 
 | Script | Asserts |
 |---|---|
-| `assert-controls-move-the-model.mjs` | every control moves the model, or is declared presentational |
-| `assert-model-consistency.mjs` | 48 configurations coherent; every rule can be driven to FAIL |
+| `assert-controls-move-the-model.mjs` | every control moves the model or is declared presentational |
+| `assert-model-consistency.mjs` | 42 configurations coherent; every rule can be driven to FAIL |
 | `adv-fingerprint.mjs` | the NVL72 path did not move — diff two runs |
 | `probe-arch.mjs` | each architecture produces a *distinct* composition |
-| `probe-bom.mjs` | every BOM line is orderable-shaped, and nothing derived cites an RA table |
+| `probe-bom.mjs` | every BOM line is orderable-shaped, nothing derived cites an RA table |
+| `fetch-datasheet.mjs` | renders a Penguin datasheet so its figures can be read and cited |
 
-Run them from a directory with Playwright installed:
+Run them from a directory with Playwright installed.
 
-```
-node scripts/assert-model-consistency.mjs --verbose
-node scripts/adv-fingerprint.mjs > before.json      # then make a change
-node scripts/adv-fingerprint.mjs > after.json && diff before.json after.json
-```
+### A note on trusting harnesses
+
+Three separate times, a check passed while the thing underneath was broken — a deleted
+`elevation()` that only threw at runtime, a null manifest element, and the consistency sweep
+testing one configuration 42 times because a `<select>` silently ignores a value it has no
+option for. None were visible to parsing. All three surfaced only by driving the real UI.
+
+A green harness is evidence, not proof. Look at the artifact.
