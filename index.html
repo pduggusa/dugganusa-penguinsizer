@@ -667,7 +667,7 @@
             <button class="rk-btn primary" id="advImportBtn">↙ Import target from Size It</button>
             <span class="adv-importnote" id="advImportNote">Pulls the GPU count currently set on the Size It tab and rebuilds the whole design against it.</span>
           </div>
-          <p class="lede" style="margin-top:10px">Architecture: <select id="advArch" class="rk-btn" style="padding:5px 9px"></select> Region: <select id="advRegion" class="rk-btn" style="padding:5px 9px"></select> Rack feed: <select id="advFeed" class="rk-btn" style="padding:5px 9px"></select> PDU: <select id="advPdu" class="rk-btn" style="padding:5px 9px"><option value="vertical">0U vertical (rear channel)</option><option value="horizontal">1U horizontal (costs rack U)</option></select> Fabric: <select id="advTiers" class="rk-btn" style="padding:5px 9px"><option value="leaf-only">Leaf only (pod scale)</option><option value="leaf-spine">Leaf + spine</option></select> <span id="advArchNote"></span></p>
+          <p class="lede" style="margin-top:10px">Architecture: <select id="advArch" class="rk-btn" style="padding:5px 9px"></select> Region: <select id="advRegion" class="rk-btn" style="padding:5px 9px"></select> Rack feed: <select id="advFeed" class="rk-btn" style="padding:5px 9px"></select> PDU: <select id="advPdu" class="rk-btn" style="padding:5px 9px"><option value="vertical">0U vertical (rear channel)</option><option value="horizontal">1U horizontal (costs rack U)</option></select> Fabric: <select id="advTiers" class="rk-btn" style="padding:5px 9px"><option value="leaf-only">Leaf only (pod scale)</option><option value="leaf-spine">Leaf + spine</option></select> Rack: <select id="advRackU" class="rk-btn" style="padding:5px 9px"><option value="42">42U</option><option value="48">48U</option><option value="52">52U</option></select> <span id="advArchNote"></span></p>
           <div class="adv-ctl" id="advCtl"></div>
           <div class="adv-rules" id="advRules"></div>
           <div class="adv-out" id="advOut"></div>
@@ -1278,15 +1278,11 @@
           <thead><tr><th>Row</th><th>Racks</th><th>Rack IDs</th><th>Contents</th><th>GPUs</th><th>Load</th><th>Weight</th><th class="desc">Floor loading</th></tr></thead>
           <tbody id="bsRows"></tbody></table></div>
         <h3 class="mem-h">Per-rack manifest</h3>
-        <div class="mem-tbl-wrap" style="max-height:520px;overflow-y:auto"><table class="mem-tbl">
-          <thead><tr><th>Rack</th><th>Row</th><th>SU</th><th>Type</th><th>Devices</th><th>Ports</th><th>Load</th></tr></thead>
-          <tbody id="bsRacks"></tbody></table></div>
-
-        <h3 class="mem-h">Phased buildout</h3>
-        <p class="lede">Split the rollout to test wiring assumptions before the whole floor is committed. <b style="color:var(--ink)">Phase 1 carries the spine</b>, so its cable count is disproportionate — that is the point, and it is what a staged budget needs to show. Set the phase count on the Rack Planner.</p>
+        <p class="lede">One row per cabinet — what is in it, what it draws, what it weighs. This is the sheet the installer works from and the receiving dock checks a pallet against.</p>
         <div class="mem-tbl-wrap"><table class="mem-tbl">
-          <thead><tr><th>Phase</th><th>Racks</th><th>Penguin</th><th>NVIDIA</th><th>GPUs</th><th>Load</th><th class="desc">Notes</th></tr></thead>
-          <tbody id="bsPhases"></tbody></table></div>
+          <thead><tr><th>Rack</th><th>Row</th><th>Kind</th><th>Devices</th><th>Ports</th><th>Load</th><th>Weight</th></tr></thead>
+          <tbody id="bsRacks"></tbody></table></div>
+        
 
         <h3 class="mem-h">Bill of materials</h3>
         <p class="lede">The same BOM the Rack Planner derives, carried onto the build sheet so the sheet is self-contained. <b style="color:var(--ink)">Cable colours are separate line items</b> — change a colour in the planner and the split follows here.</p>
@@ -3037,7 +3033,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
  const LS='penguin-adv-planner-v1';
  let A=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')return j;}catch(e){}return null;})()
    ||{gpus:512,arch:'relion-xe4418',feed:'200',feedsPerRack:1,rackU:48,reserveU:4,
-      siteKw:1200,floorLoadKgM2:1220,region:'uk',pduOrient:'vertical',pduPerRack:2,fabricTiers:'leaf-only',cableRunM:10,
+      siteKw:1200,floorLoadKgM2:1220,nodeKgOverride:0,region:'uk',pduOrient:'vertical',pduPerRack:2,fabricTiers:'leaf-only',cableRunM:10,
       floors:1,racksPerRow:8,interFloorM:40,rowRunM:25,trunkFibers:24,spares:5,
       netPlacement:'eor',netRed:'ab50',rackPitchM:0.6,
       rackDepthM:1.2, coldAisleM:1.2, hotAisleM:0.9, serviceM:1.0,trayRiseM:6,ibUplinksPerLeaf:72,phases:1,rowsPerFloor:0,hubPos:1,
@@ -3233,14 +3229,28 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    rails, perRack, portsPerNode:pp, usableU, rackU, reserveU,
    pduPerRack, pduOrient:pduHoriz?'horizontal':'vertical', pduU,
    /* ---- WHAT IT WEIGHS, WHICH IS A STRUCTURAL QUESTION BEFORE IT IS A NETWORK ONE ----
-    * Per-node and rack-fixed weights are VENDOR-PUBLISHED in SPEC and were already used
-    * by the simple planner; the whole-floor planner never carried them. A populated NVL72
+    * WEIGHTS ARE OURS UNLESS A SPEC NOTE SAYS OTHERWISE. Only the Dell PowerStore entry
+    * carries an explicit "41.7 kg full are VENDOR-PUBLISHED"; the Penguin and NVIDIA rows
+    * carry a bare number with no provenance. An earlier version of this comment claimed
+    * they were all vendor-published, which is the exact over-claim the rest of this file
+    * exists to stop. They are sizing-grade, and rule P2 says so on its face. A populated NVL72
     * is around 1,500 kg and a Relion rack around 960 kg, and a 600 x 1200 mm footprint is
     * 0.72 m² — so both land well past the 1,220 kg/m² a typical raised floor is rated
     * for. That is a conversation with a structural engineer, and it is cheaper to have it
     * before the order than after the delivery. RACK_TARE is the empty cabinet. */
-   nodeWeightKg:(s&&s.weight)||0, rackFixedWeightKg:(s&&s.fixedWeight)||0,
-   rackWeightKg: Math.round(nodesPerRack*((s&&s.weight)||0)+((s&&s.fixedWeight)||0)+160),
+   /* PER-NODE WEIGHT IS AN INPUT, because it decides whether rule P2 fails and the
+    * built-in figure has no citation. What is actually known, 2026-08-10:
+    *   SPEC carries 100 kg for the 4U 8-GPU Penguin nodes — no vendor citation.
+    *   A reseller listing for the Altus XE4218GTS, a comparable 4U 8-GPU HGX chassis
+    *   with four 3000 W PSUs, gives ~59 kg UNPOPULATED and ~68 kg crated — and
+    *   unpopulated excludes the HGX baseboard, which is the heavy part.
+    * Those disagree, neither is a Penguin datasheet for the XE4418GTS-DTC, and the gap
+    * is the difference between a floor that passes and one that does not. So the number
+    * is exposed rather than picked, and P2 says it is unverified either way. */
+   nodeWeightKg:(gi('nodeKgOverride')>0?gi('nodeKgOverride'):((s&&s.weight)||0)),
+   nodeWeightSource:(gi('nodeKgOverride')>0?'your figure':'built-in, UNVERIFIED'),
+   rackFixedWeightKg:(s&&s.fixedWeight)||0,
+   rackWeightKg: Math.round(nodesPerRack*(gi('nodeKgOverride')>0?gi('nodeKgOverride'):((s&&s.weight)||0))+((s&&s.fixedWeight)||0)+160),
    feed, feedsPerRack:feeds, feedMode:red, feedKw,
    cooling:a.cool||'', liquid:/liquid|DTC/i.test(a.cool||''),
    /* The GPU ceiling is a FABRIC limit, not a rack limit. Rack-scale rides NVIDIA's
@@ -3493,7 +3503,10 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    * Compute is Penguin-integrated NVIDIA silicon and the network racks hold NVIDIA
    * switching — different purchase orders, different support contracts, and a floor plan
    * is much less useful if it does not say which is which. */
-  const phases=Math.max(1,gi('phases')||1);
+  /* Build phases removed. A staged rollout is a project-plan decision, not a sizing one,
+   * and it put a phase column in three tables and a sheet in the workbook for something
+   * nobody set. Everything is phase 1. */
+  const phases=1;
   /* Rack-scale builds phase by SCALABLE UNIT because that is the purchasable block.
    * Everything else has no SU — refusing to invent one is the whole provenance argument
    * — so those phase by RACK, which is their purchasable block. Same shape, honest unit. */
@@ -3761,10 +3774,11 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    (A_.rackKw>A_.feedKw?` SHORT BY ${N1_(A_.rackKw-A_.feedKw)} kW. Pick a larger breaker, add a capacity feed, or accept fewer nodes per rack.`:'')));
 
   out.push(R('E2','Electrical', A_.feedMode!=='2N'||A_.feedsPerRack<=2?true:null,
-   `Feed redundancy — ${A_.feedMode}`,
+   `Feed redundancy — ${A_.feedMode} · facility UPS assumed`,
    A_.feedMode==='2N'
     ? `A/B sized for the whole load each. Usable capacity is ONE feed (${A_.feed.kw} kW), not the sum of ${A_.feedsPerRack}.`
-    : `${A_.feedsPerRack} capacity feed${A_.feedsPerRack===1?'':'s'} summing to ${A_.feedKw} kW. This is NOT redundancy — losing one loses that share of the rack.`));
+    : `${A_.feedsPerRack} capacity feed${A_.feedsPerRack===1?'':'s'} summing to ${A_.feedKw} kW. This is NOT redundancy — losing one loses that share of the rack.`
+    +` DATA-CENTRE UPS IS ASSUMED UPSTREAM: this models the rack feed from the PDU back to the busway, and takes ride-through, generator and switchgear as the facility's. If the room has no UPS, none of these figures change but the availability argument does.`));
 
   /* Air cannot carry this. ~40 kW/rack is the practical ceiling for contained air with a
    * rear-door exchanger; past that it is direct-to-chip liquid or it is not a design.
@@ -3930,7 +3944,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    const pt=Math.round(d.rackWeightKg/Math.max(0.1,d.rackFootprintM2));
    out.push(R('P2','Physical', pt<=d.floorLoadKgM2,
     `Floor point load — ${N1_(pt)} kg/m² under each ${A_.label} rack, floor rated ${N1_(d.floorLoadKgM2)}`,
-    `${N1_(d.rackWeightKg)} kg populated over a ${d.rackFootprintM2} m² footprint. Total build ${N1_(d.totalWeightKg)} kg across ${d.racks.length} cabinets.`
+    `${N1_(d.rackWeightKg)} kg per cabinet over a ${d.rackFootprintM2} m² footprint, from ${N1_(A_.nodeWeightKg)} kg per node (${A_.nodeWeightSource}) x ${A_.nodesPerRack} + ${N1_(A_.rackFixedWeightKg+160)} kg rack and fixed. Total build ${N1_(d.totalWeightKg)} kg across ${d.racks.length} cabinets. THE NODE WEIGHT DECIDES THIS VERDICT and the built-in figure carries no vendor citation — a comparable 4U 8-GPU HGX chassis is quoted around 59 kg unpopulated elsewhere, which would pass a floor this one fails. Put the datasheet number in before this reaches a structural engineer.`
     +(pt>d.floorLoadKgM2
       ? ` OVER the rating by ${N1_(pt-d.floorLoadKgM2)} kg/m². This needs load spreading, a structural review, or a slab — it is not a networking problem and it does not get solved on delivery day.`
       : ` Within the stated rating. Confirm the POINT load with the building, not the average: a room rating is not a per-cabinet rating.`)));
@@ -4109,8 +4123,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   {k:'racksPerRow',l:'Racks per row',step:1,hint:'row length — sets the cable run'},
   {k:'cableRunM',l:'Cable run to leaf (m)',step:1,hint:'node to leaf, including tray rise'},
   {k:'floorLoadKgM2',l:'Floor rating (kg/m²)',step:100,hint:'1220 = 250 lb/ft², a typical raised floor'},
+  {k:'nodeKgOverride',l:'Node weight (kg)',step:5,hint:'0 = use the built-in figure · UNVERIFIED, set the datasheet number'},
   {k:'pduPerRack',l:'PDUs per rack',step:1,hint:'2 = A/B feed paths'},
-  {k:'rackU',l:'Rack height (U)',step:1,hint:'48 = AI cabinet · 42 = traditional'},
   {k:'reserveU',l:'Reserved U',step:1,hint:'patch, PDU, growth — off the top of usable'},
   {k:'feedsPerRack',l:'Feeds per rack',step:1,hint:'capacity feeds SUM · 2N feeds do not'},
   {k:'memPerSU',l:'MemoryAI per SU',step:1,hint:'0 = none · our default, not a vendor rule'},
@@ -4129,6 +4143,9 @@ ${c.iso?`<h2>Multi-tenancy</h2>
     asel.onchange=e=>{A.arch=e.target.value;save();paint();};}
   /* FEED PICKER, not a kW box. See FEEDS — capacity is a breaker, a voltage and a
    * derate, and letting someone type 137 kW produces a rack nobody can energise. */
+  const usel=$a('advRackU');
+  if(usel){usel.value=String(gi('rackU')||48);
+    usel.onchange=e=>{A.rackU=e.target.value;save();paint();};}
   const tsel=$a('advTiers');
   if(tsel){tsel.value=A.fabricTiers||'leaf-only';
     tsel.onchange=e=>{A.fabricTiers=e.target.value;save();paint();};}
@@ -5263,17 +5280,6 @@ ${c.iso?`<h2>Multi-tenancy</h2>
      <td>${r.su||'—'}</td><td>${r.kind}</td><td>${dev}</td><td>${ports?N(ports):'—'}</td>
      <td>${r.kind==='compute'?A_.rackKw+' kW':'~8 kW'}</td></tr>`;}).join('');
   // phased buildout
-  const pb=$s('bsPhases');
-  if(pb){
-   const ph={};
-   d.racks.forEach(r=>{const k=r.phase||1;(ph[k]=ph[k]||{n:0,penguin:0,nvidia:0,gpus:0,kw:0});
-     ph[k].n++; ph[k][r.vendor]++;
-     if(r.kind==='compute'){ph[k].gpus+=d.arch.gpusPerRack;ph[k].kw+=d.arch.rackKw;} else ph[k].kw+=8;});
-   pb.innerHTML=Object.entries(ph).map(([k,v])=>`<tr><td><b>Phase ${k}</b></td><td>${N(v.n)}</td>
-     <td style="color:#22d3ee">${v.penguin||0}</td><td style="color:#94a3b8">${v.nvidia||0}</td>
-     <td>${N(v.gpus)}</td><td>${N(v.kw)} kW</td>
-     <td class="desc">${k==='1'?'carries the spine layer — highest cable count per rack':'leaf only, trunks up to phase 1'}</td></tr>`).join('');
-  }
   const bb=$s('bsBom');
   if(bb) bb.innerHTML=(d.bom||[]).length
    ? d.bom.map(b=>`<tr><td>${b.cat}<div style="font-family:var(--mono);font-size:10px;color:var(--faint)">${b.id}</div></td>
@@ -5774,25 +5780,7 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    ['NOTE','Placement changes the cable BOM more than it changes the rack count. Confirm the leaf grouping against the reference architecture before committing to ToR.','']]});
   sh.push({name:'Cables',rows:[['Class','Colour','Colour name','Links','Speed','Media','Reach m','Optic/connector','Description'],
    ...d.L.map(l=>[l.cls,'','',l.n,l.speed,l.media,l.reach,l.opt,l.desc])]});
-  sh.push({name:'Trunking',rows:[['Metric','Value','Note'],
-   ['Racks per trunk',d.trunkRacks,'user input — the pod size'],
-   ['Panel ports per trunk',d.trunkPorts,'MPO positions per patch panel'],
-   ['Trunk landing',d.trunkSide,d.sideDiv===2?'both ends — halves the worst horizontal walk':'single end'],
-   ['Link load cap',Math.round(d.loadCap*100),'% — trunks and risers are never filled to capacity'],
-   ['Links offered per pod',d.groupLinks,'racks per trunk x links per rack'],
-   ['Assemblies per pod',d.assembliesPerGroup,'ceil(offered / (links per trunk x load cap))'],
-   ['Risers at load cap',d.risers,'what to order'],
-   ['Risers if filled to 100%',d.risersRaw,'for comparison only — do not order this'],
-   ['Trunk groups per row',d.trunkGroups,'ceil(racks per row / racks per trunk)'],
-   ['Horizontal trunk assemblies',d.rowTrunks,'groups per row x rows'],
-   ['Panels per trunk group',d.panelsPerTrunk,'MPO positions per rack x racks per trunk / panel ports'],
-   ['Rack pods',d.trunkPods,'trunk groups per row x rows'],
-   ['Patch panels total',d.trunkPanels,'panels per pod x pods — terminations, not assemblies'],
-   ['MPO positions per rack',d.portsPerRack,'one position per 800G DR8 link'],
-   ['Lit fibres per rack',d.fibrePerRack,'8 strands of each MPO-12 lit'],
-   ['Trunk fibres',d.trunkFibers,'strand count of the trunk assembly'],
-   ['Links per trunk',d.trunkLinks,'floor(fibres / 8)'],
-   ['Inter-floor riser trunks',d.risers,d.floors>1?'spine assumed on floor 1':'single floor — none required']]});
+  
   sh.push({name:'Memory tier',rows:[['Metric','Value','Unit','Provenance'],
    ['MemoryAI enabled',d.memOn?'yes':'no','','user toggle — on by default'],
    ['Appliances',d.memUnits,'units','ratio x scalable units'],
@@ -5809,19 +5797,8 @@ ${c.iso?`<h2>Multi-tenancy</h2>
    ['Round trip',d.memNs,'ns','DERIVED: 4.9 ns/m glass + 450 ns per hop, both directions'],
    ['','','',''],
    ['NOTE','A KV cache is a latency asset. Drag a memory rack into a compute row in the wiring diagram to cut the hop count — the round-trip figure above moves with it.','','']]});
-  sh.push({name:'Rows and aisles',rows:[['Row','Row letter','Floor','Front faces','Aisle below','Racks in row'],
-   ...Array.from({length:d.totalRows},(_,r)=>{
-     const n=Math.min(perRow,d.racks.length-r*perRow);
-     return [r+1,String.fromCharCode(d.rowStart.charCodeAt(0)+r),Math.floor(r/rpf)+1,
-       d.aislesOn?(d.faceOf(r)>0?'down-plan':'up-plan'):'n/a',
-       d.aislesOn?d.aisleAt(r):'n/a',n];})]});
-  sh.push({name:'Phases',rows:[['Phase','Racks','Compute racks','Network racks','Storage racks','GPUs','Load kW'],
-   ...Array.from({length:d.phases},(_,i)=>{
-     const p=i+1, rs=d.racks.filter(r=>r.phase===p);
-     const c=rs.filter(r=>r.kind==='compute').length;
-     return [p,rs.length,c,rs.filter(r=>r.kind==='network').length,
-       rs.filter(r=>r.kind==='storage').length,
-       c*d.arch.gpusPerRack, c*d.arch.rackKw+(rs.length-c)*8];})]});
+  
+  
 
   dl('ai-factory-workbook-'+new Date().toISOString().slice(0,10)+'.xlsx',xlsx(sh),'');
  };

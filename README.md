@@ -5,9 +5,13 @@
 > **Source-available under [BUSL 1.1](LICENSE).** Free for sizing your own
 > infrastructure. Paid if you are being paid — see **[COMMERCIAL.md](COMMERCIAL.md)**.
 
-Interactive capacity planner for **sovereign, compliant, on-prem AI factories** built on NVIDIA Blackwell.
-Size a GPU cluster across four architectures from any single target — GPUs, FP4 exaFLOPS, SuperPODs, or nodes —
-and derive **power (space- vs power-limited racks), cost/TCO and flagship-model workloads** live.
+Sizes a **Penguin Solutions AI pod** and produces a defensible bill of materials: nodes, racks,
+PDUs, fabric, cables and the ClusterWareAI management plane. Built around a repeatable order
+motion — change the GPU count, the region and the rack feed, and the same BOM shape comes out.
+
+Ask for 512 GPUs on a 415 V 200 A feed and you get 64 Relion nodes in 8 cabinets at 112 kW each,
+a non-blocking leaf-only InfiniBand back-end, a front-end for storage access, OOB management,
+every cable with its length and endpoint, and a SKU request sheet to send the vendor.
 
 ## Documentation
 
@@ -39,16 +43,18 @@ model those boundaries yet, so a Penguin build here can land *between* pre-valid
 configurations — rule **V2** says so on screen, by name. See
 [MODEL-AND-FLOW.md](docs/MODEL-AND-FLOW.md).
 
-## Partner Solutions — the rest of the floor
-A real estate is not only an AI factory. The **Partner Solutions** tab sizes general-purpose
-compute and storage on **Dell**: PowerEdge 17th-generation (R770/R670 Intel, R7725/R6725 AMD),
-PowerStore / PowerMax / PowerFlex, and PowerSwitch fabric — driven by a **workload profile**
-(OLTP, OLAP, SAP HANA, virtualization, VDI, HPC, CPU inference, or your own numbers) or by
-**your current array's own counters**, and carried through power, cooling, cabling and racks.
+## Region sets the voltage and the plug
+A rack feed is not a universal quantity. The same 200 A breaker is **112.7 kW** in a 415 V UK
+hall, **130.4 kW** at 480 V in North America and **108.6 kW** at 400 V in Europe — which moves
+the same 512 GPUs from 8 racks to 10. The inlet is a different orderable part in each, and the
+regional single-phase standard is named because that is what the console and the OOB switch land
+on. Six regions: NA, EU, UK, ANZ, Japan, India. Data-centre UPS is assumed upstream.
 
-Dell's **18th generation** is announced but carries no published power or thermal data, so the
-tool lists it as a procurement calendar and **refuses to emit a wattage for it**. A percentage
-performance claim is not a power figure.
+## The management plane
+**ClusterWareAI™** — bare-metal allocation, secure image deployment, health monitoring and
+multi-tenancy — is in the BOM, because that is the part that is Penguin's. Both unknowns are
+called out on the line: Penguin does not publish the licence unit, and documents the head node
+as a virtual machine wanting three or more for HA.
 
 ## Use it
 Open `index.html`, or the hosted page at **[penguinai.dugganusa.com](https://penguinai.dugganusa.com)**.

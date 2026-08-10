@@ -113,13 +113,17 @@ not be a footnote. See **[BUSINESS-RULES.md](BUSINESS-RULES.md)**.
 
 Then the controls, all live:
 
+Five selectors sit above the numeric controls: **architecture**, **region**, **rack feed**,
+**PDU orientation** (0U vertical or 1U horizontal — horizontal costs rack U), **fabric tiers**
+(leaf only or leaf + spine) and **rack height** (42U / 48U / 52U).
+
 | Group | Controls |
 |---|---|
-| Scale | target GPUs, rack height (U), reserved U, feeds per rack, build phases |
-| Floor | floors, racks per row, rows per floor, rack pitch/depth, cold & hot aisle, end service space |
-| Fabric | network placement (left / middle / right of row, or top-of-rack), redundancy (single plane, A/B half each, A/B full each), IB uplinks per leaf |
-| Cabling | tray rise, inter-floor run, trunk fibres, racks per trunk, panel ports per trunk, link load cap %, spares % |
-| Tiers | MemoryAI in/out and per-block ratio |
+| Scale | target GPUs, site power budget, racks per row, reserved U, feeds per rack |
+| Physical | floor rating (kg/m²), node weight override |
+| Cabling | cable run to leaf (m), spares % |
+| Fabric | IB uplinks per leaf (72 = non-blocking) |
+| Tiers | MemoryAI per block (0 = out) |
 
 Everything below reflows: the wiring diagram (drag any rack to reposition it), rack
 elevations, the naming scheme with field-limit checks, the cable plant and the BOM.

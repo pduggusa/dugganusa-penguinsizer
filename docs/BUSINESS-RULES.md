@@ -157,6 +157,16 @@ to aggregation.
 **P1 — rack U.** `nodes × nodeU + fixedU ≤ usableU`, where usable is rack height less
 reserved U. For rack-scale the cabinet is the SKU and its contents are vendor-fixed.
 
+**P2 — floor point load.** `rack weight ÷ footprint` against the floor rating, as a POINT
+load — a room rating says nothing about what sits under one 0.72 m² cabinet.
+
+The node weight decides this verdict, and it is **not published**. Searched and fetched
+2026-08-10: Penguin's datasheet URLs resolve to resource-library landing pages, not specs.
+The built-in 100 kg carries no citation; a reseller listing for the comparable 4U 8-GPU
+Altus XE4218GTS gives ~59 kg unpopulated, which excludes the HGX baseboard. At 100 kg the
+rack is 1,333 kg/m² and fails a 1,220 floor; at 59 kg it is 878 and passes. So the weight
+is an INPUT, the rule names which figure it used, and it says the number decides the answer.
+
 **P3 — ASHRAE TC9.9 aisles.** WARN below 1.2 m cold (front-to-front) or 0.9 m hot
 (back-to-back). Below that you are trading service access and recirculation margin for
 floor area — a decision, not an oversight.
@@ -199,7 +209,6 @@ ids are left unused rather than renumbered so this table stays honest:
 | id | Would check | Why it is not there yet |
 |---|---|---|
 | **C2** | media class vs reach — passive DAC ≤ 2 m, ACC ≤ 3 m, AOC ≤ 5 m, else optics | `media()` already selects correctly; the rule would assert nothing downstream overrode it |
-| **P2** | the floor closes on metres — rows × row pitch + terminating aisle = stated depth | the geometry is computed and rendered but not asserted |
 
 Each is a few lines. They are listed here rather than quietly dropped because a rule set
 that documents 24 checks and runs 21 is exactly the kind of gap this tool exists to catch
