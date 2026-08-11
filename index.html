@@ -25,6 +25,9 @@
   nav.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);font-family:var(--sans);font-size:13px;padding:9px 14px;cursor:pointer;margin-bottom:-1px}
   nav.tabs button.on{color:var(--cool);border-bottom-color:var(--cool);font-weight:600}
   nav.tabs button:hover{color:var(--ink)}
+  nav.tabs a.out{color:var(--dim);font-family:var(--sans);font-size:13px;padding:9px 14px;text-decoration:none;
+    border-bottom:2px solid transparent;margin-bottom:-1px;display:inline-block}
+  nav.tabs a.out:hover{color:var(--cool)}
   .grid{display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px;align-items:start}
   /* grid items default to min-width:auto and refuse to shrink below their content,
      which blows the page out horizontally. Every track below uses minmax(0,1fr). */
@@ -511,6 +514,7 @@
     <button data-v="size" class="on">Size It</button>
     <button data-v="mem">🐧 MemoryAI</button>
     <button data-v="rack">Rack Planner</button>
+    <a class="out" href="./cable.html" title="Standalone cable length calculator — click two U positions, get a length">🔌 Cable Lengths ↗</a>
     <button data-v="why">Why Penguin</button>
     <button data-v="rent">Buy vs Rent</button>
     <button data-v="case">The Case</button>
