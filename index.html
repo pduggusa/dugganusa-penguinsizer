@@ -5874,5 +5874,82 @@ ${c.iso?`<h2>Multi-tenancy</h2>
   </div>
 </div>
 
+<script>
+/* ---------------------------------------------------------------------------
+   CHAT ASSISTANT — client.
+
+   This markup shipped fully styled — .msg.u, .msg.a, .dots typing animation,
+   :disabled on the send button — and with NO JavaScript behind it. The Cloudflare
+   Worker was deployed and healthy the whole time (CORS preflight 200, Mistral
+   replying), so every layer reported fine and the button did nothing when clicked.
+   Exactly the shape of a failure that hides: a working backend and no caller.
+
+   Errors are surfaced to the reader, never swallowed. A chat that silently does
+   nothing is indistinguishable from a chat nobody used.
+--------------------------------------------------------------------------- */
+(function(){
+ "use strict";
+ var ENDPOINT='https://penguinsizer-chat.hacksawduggan.workers.dev';
+ var fab=document.getElementById('chatFab'), panel=document.getElementById('chatPanel'),
+     closeB=document.getElementById('chatClose'), body=document.getElementById('chatBody'),
+     text=document.getElementById('chatText'), send=document.getElementById('chatSend'),
+     chips=document.getElementById('chatChips');
+ if(!fab||!panel||!send) return;
+ var history=[], busy=false;
+
+ function add(cls,txt){
+  var d=document.createElement('div');
+  d.className='msg '+cls;
+  d.textContent=txt;                 // textContent, not innerHTML — model output is never markup
+  body.appendChild(d); body.scrollTop=body.scrollHeight;
+  return d;
+ }
+ function thinking(){
+  var d=document.createElement('div');
+  d.className='msg a'; d.innerHTML='<span class="dots"><span></span><span></span><span></span></span>';
+  body.appendChild(d); body.scrollTop=body.scrollHeight; return d;
+ }
+ function setBusy(b){ busy=b; send.disabled=b; text.disabled=b; }
+
+ async function ask(q){
+  q=(q||'').trim(); if(!q||busy) return;
+  add('u',q); text.value=''; history.push({role:'user',content:q});
+  setBusy(true);
+  var dots=thinking();
+  try{
+   var r=await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({messages:history.slice(-8)})});
+   var j=null; try{ j=await r.json(); }catch(e){}
+   dots.remove();
+   if(!r.ok||!j||!j.reply){
+    /* Say what actually happened. 429 is the per-IP rate limit; 502 is the model or a
+       failed grounding fetch; anything else is worth showing verbatim rather than
+       hiding behind "something went wrong". */
+    var msg = r.status===429 ? 'Rate limit — 15 questions a minute. Give it a moment and ask again.'
+            : (j&&j.error) ? j.error
+            : 'The assistant did not answer (HTTP '+r.status+'). It is a proxy to Mistral; if this keeps happening the Worker or the model is down.';
+    add('sys','⚠ '+msg);
+   } else {
+    add('a',j.reply); history.push({role:'assistant',content:j.reply});
+   }
+  }catch(e){
+   dots.remove();
+   add('sys','⚠ Could not reach the assistant — '+(e&&e.message?e.message:'network error')+'. It needs a connection; the rest of this page does not.');
+  }
+  setBusy(false); text.focus();
+ }
+
+ fab.onclick=function(){ panel.classList.add('open'); fab.style.display='none'; text.focus(); };
+ if(closeB) closeB.onclick=function(){ panel.classList.remove('open'); fab.style.display=''; };
+ send.onclick=function(){ ask(text.value); };
+ text.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); ask(text.value); }
+ });
+ if(chips) chips.addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(b) ask(b.textContent);
+ });
+})();
+</script>
+
 </body>
 </html>
