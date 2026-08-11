@@ -60,24 +60,26 @@
          border-radius:12px;padding:14px 15px;margin-bottom:14px}
   .panel h2{font-size:12.5px;margin:0 0 10px;font-weight:640;color:var(--dim)}
   .cabs{display:flex;gap:9px;align-items:flex-end;overflow-x:auto;padding-bottom:4px}
-  .cab{flex:0 0 auto;width:88px}
+  .cab{flex:0 0 auto;width:96px}
   .cab .lbl{text-align:center;font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-bottom:4px;cursor:pointer}
   .cab.sel .lbl{color:var(--cool);font-weight:650}
   .rail{height:7px;border-radius:2px;background:repeating-linear-gradient(90deg,#1e2a38 0 6px,transparent 6px 10px)}
   .rail.on{background:repeating-linear-gradient(90deg,var(--cool-dim) 0 6px,transparent 6px 10px)}
   .frame{border:1px solid var(--line);border-radius:5px;background:#080d13;padding:3px;margin:3px 0}
   .frame.sel{border-color:var(--cool-dim)}
-  .u{height:8px;margin-bottom:1px;border-radius:2px;background:#0d141d;cursor:pointer}
+  .u{height:13px;margin-bottom:1px;border-radius:2px;background:#0d141d;cursor:pointer;
+     display:flex;align-items:center;padding-left:4px;font-family:var(--mono);font-size:8.5px;
+     color:#3d4a5c;letter-spacing:-.2px;user-select:none}
   .u:hover{outline:1px solid var(--cool-dim)}
-  .u.dev{background:linear-gradient(180deg,#22303f,#1a2632);border-left:2px solid var(--cool-dim)}
-  .u.a{outline:2px solid var(--ok)!important;background:rgba(52,211,153,.25)}
-  .u.b{outline:2px solid var(--warn)!important;background:rgba(251,191,36,.25)}
+  .u.dev{background:linear-gradient(180deg,#22303f,#1a2632);border-left:2px solid var(--cool-dim);color:#7d8fa3}
+  .u.a{outline:2px solid var(--ok)!important;background:rgba(52,211,153,.25);color:#eafff5;font-weight:700}
+  .u.b{outline:2px solid var(--warn)!important;background:rgba(251,191,36,.25);color:#fff8e6;font-weight:700}
   .cab .meta{text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);margin-top:4px}
 
   .out{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:linear-gradient(180deg,var(--panel),var(--panel2));
        border:1px solid var(--line);border-left:3px solid var(--ok);border-radius:12px;padding:15px;margin-bottom:14px}
   .out.idle{border-left-color:var(--line)}
-  .out .n{font-family:var(--mono);font-size:40px;font-weight:700;color:var(--ok);line-height:1}
+  .out .n{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--ok);line-height:1;white-space:nowrap}
   .out.idle .n{color:var(--faint);font-size:22px}
   .out .side{display:flex;flex-direction:column;gap:3px}
   .out .ends{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
@@ -145,9 +147,9 @@
     <h2>Hardware in <span id="lEdit" style="color:var(--cool)">Cabinet 1</span> — stacks from the bottom</h2>
     <div id="devs"></div>
     <div class="devrow" style="margin-top:7px">
-      <input type="number" id="dQty" min="1" max="52" value="8" title="quantity"/>
+      <input type="number" id="dQty" min="1" max="52" value="42" title="quantity"/>
       <span style="color:var(--faint);font-size:12px">×</span>
-      <input type="number" id="dU" min="1" max="10" value="2" title="U each"/>
+      <input type="number" id="dU" min="1" max="10" value="1" title="U each"/>
       <span style="color:var(--faint);font-size:12px">U</span>
       <button class="btn primary" id="add">Add</button>
       <button class="btn" id="all">Apply to all cabinets</button>
@@ -163,7 +165,7 @@
   <div class="foot">
     <b>How it is built.</b> Device-to-manager allowance at both ends (400 mm each) + rise from each U to the pathway +
     |rack A − rack B| × pitch + a service loop each end, × the slack factor, rounded up to the next stocked length
-    (0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 7, 10, 15, 20, 30, 50 m). Same ladder the sizer's Rack Planner uses. 1U = 44.45 mm.<br/>
+    (0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 35, 40, 50 m). 1U = 44.45 mm.<br/>
     <b>What it is not.</b> Lengths only — it has no opinion on media, reach or cost, and it does not know your
     containment, fill ratio or bend radius. Sizing-grade. Walk the route before you order in volume.
   </div>
@@ -173,10 +175,10 @@
 (function(){
 "use strict";
 var U=44.45, BASE=100, TOP=60, LAT=400, FT=304.8;
-var STOCK=[0.5,1,1.5,2,2.5,3,4,5,7,10,15,20,30,50];
+var STOCK=[0.5,1,1.5,2,2.5,3,3.5,4,5,6,7,8,9,10,12,15,20,25,30,35,40,50];
 var S={cabs:6,rackU:42,pitch:600,path:'oh',off:300,slack:10,loop:300,units:'m',
        edit:0,racks:[],A:null,B:null,saved:[]};
-function mk(n){var o=[];for(var i=0;i<n;i++)o.push(S.racks[i]||[{q:8,u:2}]);return o;}
+function mk(n){var o=[];for(var i=0;i<n;i++)o.push(S.racks[i]||[{q:S.rackU,u:1}]);return o;}
 S.racks=mk(S.cabs);
 
 function layout(i){
@@ -219,7 +221,7 @@ function drawRow(){
       var c='u'+(m[u]?' dev':'');
       if(S.A&&S.A.rack===i&&S.A.u===u)c+=' a';
       if(S.B&&S.B.rack===i&&S.B.u===u)c+=' b';
-      h+='<div class="'+c+'" data-r="'+i+'" data-u="'+u+'" title="Cabinet '+(i+1)+' · U'+u+'"></div>';
+      h+='<div class="'+c+'" data-r="'+i+'" data-u="'+u+'" title="Cabinet '+(i+1)+' · U'+u+'">'+u+'</div>';
     }
     h+='</div><div class="rail'+(S.path==='uf'?' on':'')+'"></div>';
     h+='<div class="meta">'+used(i)+'/'+S.rackU+'U</div></div>';
@@ -236,9 +238,11 @@ function drawOut(){
   }
   o.classList.remove('idle');
   var r=calc(S.A,S.B);
-  n.textContent=order(r.raw);
+  n.innerHTML='<span style="color:var(--ok)">'+fmt(r.raw)+'</span>'
+    +'<span style="font-size:17px;color:var(--faint);margin:0 9px">→ order</span>'
+    +'<span style="color:var(--cool)">'+order(r.raw)+'</span>';
   e.textContent=lab(S.A)+'  →  '+lab(S.B)+(r.same?'   (same cabinet)':'   via '+(S.path==='oh'?'overhead':'under floor'));
-  c.textContent='computed '+fmt(r.raw)+' · rounded up to order';
+  c.textContent='computed path, then rounded up to the next stocked length';
   var h='';
   h+='<div class="pc"><div class="k">To manager</div><div class="v">'+fmt(r.lat)+'</div></div>';
   h+='<div class="pc"><div class="k">'+(r.same?'Vertical':'Rise A')+'</div><div class="v">'+fmt(r.riseA)+'</div></div>';
