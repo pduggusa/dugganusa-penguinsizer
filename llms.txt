@@ -1,0 +1,89 @@
+# AI Factory Sizer — Blackwell / SuperPOD
+
+> Two tools at penguinai.dugganusa.com. A **generic sizer** that turns a GPU target into a
+> defensible bill of materials, and a **cabling breakout** that turns a standardized
+> deployment into an install drawing. Sizing-grade: estimates to inform a conversation, not
+> a quote, not an electrical or mechanical stamp. Confidence is capped at 95% throughout.
+
+## What each tool is for
+
+- **/index.html — the sizer. Generic.** Any GPU count, any supported architecture, any rack
+  feed. Produces nodes, racks, PDUs, fabric, cables and the management plane, plus a SKU
+  request sheet. Nodes per rack is `min(space, power)` and which one bound it is reported.
+- **/cable.html — the install map. Standardized deployments only.** Takes a published
+  reference architecture and breaks out the physical detail the sizer summarises: which U,
+  which side, which fault zone, which bundle, which connector. Exports an SVG for install
+  teams and an XLS workbook for procurement.
+
+The two are complementary, not alternatives. The sizer answers *what do I buy*. The install
+map answers *where does it go, where does it plug in, and what lands where*.
+
+## The rule that governs every number
+
+Every figure is either **read from a vendor** or **computed by us**, and the distinction
+travels with the figure rather than living in a footnote. `archSpec().provenance` is
+`vendor` or `derived` and rides on downstream values; basis strings say `DERIVED (OURS)` in
+words; rule V1 fails the build if a BOM line cites an NVIDIA reference-architecture table on
+a fabric computed locally.
+
+Where a vendor publishes no reference architecture, the build is sized **on racks** rather
+than on an invented scalable unit, and every derived figure is badged as ours.
+
+## Install map — what is published and what is ours
+
+Published: U-heights, tray counts, port topology, switch models, link counts per scalable
+unit, regional rack input connectors.
+
+Ours: A/B side mapping per rack, fault-zone assignment and the loss analysis, riser distance,
+slack policy, service loops. **No vendor publishes which way round your PDUs go** — that is a
+property of the hall, not the rack.
+
+## The analysis that distinguishes it
+
+Dual-corded equipment is redundant only if its two cords land in two things that cannot fail
+together. The map runs one check: **lose any single fault zone — does every rack still have
+power, and does the surviving feed stay within its breaker at 80% continuous?** Single-corded
+equipment in a lost zone is reported as dropped. A rack at 60% per feed passes every
+steady-state drawing and browns out when its partner zone drops.
+
+Per-phase amps = kW × 1000 ÷ (V × √3 × PF). Feed pairs per rack is a control, not a constant:
+one pair suits a 5–10 kW enterprise rack and is wrong for a 132 kW GPU rack.
+
+## Reference architectures currently modelled
+
+- **NVIDIA GB300 NVL72 — SpectrumX Enterprise RA.** Per scalable unit (18 trays, 72 GPUs):
+  144× 400G compute across dual planes and 4 rails per plane, 36× 400G converged from one
+  BlueField-3 B3240 DPU per tray. The compute fabric is **Ethernet (RoCE), not InfiniBand** —
+  SN5600 leaves, SN5610 spines. Quantum-X InfiniBand is a different reference architecture.
+  Known gap: management is modelled at one run per tray against the document's 71× 1G per SU,
+  so that count is a floor rather than a total.
+- **Penguin Relion / Altus HGX B300.** The same NVIDIA HGX silicon in an 8U node.
+
+## Cable length method
+
+Device-to-manager allowance at both ends, rise to the pathway, horizontal run at the cabinet
+pitch, a service loop each end, a slack factor, rounded up to a stocked length. 1U = 44.45 mm.
+Both tools share one ladder so they cannot quote different parts for the same run. Beyond the
+ladder the answer is "custom trunk — specify". **Media reach is modelled in the sizer only**,
+deliberately in one place.
+
+## Documentation
+
+- docs/USING-THE-SIZER.md — how to drive it, tab by tab
+- docs/MODEL-AND-FLOW.md — how a GPU target becomes a floor plan
+- docs/BUSINESS-RULES.md — the consistency rules and what they refuse to build
+- docs/BOM-AND-ORDERING.md — the BOM and the ordering seam
+- docs/VENDOR-DOCS.md — the vendor datasheet citation trail
+- docs/INSTALL-MAP.md — the cabling breakout
+- docs/AI-PROMPTS.md — worked prompts for using these tools with an AI assistant
+
+## Licence
+
+Source-available under BUSL 1.1. Free to size your own infrastructure; commercial terms
+apply if you are being paid to use it. See COMMERCIAL.md.
+
+## What these tools are not
+
+Not a quote. Not an electrical or mechanical stamp. Not a substitute for the as-built
+drawing, your local code, or the people who will actually pull the cable. Walk the route
+before ordering in volume.

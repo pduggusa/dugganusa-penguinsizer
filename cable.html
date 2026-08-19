@@ -5,11 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Cable Length Calculator — DugganUSA</title>
 <!--
-  CABLE LENGTH CALCULATOR — lengths only.
+  CABLE, POWER AND CONNECTIVITY PLANNER.
 
-  Lay out a row, rack the hardware, click two points, get a length. That is the whole job.
-  Media selection, reach limits and BOM economics live in the sizer's Rack Planner; this
-  does not duplicate them and deliberately does not have an opinion about them.
+  Lay out a row, rack the hardware, click two points, get a length. That was the whole job
+  until 2026-08-19; it now also carries POWER (A/B feeds, PDU side mapping, per-device PSU
+  counts) and CONNECTIVITY (link class per run, coloured by media), because the person
+  standing in the cold aisle is holding one drawing, not three.
+
+  WHAT CHANGED, AND WHY THE OLD NOTE IS GONE
+  This file used to say it "deliberately does not have an opinion" about media, deferring
+  all of it to the sizer's Rack Planner. That was right when it only produced a number.
+  It now produces a BOM you can hand to procurement, and a BOM without a link class is
+  unorderable — 12 m of "cable" is not a part. The line ladder and the Manhattan geometry
+  are UNCHANGED and still match the sizer, so the two tools cannot quote different lengths
+  for the same run. What is new is the class beside the length.
+
+  FAULT ZONES ARE THE POINT OF A/B, NOT THE LABEL ON IT
+  Dual-corded kit is not redundant because it has two cords. It is redundant because the
+  two cords land in two things that cannot fail together. A row where every A feed hangs
+  off one RPP and every B feed off another has TWO fault zones; a row where eight racks
+  all tap the same busway section has ONE, however many PDUs are bolted to it.
+
+  So the zone is a first-class field here, and the only power check that matters is the
+  one this tool runs: LOSE ANY SINGLE ZONE — does every rack still have power, and does
+  the surviving feed stay inside its breaker at 80% continuous? A rack drawing 60% per
+  feed passes every steady-state check and browns out the moment its partner zone drops.
+  That is the failure this exists to catch, and it is invisible on a normal-state drawing.
+
+  REACH IS STILL NOT MODELLED HERE. The sizer owns reach-vs-lane-rate; a 3 m passive DAC
+  at 800G is a different animal from 3 m at 25G, and that argument belongs in one place.
+  Pick the class you intend to pull; this tells you how long it has to be.
 
   Cable runs Manhattan, not through the air: out of the device to the vertical manager, up
   or down to the pathway, along the row, back in at the far end. Plus a service loop each
@@ -102,28 +127,92 @@
   .tot b{color:var(--cool)}
   .foot{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.6;border-top:1px solid var(--line);padding-top:12px}
   .foot b{color:var(--dim)}
+
+  /* ---- power, zones, links (2026-08-19) ---------------------------------------- */
+  .pdu{width:5px;border-radius:2px;background:#16212e;position:relative}
+  .cabwrap{display:flex;gap:2px;align-items:stretch}
+  #row{position:relative}
+  .zchip{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .lg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);cursor:pointer;
+      border:1px solid var(--line);border-radius:999px;padding:3px 9px;background:#0a1119}
+  .lg.on{border-color:var(--cool-dim);color:var(--ink)}
+  .lg i{width:14px;height:3px;border-radius:2px;display:inline-block}
+  .zgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:7px;margin-top:9px}
+  .zc{background:#0a1119;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11px}
+  .zc .zt{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-bottom:4px}
+  .zc select{width:100%;padding:3px 5px;font-size:11px}
+  .verdict{border-left:3px solid var(--ok);background:#0a1119;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:12px}
+  .verdict.bad{border-left-color:#fb7185}
+  .verdict.warn{border-left-color:var(--warn)}
+  .verdict b{color:var(--ink)}
+  .verdict .vt{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:5px}
+  tr.inbom td{opacity:.38}
+  tr.inbom td.n{color:var(--dim)}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:-1px}
+  .devrow input[type=text]{width:150px;background:#0a1119;border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:6px 9px;font-family:var(--mono);font-size:12px}
+  .psu{display:inline-flex;gap:2px;margin-left:5px}
+  .psu i{width:6px;height:6px;border-radius:1px;display:inline-block}
+  /* Back to top. The BOM on a full scalable unit runs to hundreds of lines and the
+   * controls all live at the head of the page — without this you scroll for a while to
+   * change one number. Fixed, out of the way, and only shown once there is something to
+   * scroll back from. */
+  #toTop{position:fixed;right:18px;bottom:18px;z-index:50;display:none;
+         background:rgba(34,211,238,.14);border:1px solid var(--cool-dim);color:var(--cool);
+         font-size:12px;font-weight:600;padding:9px 14px;border-radius:999px;cursor:pointer;
+         font-family:var(--sans);backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.45)}
+  #toTop:hover{background:rgba(34,211,238,.24)}
+  .warnnote{color:var(--warn);font-size:11px}
+  /* A device block: real height, a name, its U range, and a dot per port class so the
+   * connectivity is legible from the elevation instead of only from the editor. */
+  .u.dev{position:relative;overflow:hidden;padding-left:5px}
+  .u.dev .dv{font-family:var(--sans);font-size:9.5px;color:#b8c6d6;font-weight:600;letter-spacing:-.1px;
+             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .u.dev .dr{position:absolute;right:4px;top:2px;font-family:var(--mono);font-size:8px;color:#5b6b7e}
+  .u.dev .dp{position:absolute;right:4px;bottom:2px;display:flex;gap:2px}
+  .u.dev .dp i{width:5px;height:5px;border-radius:1px;display:inline-block}
+  .u.dev.multi{align-items:flex-start;padding-top:3px;
+    background:linear-gradient(180deg,#26364a,#1a2632 62%);
+    box-shadow:inset 0 -1px 0 rgba(255,255,255,.05), inset 0 1px 0 rgba(255,255,255,.07)}
+  .u.dev.multi .dv{font-size:10px}
+  .riserbox{display:flex;align-items:center;justify-content:center;gap:4px;font-size:9.5px;color:var(--faint);
+            font-family:var(--mono);margin-top:4px;cursor:pointer;user-select:none}
+  .riserbox input{accent-color:var(--cool);width:11px;height:11px;cursor:pointer}
+  .badnote{color:#fb7185;font-size:11px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>Cable <span class="accent">Length</span> Calculator</h1>
-    <a class="back" href="./index.html">← AI Factory Sizer</a>
+    <h1>Cable, <span class="accent">Power</span> &amp; Connectivity Planner</h1>
+    <a class="back" href="./index.html">&larr; AI Factory Sizer</a>
   </header>
   <div class="sub">
-    Click a source U, click a destination U. Cable is routed the way it actually runs — out to the manager, up or down
-    to the pathway, along the row, back in — plus a service loop each end and a routing factor, rounded up to a length
-    you can order.
+    Lay out a row, rack the hardware, click two U positions, pick the link class, get an orderable length.
+    Power is modelled alongside it: A/B feed sides, per-device PSUs, and the only check that matters &mdash;
+    <b style="color:var(--ink)">lose any one fault zone and see whether the row survives it</b>.
   </div>
 
   <div class="bar">
-    <div class="f"><label>Cabinets <b id="lCabs">6</b></label><input type="range" id="cabs" min="2" max="10" value="6"/></div>
+    <div class="f"><label>Region</label>
+      <select id="region"><option value="na" selected>North America</option><option value="eu">Europe / International</option>
+        <option value="uk">United Kingdom</option><option value="jp">Japan</option><option value="au">Australia / NZ</option></select></div>
+    <div class="f"><label>Show</label>
+      <div class="seg" id="view"><button data-v="both" class="on">Both</button><button data-v="power">Power</button><button data-v="net">Network</button></div></div>
+    <div class="f"><label>Preset</label>
+      <select id="preset">
+        <option value="nv576">NVIDIA GB300 NVL72 &mdash; 576 GPU SU</option>
+        <option value="peng">Penguin Relion / Altus HGX B300</option></select></div>
+    <div class="f"><label>Cabinets <b id="lCabs">6</b></label><input type="range" id="cabs" min="2" max="12" value="6"/></div>
     <div class="f"><label>Rack height</label>
-      <select id="rackU"><option>40</option><option selected>42</option><option>45</option><option>47</option><option>48</option><option>52</option></select></div>
+      <select id="rackU"><option>40</option><option>42</option><option>45</option><option>47</option><option selected>48</option><option>52</option></select></div>
     <div class="f"><label>Pitch</label>
-      <select id="pitch"><option value="600" selected>600 mm</option><option value="750">750 mm</option><option value="800">800 mm</option></select></div>
+      <select id="pitch"><option value="600">600 mm</option><option value="750" selected>750 mm</option><option value="800">800 mm</option></select></div>
     <div class="f"><label>Pathway</label>
       <div class="seg" id="path"><button data-v="oh" class="on">Overhead</button><button data-v="uf">Under floor</button></div></div>
+    <div class="f"><label>Network</label>
+      <div class="seg" id="tor"><button data-v="tor" class="on">TOR</button><button data-v="mor">MOR</button><button data-v="eor">EOR</button></div></div>
     <div class="f"><label>Pathway offset <b id="lOff">300</b> mm</label><input type="range" id="off" min="0" max="1200" step="50" value="300"/></div>
     <div class="f"><label>Slack <b id="lSlack">10</b>%</label><input type="range" id="slack" min="0" max="30" value="10"/></div>
     <div class="f"><label>Service loop <b id="lLoop">300</b> mm</label><input type="range" id="loop" min="0" max="1000" step="50" value="300"/></div>
@@ -131,65 +220,282 @@
       <div class="seg" id="units"><button data-v="m" class="on">m</button><button data-v="ft">ft</button></div></div>
   </div>
 
+  <div class="panel">
+    <h2>Power &mdash; feeds, PDU sides and fault zones</h2>
+    <div class="bar" style="margin:0 0 4px;border:0;background:none;padding:0">
+      <div class="f"><label>Volts (3ph)</label>
+        <select id="pv"><option value="415" selected>415 V</option><option value="400">400 V</option><option value="208">208 V</option><option value="230">230 V</option></select></div>
+      <div class="f"><label>Breaker per feed</label>
+        <select id="pb"><option value="32">32 A</option><option value="60" selected>60 A</option><option value="63">63 A</option><option value="100">100 A</option></select></div>
+      <div class="f"><label>Power factor <b id="lPf">0.99</b></label><input type="range" id="pf" min="85" max="100" value="99"/></div>
+      <div class="f"><label>Feed pairs per rack</label>
+        <select id="feeds"><option value="1">1 (A + B)</option><option value="2">2 pairs</option><option value="3">3 pairs</option><option value="4" selected>4 pairs</option><option value="6">6 pairs</option></select></div>
+      <div class="f"><label>A-feed side</label>
+        <div class="seg" id="aside"><button data-v="alt" class="on">Alternating</button><button data-v="left">All left</button><button data-v="right">All right</button></div></div>
+      <div class="f"><label>Zone split</label>
+        <div class="seg" id="zsplit"><button data-v="alt" class="on">Alternating</button><button data-v="half">Half / half</button><button data-v="one">One zone (bad)</button></div></div>
+    </div>
+    <div class="zgrid" id="zgrid"></div>
+    <div id="pverdict"></div>
+  </div>
+
   <div class="out idle" id="out">
-    <div class="n" id="outN">—</div>
+    <div class="n" id="outN">&mdash;</div>
     <div class="side"><div class="ends" id="outEnds">Click a U to set A, then another for B.</div>
       <div class="calc" id="outCalc"></div></div>
     <div class="parts" id="outParts"></div>
   </div>
 
   <div class="panel">
-    <h2>The row — click the cabinet name to edit its hardware</h2>
+    <h2>The row &mdash; click a cabinet name to edit it. PDU rails are drawn each side, coloured by fault zone.</h2>
     <div class="cabs" id="row"></div>
-  </div>
-
-  <div class="panel">
-    <h2>Hardware in <span id="lEdit" style="color:var(--cool)">Cabinet 1</span> — stacks from the bottom</h2>
-    <div id="devs"></div>
-    <div class="devrow" style="margin-top:7px">
-      <input type="number" id="dQty" min="1" max="52" value="42" title="quantity"/>
-      <span style="color:var(--faint);font-size:12px">×</span>
-      <input type="number" id="dU" min="1" max="10" value="1" title="U each"/>
-      <span style="color:var(--faint);font-size:12px">U</span>
-      <button class="btn primary" id="add">Add</button>
-      <button class="btn" id="all">Apply to all cabinets</button>
-      <button class="btn" id="clr">Clear</button>
+    <div class="legend" id="legend" style="margin-top:12px"></div>
+    <div id="cblNote" style="font-size:11px;color:var(--faint);font-family:var(--mono);margin-top:2px"></div>
+    <div class="bar" style="margin:12px 0 0;padding:11px 13px">
+      <div class="f"><label>Riser / patch-panel run</label>
+        <div class="seg" id="riserSeg"><button data-v="off" class="on">Off</button><button data-v="on">On</button></div></div>
+      <div class="f"><label>Distance to riser <b id="lRiser">30</b> m</label>
+        <input type="range" id="riserM" min="10" max="200" step="10" value="30"/></div>
+      <span class="note" style="font-size:11px;color:var(--faint);max-width:520px;align-self:center">
+        Tick a rack on its <b style="color:var(--dim)">right-hand edge</b> below to give it a run off the row &mdash; to the
+        riser, the MDA or a patch field. That leg is <b style="color:var(--dim)">not derivable from the row geometry</b>,
+        so it is a number you set: 10 m intervals, added to the computed path on top of the in-row routing.
+      </span>
     </div>
   </div>
 
   <div class="panel">
-    <h2>Lengths <span style="color:var(--faint);font-weight:400">— click “Save length” on any result</span></h2>
+    <h2>Placement in <span id="lEdit" style="color:var(--cool)">Cabinet 1</span>
+      <span style="color:var(--faint);font-weight:400">&mdash; reference elevation, bottom-up</span></h2>
+    <div id="devs"></div>
+    <span class="note" style="font-size:11px;color:var(--faint);display:block;margin-top:9px">
+      <b style="color:var(--dim)">Reference architectures only, deliberately.</b> There is no custom rack builder here
+      yet and there should not be one until these two are right &mdash; a tool that draws anything you type is a tool
+      nobody can check. U-heights, tray counts and port topology come from published architecture documents; the A/B
+      side mapping, the fault-zone split and the riser distance are yours to set, because those are properties of your
+      hall and no vendor publishes them.
+    </span>
+  </div>
+
+  <div class="panel">
+    <h2>Cable schedule <span style="color:var(--faint);font-weight:400">&mdash; add a run to the BOM and it greys out here</span></h2>
     <div id="list"></div>
   </div>
 
+  <div class="panel">
+    <h2>Bill of materials
+      <button class="btn primary" id="xls" style="float:right;margin-top:-3px">&darr; Export XLS</button>
+      <button class="btn primary" id="svg" style="float:right;margin-top:-3px;margin-right:7px" title="Standalone install drawing — where it goes, where it plugs in, what lands where">&darr; Save SVG map</button>
+      <button class="btn" id="bomAll" style="float:right;margin-top:-3px;margin-right:7px">Add every run</button></h2>
+    <div id="bom"></div>
+  </div>
+
   <div class="foot">
-    <b>How it is built.</b> Device-to-manager allowance at both ends (400 mm each) + rise from each U to the pathway +
-    |rack A − rack B| × pitch + a service loop each end, × the slack factor, rounded up to the next stocked length
-    (0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 35, 40, 50 m). 1U = 44.45 mm.<br/>
-    <b>What it is not.</b> Lengths only — it has no opinion on media, reach or cost, and it does not know your
-    containment, fill ratio or bend radius. Sizing-grade. Walk the route before you order in volume.
+    <b>How the length is built.</b> Device-to-manager allowance at both ends (400 mm each) + rise from each U to the
+    pathway + |rack A &minus; rack B| &times; pitch + a service loop each end, &times; the slack factor, rounded up to
+    the next stocked length (0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 35, 40, 50 m).
+    1U = 44.45 mm. Unchanged from the lengths-only version, and identical to the sizer's ladder.<br/>
+    <b>How the power is built.</b> Per-phase A = kW&nbsp;&times;&nbsp;1000 &divide; (V &times; &radic;3 &times; PF);
+    breaker headroom at 80% continuous. The single-zone-loss check assumes every dual-corded device fails over to its
+    surviving feed at full load, which is what dual-corded means and is the only assumption that makes A/B worth paying for.
+    Single-corded devices in a lost zone are counted as <b>dropped</b>, because they are.<br/>
+    <b>What it is not.</b> Not an electrical or mechanical stamp, not a quote, and it has no opinion on media reach &mdash;
+    that lives in the sizer, deliberately in one place. Sizing-grade. Walk the route and read the as-built before you
+    order in volume. Confidence capped at 95%.
   </div>
 </div>
+<button id="toTop" title="Back to the controls">&uarr; Top</button>
 
 <script>
 (function(){
 "use strict";
 var U=44.45, BASE=100, TOP=60, LAT=400, FT=304.8;
 var STOCK=[0.5,1,1.5,2,2.5,3,3.5,4,5,6,7,8,9,10,12,15,20,25,30,35,40,50];
-var S={cabs:6,rackU:42,pitch:600,path:'oh',off:300,slack:10,loop:300,units:'m',
-       edit:0,racks:[],A:null,B:null,saved:[]};
-function mk(n){var o=[];for(var i=0;i<n;i++)o.push(S.racks[i]||[{q:S.rackU,u:1}]);return o;}
-S.racks=mk(S.cabs);
 
+/* ---- LINK CLASSES ----------------------------------------------------------------
+ * Colour here is for READING THE DRAWING, not a SKU attribute and not a site convention.
+ * The sizer deliberately stopped litigating cable colour as a part number, and this does
+ * not reopen that: the jacket you actually pull is whatever TIA-598 and your site
+ * standard say. These are the classes the BOM splits on, because a length without a
+ * class is not orderable — "12 m of cable" is not a part.
+ *
+ * `cord` marks the two power classes so power never lands in the data BOM.
+ */
+var CLASS=[
+ {id:'ib',    name:'InfiniBand',        col:'#f472b6', note:'NDR/HDR OSFP. Rail-optimised compute fabric.'},
+ {id:'dac',   name:'DAC / copper',      col:'#f59e0b', note:'Passive or active copper. Short reach, no optics, no power.'},
+ {id:'aoc',   name:'AOC',               col:'#a78bfa', note:'Integrated optics, fixed length, no transceiver SKUs.'},
+ {id:'mmf',   name:'Fiber — OM4 MMF',   col:'#22d3ee', note:'Multi-mode. Two transceivers per link, plus the trunk.'},
+ {id:'smf',   name:'Fiber — OS2 SMF',   col:'#60a5fa', note:'Single-mode. Jacket is yellow by TIA-598 — that one is mandatory.'},
+ {id:'cat6a', name:'Ethernet — Cat6A',  col:'#34d399', note:'10GBASE-T copper. In-band, storage, campus.'},
+ {id:'oob',   name:'OOB / management',  col:'#ef4444', note:'BMC, iDRAC, console. Cat6 is plenty.'},
+ {id:'pwrA',  name:'Power cord — A',    col:'#fbbf24', cord:true, note:'C13/C19 to the A-side PDU.'},
+ {id:'pwrB',  name:'Power cord — B',    col:'#38bdf8', cord:true, note:'C13/C19 to the B-side PDU.'}
+];
+function cls(id){ for(var i=0;i<CLASS.length;i++) if(CLASS[i].id===id) return CLASS[i]; return CLASS[0]; }
+
+/* ---- POWER ------------------------------------------------------------------------
+ * Everything here is nameplate-grade arithmetic, not an electrical stamp:
+ *   per-phase A = kW*1000 / (V * sqrt(3) * PF)   3-phase wye
+ *   breaker headroom at 80% continuous (NEC 210.19 / 210.20 style derate)
+ * PF 0.99 is typical for modern PSUs at load and is exposed so you can argue with it.
+ */
+/* ---- REGION -> WHAT YOU ACTUALLY PLUG IN ------------------------------------------
+ * A kW figure does not tell an installer anything they can order. The rack input
+ * connector and the outlet type do, and both are regional: the same 60 kW rack is a
+ * CS8365C in Chicago, a 5-pin IEC 60309 32A in Frankfurt and a different beast again in
+ * Tokyo. Voltage follows the region too, and voltage is what turns kW into amps.
+ *
+ * Outlets are IEC 60320 everywhere — C13/C19 to the device is international and does not
+ * vary. What varies is the PDU INPUT and the supply voltage, which is exactly the pair a
+ * regional selector should carry. Locking-type NEMA and pin-and-sleeve IEC 60309 are the
+ * two families that matter at rack density; BS1363/Schuko never appear on a GPU rack and
+ * are deliberately absent so nobody specifies one.
+ *
+ * Sizing-grade. Your local code, your DNO and your electrician outrank this table. */
+var REGIONS=[
+ {id:'na',  name:'North America', v:415, alt:[208,415],
+  input:['CS8365C 50A 3ph','IEC 60309 460P9W 60A 3ph','Busway tap (Starline/Universal)'],
+  outlet:'C13 / C19 (IEC 60320)',
+  note:'415/240V wye is now normal at GPU density; 208V delta is legacy and costs you amps for the same kW.'},
+ {id:'eu',  name:'Europe / International', v:400, alt:[230,400],
+  input:['IEC 60309 532P6W 32A 3ph','IEC 60309 563P6W 63A 3ph','Busway tap'],
+  outlet:'C13 / C19 (IEC 60320)',
+  note:'400/230V wye. 5-pin pin-and-sleeve is the default; 63A where a single feed has to carry a dense rack.'},
+ {id:'uk',  name:'United Kingdom', v:400, alt:[230,400],
+  input:['IEC 60309 532P6W 32A 3ph','IEC 60309 563P6W 63A 3ph'],
+  outlet:'C13 / C19 (IEC 60320)',
+  note:'Same 400/230V and the same connectors as the continent at rack scale. BS1363 does not belong on this equipment.'},
+ {id:'jp',  name:'Japan', v:200, alt:[200,415],
+  input:['NEMA L6-30P 30A 1ph','IEC 60309 3ph where available'],
+  outlet:'C13 / C19 (IEC 60320)',
+  note:'200V is the common industrial supply. Lower volts means more amps for the same kW — more feeds, not bigger ones.'},
+ {id:'au',  name:'Australia / NZ', v:400, alt:[230,400],
+  input:['IEC 60309 532P6W 32A 3ph','56-series 3ph'],
+  outlet:'C13 / C19 (IEC 60320)',
+  note:'400/230V wye, IEC 60309 at rack density.'}
+];
+function region(id){ for(var i=0;i<REGIONS.length;i++) if(REGIONS[i].id===id) return REGIONS[i]; return REGIONS[0]; }
+
+var PWR={v:415,pf:0.99,breaker:60,derate:0.8};
+/* FEEDS PER SIDE. The first render of the NVL72 preset showed 172 A landing on a 48 A
+ * limit and called it a failure. The arithmetic was right and the MODEL was wrong: nobody
+ * feeds a 132 kW rack through one cord a side. NVL72-class racks take SEVERAL PDU pairs —
+ * the load divides across them, and so does the failover. One feed per side is correct for
+ * a 5-10 kW enterprise rack and nonsense for a GPU rack, so it is a control, not a constant.
+ * Per-feed load = side load / feeds per side. */
+function amps(kw,v,pf){ return (kw*1000)/(v*Math.sqrt(3)*(pf||0.99)); }
+
+/* ---- FAULT ZONES ------------------------------------------------------------------
+ * A zone is whatever fails as a unit upstream of the PDU: an RPP, a busway section, a
+ * UPS module, a switchboard. Two PDUs fed from one zone are one fault zone wearing two
+ * jackets. Default two zones because that is the minimum that makes A/B mean anything;
+ * a real hall usually has more and the point of naming them is to see when a "redundant"
+ * row quietly collapses into one.
+ */
+var ZONES=[{id:'z1',name:'RPP-1',col:'#fbbf24'},{id:'z2',name:'RPP-2',col:'#38bdf8'},
+           {id:'z3',name:'RPP-3',col:'#a78bfa'},{id:'z4',name:'RPP-4',col:'#34d399'}];
+function zone(id){ for(var i=0;i<ZONES.length;i++) if(ZONES[i].id===id) return ZONES[i]; return ZONES[0]; }
+
+/* ---- PRESETS ----------------------------------------------------------------------
+ * REFERENCE LAYOUTS, not vendor stencil art and not a quote. U-heights and tray counts
+ * are from published architecture documents; the POWER-SIDE MAPPING and the fault-zone
+ * split are OURS — no vendor publishes which way round your PDUs go, because it is a
+ * property of your hall, not of their rack.
+ *
+ * NVIDIA GB300 NVL72, per the NVL72 AI Factory Enterprise Reference Architecture:
+ *   docs.nvidia.com/enterprise-reference-architectures/nvl72-ai-factory/latest/
+ *   network-logical-architecture.html
+ *
+ * Corrected 2026-08-19 against that document. The first cut of this preset had it wrong in
+ * two ways that matter, and both were guesses dressed as facts:
+ *
+ *  1. THE COMPUTE FABRIC IS ETHERNET, NOT INFINIBAND. This is the SpectrumX Enterprise RA:
+ *     SN5600 128-port 400G leaves and SN5610 spines, RoCE. Quantum-X/InfiniBand is a
+ *     different reference architecture. Drawing IB here would have put the wrong optics,
+ *     the wrong switches and the wrong part numbers in the BOM.
+ *  2. EIGHT COMPUTE LINKS PER TRAY, NOT FOUR. Each tray carries four ConnectX-8 SuperNICs,
+ *     dual-port 800G, operating at 2x400G per port — so each GPU takes 2x400G, one to each
+ *     of the two planes. Per tray that is 8x400G, and per SU 18 x 8 = 144x400G, which is
+ *     the figure the document states.
+ *
+ * Published per SU (18 trays, 72 GPUs):
+ *   144x 400G GPU compute   — dual plane, 4 rails per plane, 18 uplinks per leaf per plane
+ *    36x 400G converged     — 1x BlueField-3 B3240 DPU per tray, 2x 400G each
+ *    71x 1G  management     — SN2201 48-port 1G + 4-port 100G
+ * Eight SUs is 576 GPUs, which is why this preset is eight compute racks plus network.
+ *
+ * A/B SIDE MAPPING, and why it alternates:
+ * Racks alternate which PHYSICAL side carries the A feed. Two reasons, both practical:
+ * it balances the tap load along a busway instead of loading one side of the run, and it
+ * means a dropped cable tray or a damaged vertical channel takes one feed from some racks
+ * rather than the same feed from all of them. Zones alternate for the same reason at the
+ * upstream level. Change both to match your hall — that is what the controls are for.
+ */
+var PRESETS={
+ 'nv576':{
+   label:'NVIDIA GB300 NVL72 — SpectrumX Enterprise RA · 8 SU / 576 GPU',
+   cabs:10, rackU:48, pitch:750,
+   rack:function(i){
+     /* Two network racks, one per plane, plus the converged and OOB layer in the last.
+      * Rail leaves are SN5600 (2U); each takes 18x400G per SU per plane. */
+     if(i===8) return {net:true, devs:[
+       {q:4,u:2,psu:2,w:1400,name:'SN5600 rail leaf — Plane 1',ports:[{n:18,c:'mmf'}]},
+       {q:2,u:2,psu:2,w:1400,name:'SN5610 spine GS — Plane 1',ports:[]}
+     ]};
+     if(i===9) return {net:true, devs:[
+       {q:4,u:2,psu:2,w:1400,name:'SN5600 rail leaf — Plane 2',ports:[]},
+       {q:2,u:2,psu:2,w:1400,name:'SN5610 spine GS — Plane 2',ports:[]},
+       {q:2,u:2,psu:2,w:1400,name:'SN5600 CSL — converged',ports:[]},
+       {q:4,u:1,psu:2,w:250,name:'SN2201 MG — OOB',ports:[{n:18,c:'cat6a'}]}
+     ]};
+     /* One SU = one NVL72 rack = 18 trays. Ports are per TRAY, per the RA. */
+     return {devs:[
+       {q:1,u:2,psu:0,w:0,name:'Coolant manifold',ports:[]},
+       {q:4,u:1,psu:1,w:0,name:'Power shelf 33 kW',ports:[]},
+       {q:9,u:1,psu:0,w:0,name:'NVLink switch tray',ports:[]},
+       {q:18,u:1,psu:2,w:6800,name:'GB300 compute tray — 4x B300',
+        ports:[{n:8,c:'mmf'},{n:2,c:'mmf'},{n:1,c:'cat6a'}]},
+       {q:4,u:1,psu:1,w:0,name:'Power shelf 33 kW',ports:[]},
+       {q:1,u:2,psu:0,w:0,name:'Coolant manifold',ports:[]}
+     ]};
+   },
+   cooling:'dlc', trayPower:true, torMode:'eor', feeds:4, breaker:60
+ },
+ 'peng':{
+   label:'Penguin Relion / Altus — HGX B300 nodes',
+   cabs:6, rackU:48, pitch:600,
+   rack:function(i){
+     if(i===5) return {net:true, devs:[
+       {q:2,u:1,psu:2,w:250,name:'SN2201 OOB',ports:[{n:2,c:'cat6a'}]},
+       {q:4,u:4,psu:2,w:2400,name:'Q3400-RD IB leaf',ports:[{n:36,c:'ib'}]},
+       {q:2,u:2,psu:2,w:900,name:'SN5600D Ethernet leaf',ports:[{n:8,c:'mmf'}]}
+     ]};
+     return {devs:[
+       {q:1,u:1,psu:2,w:250,name:'SN2201 OOB (in-rack)',ports:[{n:1,c:'cat6a'}]},
+       {q:5,u:8,psu:2,w:10200,name:'Relion/Altus HGX B300 node',
+        ports:[{n:8,c:'ib'},{n:2,c:'mmf'},{n:2,c:'cat6a'},{n:1,c:'oob'}]}
+     ]};
+   },
+   /* Relion/Altus ship air-cooled and DLC. Air is the default here because it is the
+    * harder rear-channel case for PDUs (no manifold competing, but far more airflow to
+    * keep clear behind the cabinet). Switch it if you are building the DLC variant. */
+   cooling:'air', torMode:'tor', feeds:1, breaker:60
+ }
+};
+/* A rack is now an OBJECT with a devs[] array rather than a bare array, and each U slot
+ * carries the device that occupies it — the drawing needs the name for its tooltip and
+ * the BOM needs the ports for its power cords, so the map has to know more than "full". */
 function layout(i){
-  var m=new Array(S.rackU+1).fill(null), at=1;
-  (S.racks[i]||[]).forEach(function(d){
+  var r=S.racks[i], m=new Array(S.rackU+1).fill(null), at=1;
+  ((r&&r.devs)||[]).forEach(function(d,di){
     for(var q=0;q<d.q;q++){ if(at+d.u-1>S.rackU) return;
-      for(var k=0;k<d.u;k++) m[at+k]={first:at,u:d.u}; at+=d.u; }
+      for(var k=0;k<d.u;k++) m[at+k]={first:at,u:d.u,dev:d,di:di,n:q+1}; at+=d.u; }
   });
   return m;
 }
 function used(i){var m=layout(i),c=0;for(var u=1;u<=S.rackU;u++)if(m[u])c++;return c;}
+function devAt(rack,u){ var m=layout(rack); return m[u]?m[u].dev:null; }
 function hMm(u){return BASE+(u-0.5)*U;}
 function topMm(){return BASE+S.rackU*U+TOP;}
 
@@ -198,8 +504,18 @@ function calc(A,B){
   if(same){ riseA=Math.abs(hMm(A.u)-hMm(B.u)); }
   else if(S.path==='oh'){ var t=topMm()+S.off; riseA=t-hMm(A.u); riseB=t-hMm(B.u); horiz=Math.abs(A.rack-B.rack)*S.pitch; }
   else { riseA=hMm(A.u)+S.off; riseB=hMm(B.u)+S.off; horiz=Math.abs(A.rack-B.rack)*S.pitch; }
-  var lat=LAT*2, loop=S.loop*2, core=lat+riseA+riseB+horiz+loop, add=core*(S.slack/100);
-  return {raw:core+add,same:same,lat:lat,riseA:riseA,riseB:riseB,horiz:horiz,loop:loop,add:add};
+  /* RISER LEG. If either end sits in a rack ticked for a riser run, the cable does not
+   * stop at the far cabinet — it carries on to the MDA, the riser or the patch field. That
+   * distance is a property of the BUILDING, not of the row, so it cannot be derived here
+   * and is set on the slider in 10 m steps. Counted ONCE even when both ends are ticked:
+   * a run leaves the row once. */
+  var riser=0;
+  if(S.riserOn){
+    var ra=(S.racks[A.rack]||{}).riser, rb=(S.racks[B.rack]||{}).riser;
+    if(ra||rb) riser=S.riserM*1000;
+  }
+  var lat=LAT*2, loop=S.loop*2, core=lat+riseA+riseB+horiz+loop+riser, add=core*(S.slack/100);
+  return {raw:core+add,same:same,lat:lat,riseA:riseA,riseB:riseB,horiz:horiz,loop:loop,riser:riser,add:add};
 }
 function stock(mm){
   var m=mm/1000;
@@ -207,41 +523,433 @@ function stock(mm){
   return null;
 }
 function fmt(mm){ return S.units==='m' ? (mm/1000).toFixed(2)+' m' : (mm/FT).toFixed(2)+' ft'; }
-function order(mm){ var s=stock(mm); if(s===null) return '>50 m';
+/* Past the top of the stocked ladder, ">50 m" is true and useless. A run that long is a
+ * backbone/riser leg and it is not bought off a patch-cable ladder at all — it is a trunk
+ * assembly cut to order, or a field-terminated pull. Say that, because it changes WHO you
+ * ring, not just which box you tick. The ladder itself is deliberately unchanged: it has to
+ * match the sizer's, or the two tools quote different parts for the same run. */
+function order(mm){ var s=stock(mm); if(s===null) return 'custom trunk — specify';
   return S.units==='m' ? s+' m' : (s*1000/FT).toFixed(0)+' ft'; }
 function lab(p){ return 'R'+(p.rack+1)+'·U'+p.u; }
 
+
+/* ---- STATE -------------------------------------------------------------------------
+ * A rack is {devs:[{q,u,name,psu,w,ports:[{n,c}]}], aSide:'l'|'r', zA, zB, net:bool}.
+ * aSide is which PHYSICAL side carries the A feed; zA/zB are the upstream fault zones.
+ * Both are per-rack because both are per-rack decisions in a real hall.
+ */
+var S={cabs:6,rackU:48,pitch:750,path:'oh',off:300,slack:10,loop:300,units:'m',tor:'tor',
+       pv:415,pb:60,pf:0.99,aside:'alt',zsplit:'alt',feeds:1,riserOn:false,riserM:30,region:'na',view:'both',
+       edit:0,racks:[],A:null,B:null,saved:[],bom:[],lastClass:'ib',filter:null,preset:''};
+
+function blank(i){ return {devs:[],aSide:(i%2?'r':'l'),zA:(i%2?'z2':'z1'),zB:(i%2?'z1':'z2'),net:false,riser:false}; }
+function mk(n){ var o=[]; for(var i=0;i<n;i++) o.push(S.racks[i]||blank(i)); return o; }
+S.racks=mk(S.cabs);
+
+/* Side and zone are recomputed from the two policies whenever either changes. Kept as a
+ * derivation rather than free-form per-rack editing because the whole value is seeing the
+ * PATTERN — a hand-edited row hides the very thing the zone check is looking for. */
+function applyPolicy(){
+  for(var i=0;i<S.racks.length;i++){
+    var r=S.racks[i];
+    r.aSide = S.aside==='alt' ? (i%2?'r':'l') : (S.aside==='left'?'l':'r');
+    if(S.zsplit==='one'){ r.zA='z1'; r.zB='z1'; }
+    else if(S.zsplit==='half'){ var h=i<Math.ceil(S.cabs/2); r.zA=h?'z1':'z3'; r.zB=h?'z2':'z4'; }
+    else { r.zA=(i%2?'z2':'z1'); r.zB=(i%2?'z1':'z2'); }
+  }
+}
+applyPolicy();
+
+function applyPreset(id){
+  S.preset=id;
+  var P=PRESETS[id]; if(!P){ S.racks=mk(S.cabs); applyPolicy(); return; }
+  S.cabs=P.cabs; S.rackU=P.rackU; S.pitch=P.pitch; S.tor=P.torMode||'tor';
+  S.racks=[];
+  for(var i=0;i<P.cabs;i++){
+    var spec=P.rack(i), r=blank(i);
+    r.devs=spec.devs.map(function(d){return JSON.parse(JSON.stringify(d));});
+    r.net=!!spec.net; r.riser=!!spec.net; S.racks.push(r);
+  }
+  S.cooling=P.cooling||'air'; S.trayPower=!!P.trayPower;
+  if(P.feeds){ S.feeds=P.feeds; var fe=document.getElementById('feeds'); if(fe) fe.value=String(P.feeds); }
+  if(P.breaker){ S.pb=P.breaker; var be=document.getElementById('pb'); if(be) be.value=String(P.breaker); }
+  applyPolicy();
+  document.getElementById('cabs').value=S.cabs; document.getElementById('lCabs').textContent=S.cabs;
+  document.getElementById('rackU').value=String(S.rackU);
+  document.getElementById('pitch').value=String(S.pitch);
+  segSet('tor',S.tor);
+  S.A=null; S.B=null; S.edit=0;
+  S.saved=[]; buildRefLinks();
+}
+
+/* ---- A REFERENCE ARCHITECTURE INCLUDES ITS CABLING -------------------------------------
+ * Preloading eight racks of hardware and then asking you to click 1,008 runs by hand is not
+ * a preload, it is homework. The port topology on each device already says what leaves it
+ * and in which class; the network rack already says what terminates each class. So the runs
+ * are DERIVED, not drawn: every port on every device instance becomes a run to the device
+ * in the rightmost rack that carries that class, at that device's anchor U.
+ *
+ * This is why the counts are large and should be: an NVL72 rack is 18 trays x (4 compute +
+ * 2 storage + 1 management), and eight of them plus the network rack is the 576-GPU
+ * scalable unit. One rail per GPU is not a figure of speech — it is 576 InfiniBand runs,
+ * and the BOM says so because that is what you buy.
+ *
+ * Where a class has no terminating device (no Ethernet leaf racked, say) the runs are
+ * simply not generated rather than being pointed at a guess. Missing infrastructure should
+ * show up as missing cable, not as cable to nowhere.
+ */
+function termFor(c){
+  /* The device that terminates class c, searched from the rightmost rack inward — that is
+   * where leaves and patch fields live, and it matches where the uplink click lands. */
+  for(var i=S.cabs-1;i>=0;i--){
+    var m=layout(i);
+    for(var u=S.rackU;u>=1;u--){
+      var sl=m[u]; if(!sl||sl.first!==u) continue;
+      var d=sl.dev;
+      if(d.ports&&d.ports.some(function(pt){return pt.c===c;})) return {rack:i,u:u,dev:d};
+    }
+  }
+  return null;
+}
+function buildRefLinks(){
+  var terms={}, made=0;
+  for(var i=0;i<S.cabs;i++){
+    var m=layout(i);
+    for(var u=1;u<=S.rackU;u++){
+      var sl=m[u]; if(!sl||sl.first!==u) continue;
+      var d=sl.dev; if(!d.ports||!d.ports.length) continue;
+      d.ports.forEach(function(pt){
+        if(!(pt.c in terms)) terms[pt.c]=termFor(pt.c);
+        var t=terms[pt.c]; if(!t) return;
+        if(t.rack===i && t.u===u) return;            // a leaf does not patch to itself
+        for(var k=0;k<pt.n;k++){
+          var r=calc({rack:i,u:u},{rack:t.rack,u:t.u});
+          S.saved.push({a:'R'+(i+1)+'\u00b7U'+u, b:'R'+(t.rack+1)+'\u00b7U'+t.u,
+                        ra:i, rb:t.rack, raw:r.raw, same:(i===t.rack), c:pt.c, bom:false, ref:true});
+          made++;
+        }
+      });
+    }
+  }
+  return made;
+}
+
+/* ---- POWER -------------------------------------------------------------------------
+ * kW per rack = sum(qty * watts). trayPower presets already express the tray draw, and
+ * their power shelves are DELIVERY not load, so shelves carry w:0 and are not summed.
+ */
+function rackKw(i){
+  var r=S.racks[i]; if(!r) return 0; var w=0;
+  r.devs.forEach(function(d){ w += (d.q||0)*(d.w||0); });
+  return w/1000;
+}
+function rackPsuSplit(i){
+  /* Dual-corded (psu>=2) splits evenly A/B. Single-corded (psu==1) lands entirely on the
+   * A side by convention and is flagged, because it is the thing that turns a "redundant"
+   * rack into a single point of failure and nobody notices until the zone drops. */
+  var r=S.racks[i], a=0,b=0,single=0;
+  r.devs.forEach(function(d){
+    var kw=(d.q||0)*(d.w||0)/1000;
+    if((d.psu||0)>=2){ a+=kw/2; b+=kw/2; }
+    else if((d.psu||0)===1){ a+=kw; single+=kw; }
+  });
+  return {a:a,b:b,single:single};
+}
+function feedAmps(kw){ return amps(kw/Math.max(1,S.feeds),S.pv,S.pf); }
+function breakerOk(kw){ return feedAmps(kw) <= S.pb*PWR.derate; }
+
+/* THE CHECK. For each zone: assume it is gone. Every rack that had a feed in it loses
+ * that feed; dual-corded load transfers to the survivor at FULL load, single-corded load
+ * on the dead side is simply dropped. Report the worst surviving feed against breaker. */
+function zoneLoss(){
+  var out=[];
+  ZONES.forEach(function(z){
+    var used=false, worst=0, worstRack=null, dropped=0, dark=0;
+    for(var i=0;i<S.cabs;i++){
+      var r=S.racks[i], sp=rackPsuSplit(i), kw=rackKw(i);
+      var lostA=(r.zA===z.id), lostB=(r.zB===z.id);
+      if(lostA||lostB) used=true;
+      if(lostA&&lostB){ dark+=kw; continue; }
+      if(lostA){ dropped+=sp.single; var surv=sp.b+(sp.a-sp.single);
+        if(surv>worst){worst=surv;worstRack=i;} }
+      else if(lostB){ var s2=sp.a+sp.b;
+        if(s2>worst){worst=s2;worstRack=i;} }
+    }
+    if(used) out.push({z:z,worst:worst,rack:worstRack,dropped:dropped,dark:dark,
+                       amps:feedAmps(worst),ok:breakerOk(worst)&&dark===0&&dropped===0});
+  });
+  return out;
+}
+
+/* ---- LINKS -------------------------------------------------------------------------- */
+/* WHERE AN UPLINK LANDS — always the RIGHTMOST rack (Patrick, 2026-08-19: "always
+ * rightmost rack for simplicity"). The TOR/MOR/EOR control still sets the ROW convention
+ * you are designing to, and it still changes the length because the rightmost rack is a
+ * different distance away in each case — but the click target does not move around under
+ * you. One rule, one place to look, and you can still click any U by hand if the real
+ * build lands somewhere else. */
+function torTarget(){ return S.cabs-1; }
+function torU(){
+  /* Top populated U of the rightmost rack — patch fields and leaves live at the top, and
+   * a run to an empty U is a run to nothing. Falls back to the top of the rack. */
+  var m=layout(torTarget());
+  for(var u=S.rackU;u>=1;u--) if(m[u]) return u;
+  return S.rackU;
+}
+
+/* ---- RENDER: ROW -------------------------------------------------------------------- */
 function drawRow(){
   var h='';
   for(var i=0;i<S.cabs;i++){
-    var m=layout(i), sel=(i===S.edit)?' sel':'';
-    h+='<div class="cab'+sel+'"><div class="lbl" data-l="'+i+'">Cabinet '+(i+1)+'</div>';
-    h+='<div class="rail'+(S.path==='oh'?' on':'')+'"></div><div class="frame'+sel+'">';
+    var m=layout(i), sel=(i===S.edit)?' sel':'', r=S.racks[i];
+    var zl=zone(r.aSide==='l'?r.zA:r.zB), zr=zone(r.aSide==='l'?r.zB:r.zA);
+    var fl=(r.aSide==='l'?'A':'B'), fr=(r.aSide==='l'?'B':'A');
+    h+='<div class="cab'+sel+'"><div class="lbl" data-l="'+i+'">'+(r.net?'Network ':'Cabinet ')+(i+1)+'</div>';
+    h+='<div class="rail'+(S.path==='oh'?' on':'')+'"></div>';
+    h+='<div class="cabwrap">';
+    h+='<div class="pdu" title="'+fl+' feed — '+zl.name+'" style="background:'+zl.col+';opacity:.85"></div>';
+    h+='<div class="frame'+sel+'" style="flex:1">';
+    /* Draw the DEVICE, not the slot. A 8U node used to render as eight identical 1U
+     * stripes, which is exactly the information a rack elevation exists to convey and the
+     * one thing the old drawing threw away — you could not see at a glance whether a
+     * cabinet held six 8U nodes or forty-eight 1U pizza boxes. Each device is now one
+     * block, its height is its real U height, and it carries its name and U range.
+     * The anchor U for a click is the device's BOTTOM U, which is also where you would
+     * actually land a cable, so the length that comes out is the length you would pull. */
     for(var u=S.rackU;u>=1;u--){
-      var c='u'+(m[u]?' dev':'');
-      if(S.A&&S.A.rack===i&&S.A.u===u)c+=' a';
-      if(S.B&&S.B.rack===i&&S.B.u===u)c+=' b';
-      h+='<div class="'+c+'" data-r="'+i+'" data-u="'+u+'" title="Cabinet '+(i+1)+' · U'+u+'">'+u+'</div>';
+      var slot=m[u];
+      if(!slot){
+        var ce='u';
+        if(S.A&&S.A.rack===i&&S.A.u===u)ce+=' a';
+        if(S.B&&S.B.rack===i&&S.B.u===u)ce+=' b';
+        h+='<div class="'+ce+'" data-r="'+i+'" data-u="'+u+'" title="Cabinet '+(i+1)+' · U'+u+' — empty">'+u+'</div>';
+        continue;
+      }
+      var topU=slot.first+slot.u-1;
+      if(u!==topU) continue;                 // only draw at the top of the device
+      var d=slot.dev, hgt=slot.u*13+(slot.u-1), c='u dev';
+      if(S.A&&S.A.rack===i&&S.A.u===slot.first)c+=' a';
+      if(S.B&&S.B.rack===i&&S.B.u===slot.first)c+=' b';
+      if(slot.u>1) c+=' multi';
+      var rng=slot.u>1 ? ('U'+slot.first+'–'+topU) : ('U'+slot.first);
+      var nm=(d.name||'Device')+(d.q>1?' '+slot.n:'');
+      var pdot='';
+      if(d.ports&&d.ports.length) d.ports.forEach(function(pt){
+        pdot+='<i style="background:'+cls(pt.c).col+'" title="'+pt.n+'x '+cls(pt.c).name+'"></i>'; });
+      h+='<div class="'+c+'" data-r="'+i+'" data-u="'+slot.first+'" style="height:'+hgt+'px" '
+        +'title="'+nm+' — '+rng+' ('+slot.u+'U)'+(d.psu?' · '+d.psu+' PSU · '+d.w+' W':'')+'">'
+        +'<span class="dv">'+nm+'</span>'
+        +'<span class="dr">'+rng+'</span>'
+        +(pdot?'<span class="dp">'+pdot+'</span>':'')
+        +'</div>';
+      u=slot.first;                          // jump the loop past the block we just drew
     }
-    h+='</div><div class="rail'+(S.path==='uf'?' on':'')+'"></div>';
-    h+='<div class="meta">'+used(i)+'/'+S.rackU+'U</div></div>';
+    h+='</div>';
+    h+='<div class="pdu" title="'+fr+' feed — '+zr.name+'" style="background:'+zr.col+';opacity:.85"></div>';
+    h+='</div>';
+    /* Right-edge tick: does THIS rack have a leg off the row (riser / MDA / patch field)?
+     * Drawn on the rack rather than in a settings list so the drawing answers the question
+     * you actually ask in the aisle — which cabinets leave the row, and how far. */
+    h+='<label class="riserbox" title="Run from this rack to the riser / patch panel">'
+      +'<input type="checkbox" data-riser="'+i+'"'+(r.riser?' checked':'')+'/> riser</label>';
+    h+='<div class="rail'+(S.path==='uf'?' on':'')+'"></div>';
+    var kw=rackKw(i), sp=rackPsuSplit(i);
+    var hot=!breakerOk(Math.max(sp.a,sp.b));
+    h+='<div class="meta">'+used(i)+'/'+S.rackU+'U · <span style="color:'+(hot?'#fb7185':'var(--faint)')+'">'
+      +kw.toFixed(1)+' kW</span></div>';
+    h+='<div class="meta" style="font-size:8.5px">'+fl+'&larr;'+zl.name+' · '+fr+'&larr;'+zr.name+'</div>';
+    h+='</div>';
   }
   document.getElementById('row').innerHTML=h;
+  drawCables();
+  drawLegend(); drawZones(); drawVerdict();
 }
+/* ---- THE CABLES, ACTUALLY DRAWN -------------------------------------------------------
+ * A colour key with nothing drawn under it is a legend for an absent picture. Every saved
+ * run is now a line on the elevation, and it TERMINATES WHERE IT TERMINATES: on the device
+ * block at that U, in the cabinet that holds it — not at the edge of a rack, not at a
+ * cabinet-level stub.
+ *
+ * The route drawn is the route COSTED. It leaves the device sideways, rises to the pathway
+ * (overhead above the cabinets, under-floor below them), runs the row, and drops into the
+ * far device. That is exactly the Manhattan path calc() bills for, so the picture and the
+ * number cannot disagree — the failure mode of every hand-drawn cable diagram.
+ *
+ * Geometry is read from the DOM after layout rather than recomputed, because the rack
+ * drawing is the source of truth for where a U physically is on screen. A device that
+ * spans 8U anchors at its bottom U, which is where you would land the cable anyway.
+ */
+function drawCables(){
+  var row=document.getElementById('row');
+  var old=row.querySelector('svg.cbl'); if(old) old.remove();
+  if(!S.saved.length) return;
+  var rb=row.getBoundingClientRect();
+  var W=Math.max(row.scrollWidth,row.clientWidth), H=Math.max(row.scrollHeight,row.clientHeight);
+  function anchor(rack,u){
+    var el=row.querySelector('[data-r="'+rack+'"][data-u="'+u+'"]');
+    if(!el) return null;
+    var b=el.getBoundingClientRect();
+    return {l:b.left-rb.left+row.scrollLeft, r:b.right-rb.left+row.scrollLeft,
+            y:b.top-rb.top+row.scrollTop+b.height/2, h:b.height};
+  }
+  /* One pathway lane per class so parallel runs of different media do not overprint into a
+   * single muddy line. Lanes are 3 px apart — enough to count them, tight enough to read as
+   * one bundle, which is what they are in the tray. */
+  var lanes={}, li=0;
+  S.saved.forEach(function(c){ if(!(c.c in lanes)) lanes[c.c]=li++; });
+  var frames=row.querySelectorAll('.frame');
+  var topY=1e9, botY=0;
+  Array.prototype.forEach.call(frames,function(f){
+    var b=f.getBoundingClientRect();
+    topY=Math.min(topY,b.top-rb.top+row.scrollTop);
+    botY=Math.max(botY,b.bottom-rb.top+row.scrollTop);
+  });
+  if(topY>1e8) return;
+  /* DRAW CAP. A full 576-GPU SU is over a thousand runs. Drawing every one turns the
+   * elevation into a solid block of colour and tells you nothing; drawing a subset and
+   * saying nothing would be a lie about coverage. So: draw up to the cap, and print how
+   * many of how many are on screen. The BOM always counts every run. */
+  var CAP=Number(S.drawCap||260), shown=0, total=S.saved.length;
+  var svg='<svg class="cbl" width="'+W+'" height="'+H+'" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible">';
+  if(S.view!=='power'){
+  S.saved.forEach(function(c,idx){
+    if(shown>=CAP) return;
+    var A=anchor(c.ra,parseInt(String(c.a).split('U')[1],10));
+    var B=anchor(c.rb,parseInt(String(c.b).split('U')[1],10));
+    if(!A||!B) return;
+    var C=cls(c.c), lane=lanes[c.c]*3;
+    var dim=c.bom?0.32:0.92;                 /* in the BOM = handled = recedes, same as the table */
+    var same=(c.ra===c.rb);
+    var d;
+    if(same){
+      /* Inside one cabinet the cable never sees the pathway — it runs the vertical manager
+       * at the side of the rack, which is the 400 mm the calculation already charges for. */
+      var x=A.r+6+lane;
+      d='M '+A.r+' '+A.y+' H '+x+' V '+B.y+' H '+B.r;
+    } else {
+      var up=(S.path==='oh');
+      var yPath=(up? topY-10-lane : botY+10+lane);
+      var ax=(c.ra<c.rb)? A.r : A.l, bx=(c.ra<c.rb)? B.l : B.r;
+      var axo=(c.ra<c.rb)? ax+5 : ax-5, bxo=(c.ra<c.rb)? bx-5 : bx+5;
+      d='M '+ax+' '+A.y+' H '+axo+' V '+yPath+' H '+bxo+' V '+B.y+' H '+bx;
+    }
+    svg+='<path d="'+d+'" fill="none" stroke="'+C.col+'" stroke-width="1.6" stroke-opacity="'+dim
+      +'" stroke-linejoin="round" stroke-linecap="round"/>';
+    /* Termination dots. The point of the whole exercise: you can see WHICH DEVICE each end
+     * lands on, not merely which cabinet. */
+    svg+='<circle cx="'+(same?A.r:(c.ra<c.rb?A.r:A.l))+'" cy="'+A.y+'" r="2.6" fill="'+C.col+'" fill-opacity="'+dim+'"/>';
+    svg+='<circle cx="'+(same?B.r:(c.ra<c.rb?B.l:B.r))+'" cy="'+B.y+'" r="2.6" fill="'+C.col+'" fill-opacity="'+dim+'"/>';
+    shown++;
+  });
+  }
+  /* POWER VIEW — where the cords go. Every PSU is a stub from the device to the rail on
+   * its side, A amber, B sky, so an installer can see which side each box is corded to
+   * without reading a table. Drawn as short stubs rather than full runs because that is
+   * physically what a power cord is: 1-2 m into the vertical PDU beside it. */
+  if(S.view!=='net'){
+    for(var ri=0;ri<S.cabs;ri++){
+      var mm=layout(ri), rr=S.racks[ri];
+      for(var uu=1;uu<=S.rackU;uu++){
+        var sl2=mm[uu]; if(!sl2||sl2.first!==uu) continue;
+        var dd=sl2.dev; if(!dd.psu) continue;
+        var an=anchor(ri,uu); if(!an) continue;
+        var aLeft=(rr.aSide==='l');
+        for(var pi=0;pi<dd.psu;pi++){
+          var isA=(pi%2===0), col=cls(isA?'pwrA':'pwrB').col;
+          var toLeft=(isA?aLeft:!aLeft);
+          var x0=toLeft?an.l:an.r, x1=toLeft?an.l-7:an.r+7;
+          var yy=an.y+(pi-(dd.psu-1)/2)*2.2;
+          svg+='<path d="M '+x0+' '+yy+' H '+x1+'" stroke="'+col+'" stroke-width="1.4" stroke-opacity=".9" fill="none"/>';
+        }
+      }
+    }
+  }
+  svg+='</svg>';
+  row.insertAdjacentHTML('afterbegin',svg);
+  var cn=document.getElementById('cblNote');
+  if(cn) cn.innerHTML = total? ('drawing <b>'+shown+'</b> of <b>'+total+'</b> runs'
+      +(shown<total?' &mdash; the cap keeps the elevation readable; the BOM counts every one'
+                   :' &mdash; all of them')) : '';
+}
+
+function drawLegend(){
+  var h='';
+  CLASS.forEach(function(c){
+    var on=(S.filter===c.id)?' on':'';
+    h+='<div class="lg'+on+'" data-f="'+c.id+'" title="'+c.note+'"><i style="background:'+c.col+'"></i>'+c.name+'</div>';
+  });
+  var el=document.getElementById('legend'); el.innerHTML=h;
+  Array.prototype.forEach.call(el.querySelectorAll('[data-f]'),function(b){
+    b.onclick=function(){ var id=b.getAttribute('data-f'); S.filter=(S.filter===id)?null:id; drawLegend(); drawList(); };
+  });
+}
+function drawZones(){
+  var h='';
+  for(var i=0;i<S.cabs;i++){
+    var r=S.racks[i], sp=rackPsuSplit(i);
+    h+='<div class="zc"><div class="zt">'+(r.net?'Network ':'Cabinet ')+(i+1)+' · '+rackKw(i).toFixed(1)+' kW</div>';
+    h+='<div style="font-size:10.5px;color:var(--faint)">A '+feedAmps(sp.a).toFixed(1)+' A · B '+feedAmps(sp.b).toFixed(1)+' A'
+      +(sp.single>0?' <span class="warnnote">· '+sp.single.toFixed(1)+' kW single-corded</span>':'')+'</div>';
+    h+='<div style="margin-top:5px"><span class="zchip" style="background:'+zone(r.zA).col+'"></span>A '+zone(r.zA).name
+      +' &nbsp; <span class="zchip" style="background:'+zone(r.zB).col+'"></span>B '+zone(r.zB).name+'</div></div>';
+  }
+  document.getElementById('zgrid').innerHTML=h;
+}
+function drawVerdict(){
+  var res=zoneLoss(), el=document.getElementById('pverdict');
+  if(!res.length){ el.innerHTML=''; return; }
+  var bad=res.filter(function(r){return !r.ok;});
+  var cap=S.pb*PWR.derate;
+  var cls = bad.length? (bad.some(function(b){return b.dark>0;})?'verdict bad':'verdict warn') : 'verdict';
+  var h='<div class="'+cls+'">';
+  if(!bad.length){
+    h+='<b>Survives the loss of any single fault zone.</b> Every rack keeps a feed and no surviving feed exceeds '
+      +cap.toFixed(0)+' A (80% of a '+S.pb+' A breaker).';
+  } else {
+    h+='<b>'+bad.length+' zone loss'+(bad.length===1?'':'es')+' would hurt.</b> This is the state a normal-day drawing does not show.';
+  }
+  h+='<div class="vt">';
+  res.forEach(function(r){
+    var mark = r.ok?'ok':(r.dark>0?'DARK':'OVER');
+    var colr = r.ok?'var(--ok)':(r.dark>0?'#fb7185':'var(--warn)');
+    h+='<div><span class="zchip" style="background:'+r.z.col+'"></span>lose <b>'+r.z.name+'</b> &rarr; worst surviving feed '
+      +r.worst.toFixed(1)+' kW = <b style="color:'+colr+'">'+r.amps.toFixed(1)+' A</b> of '+cap.toFixed(0)+' A'
+      +(r.rack!==null?' (cabinet '+(r.rack+1)+')':'')
+      +(r.dark>0?' · <b style="color:#fb7185">'+r.dark.toFixed(1)+' kW goes dark — both feeds in this zone</b>':'')
+      +(r.dropped>0?' · <span class="warnnote">'+r.dropped.toFixed(1)+' kW single-corded dropped</span>':'')
+      +' · '+mark+'</div>';
+  });
+  h+='</div></div>';
+  el.innerHTML=h;
+}
+
+/* ---- RENDER: RESULT + SAVE WITH A CLASS ---------------------------------------------- */
 function drawOut(){
   var o=document.getElementById('out'),n=document.getElementById('outN'),
       e=document.getElementById('outEnds'),c=document.getElementById('outCalc'),p=document.getElementById('outParts');
   if(!S.A||!S.B){
     o.classList.add('idle'); n.textContent='—';
     e.textContent=S.A?('A = '+lab(S.A)+'  ·  now click B'):'Click a U to set A, then another for B.';
-    c.textContent=''; p.innerHTML=''; return;
+    c.textContent='';
+    /* With A set, the overwhelmingly common B is "the uplink" — and that always lands in
+     * the rightmost rack. Offer it as one click rather than making someone hunt for the U. */
+    if(S.A && torTarget()!==null){
+      p.innerHTML='<div class="pc" style="border:0;background:none;display:flex;align-items:center">'
+        +'<button class="btn primary" id="upl">Uplink &rarr; rightmost rack (R'+(torTarget()+1)+'·U'+torU()+')</button></div>';
+      var ub=document.getElementById('upl');
+      if(ub) ub.onclick=function(){ S.B={rack:torTarget(),u:torU()}; drawRow(); drawOut(); };
+    } else p.innerHTML='';
+    return;
   }
   o.classList.remove('idle');
   var r=calc(S.A,S.B);
   n.innerHTML='<span style="color:var(--ok)">'+fmt(r.raw)+'</span>'
     +'<span style="font-size:17px;color:var(--faint);margin:0 9px">→ order</span>'
     +'<span style="color:var(--cool)">'+order(r.raw)+'</span>';
-  e.textContent=lab(S.A)+'  →  '+lab(S.B)+(r.same?'   (same cabinet)':'   via '+(S.path==='oh'?'overhead':'under floor'));
+  var da=devAt(S.A.rack,S.A.u), db=devAt(S.B.rack,S.B.u);
+  e.innerHTML=lab(S.A)+(da?' <span style="color:var(--faint)">'+da.name+'</span>':'')
+    +'  →  '+lab(S.B)+(db?' <span style="color:var(--faint)">'+db.name+'</span>':'')
+    +(r.same?'   (same cabinet)':'   via '+(S.path==='oh'?'overhead':'under floor'));
   c.textContent='computed path, then rounded up to the next stocked length';
   var h='';
   h+='<div class="pc"><div class="k">To manager</div><div class="v">'+fmt(r.lat)+'</div></div>';
@@ -250,67 +958,407 @@ function drawOut(){
     h+='<div class="pc"><div class="k">Across</div><div class="v">'+fmt(r.horiz)+'</div></div>';
     h+='<div class="pc"><div class="k">Rise B</div><div class="v">'+fmt(r.riseB)+'</div></div>';
   }
+  if(r.riser) h+='<div class="pc" style="border-color:var(--cool-dim)"><div class="k">To riser</div><div class="v">'+fmt(r.riser)+'</div></div>';
   h+='<div class="pc"><div class="k">Loops</div><div class="v">'+fmt(r.loop)+'</div></div>';
   h+='<div class="pc"><div class="k">Slack</div><div class="v">'+fmt(r.add)+'</div></div>';
-  h+='<div class="pc" style="border:0;background:none;display:flex;align-items:center"><button class="btn primary" id="save">Save length</button></div>';
+  h+='<div class="pc" style="border:0;background:none;display:flex;align-items:center;gap:6px">';
+  h+='<select id="lclass" style="padding:6px 8px">';
+  CLASS.filter(function(x){return !x.cord;}).forEach(function(x){
+    h+='<option value="'+x.id+'"'+(x.id===S.lastClass?' selected':'')+'>'+x.name+'</option>'; });
+  h+='</select><button class="btn primary" id="save">Save run</button></div>';
   p.innerHTML=h;
   document.getElementById('save').onclick=function(){
-    S.saved.push({a:lab(S.A),b:lab(S.B),raw:r.raw,same:r.same});
-    drawList();
+    var k=document.getElementById('lclass').value; S.lastClass=k;
+    S.saved.push({a:lab(S.A),b:lab(S.B),ra:S.A.rack,rb:S.B.rack,raw:r.raw,same:r.same,c:k,bom:false});
+    drawList(); drawBom();
   };
 }
+
+/* ---- RENDER: SCHEDULE ---------------------------------------------------------------- */
 function drawList(){
   var el=document.getElementById('list');
-  if(!S.saved.length){ el.innerHTML='<div class="empty">Nothing saved yet.</div>'; return; }
-  var h='<table><thead><tr><th>#</th><th>From</th><th>To</th><th>Computed</th><th>Order</th><th></th></tr></thead><tbody>';
+  if(!S.saved.length){ el.innerHTML='<div class="empty">Nothing saved yet. Click two U positions, pick a class, save.</div>'; return; }
+  var h='<table><thead><tr><th>#</th><th>Class</th><th>From</th><th>To</th><th>Computed</th><th>Order</th><th></th><th></th></tr></thead><tbody>';
   S.saved.forEach(function(s,i){
-    h+='<tr><td>'+(i+1)+'</td><td>'+s.a+'</td><td>'+s.b+'</td><td>'+fmt(s.raw)+'</td>';
-    h+='<td class="n">'+order(s.raw)+'</td><td><button class="btn" data-d="'+i+'" style="padding:1px 7px;font-size:10px">×</button></td></tr>';
+    if(S.filter && s.c!==S.filter) return;
+    var C=cls(s.c);
+    h+='<tr'+(s.bom?' class="inbom"':'')+'><td>'+(i+1)+'</td>';
+    h+='<td><span class="dot" style="background:'+C.col+'"></span>'+C.name+'</td>';
+    h+='<td>'+s.a+'</td><td>'+s.b+'</td><td>'+fmt(s.raw)+'</td><td class="n">'+order(s.raw)+'</td>';
+    h+='<td>'+(s.bom?'<span style="color:var(--faint);font-size:10.5px">in BOM</span>'
+      :'<button class="btn" data-bom="'+i+'" style="padding:1px 8px;font-size:10px">+ BOM</button>')+'</td>';
+    h+='<td><button class="btn" data-d="'+i+'" style="padding:1px 7px;font-size:10px">×</button></td></tr>';
   });
   h+='</tbody></table>';
-  var g={},tot=0;
-  S.saved.forEach(function(s){ var o=order(s.raw); g[o]=(g[o]||0)+1; tot+=s.raw; });
-  h+='<div class="tot"><span>'+S.saved.length+' runs</span>';
+  var g={},tot=0,inb=0;
+  S.saved.forEach(function(s){ var o=order(s.raw); g[o]=(g[o]||0)+1; tot+=s.raw; if(s.bom)inb++; });
+  h+='<div class="tot"><span>'+S.saved.length+' runs</span><span><b>'+inb+'</b> in BOM</span>';
   Object.keys(g).forEach(function(k){ h+='<span><b>'+g[k]+'</b> × '+k+'</span>'; });
   h+='<span>computed total <b>'+fmt(tot)+'</b></span></div>';
   el.innerHTML=h;
   Array.prototype.forEach.call(el.querySelectorAll('[data-d]'),function(b){
-    b.onclick=function(){ S.saved.splice(+b.getAttribute('data-d'),1); drawList(); };
+    b.onclick=function(){ S.saved.splice(+b.getAttribute('data-d'),1); drawList(); drawBom(); };
+  });
+  Array.prototype.forEach.call(el.querySelectorAll('[data-bom]'),function(b){
+    b.onclick=function(){ S.saved[+b.getAttribute('data-bom')].bom=true; drawList(); drawBom(); };
   });
 }
+
+/* ---- BOM ----------------------------------------------------------------------------
+ * Two sources, deliberately separate line groups:
+ *   DATA  — every run you added, merged by (class, ordered length).
+ *   POWER — derived, not clicked: one cord per PSU per device, split A/B by side. You do
+ *           not draw power cords one at a time in real life and you should not have to
+ *           here; if a rack holds 18 dual-PSU trays that is 36 cords and the BOM says so.
+ */
+function bomRows(){
+  var rows=[], g={};
+  S.saved.filter(function(s){return s.bom;}).forEach(function(s){
+    var o=stock(s.raw), k=s.c+'|'+o;
+    if(!g[k]) g[k]={kind:'data',cls:cls(s.c),len:o,n:0,raw:0};
+    g[k].n++; g[k].raw+=s.raw;
+  });
+  Object.keys(g).forEach(function(k){ rows.push(g[k]); });
+  var cordA=0,cordB=0;
+  for(var i=0;i<S.cabs;i++){
+    var r=S.racks[i];
+    r.devs.forEach(function(d){
+      var psu=d.psu||0, tot=(d.q||0)*psu;
+      if(!tot) return;
+      if(psu>=2){ cordA+=Math.ceil(tot/2); cordB+=Math.floor(tot/2); } else { cordA+=tot; }
+    });
+  }
+  if(cordA) rows.push({kind:'power',cls:cls('pwrA'),len:2,n:cordA,raw:cordA*2000});
+  if(cordB) rows.push({kind:'power',cls:cls('pwrB'),len:2,n:cordB,raw:cordB*2000});
+  rows.sort(function(a,b){ return a.cls.name===b.cls.name ? a.len-b.len : a.cls.name.localeCompare(b.cls.name); });
+  return rows;
+}
+function drawBom(){
+  var el=document.getElementById('bom'), rows=bomRows();
+  if(!rows.length){ el.innerHTML='<div class="empty">Add runs from the schedule. Power cords appear automatically from the PSU counts.</div>'; return; }
+  var h='<table><thead><tr><th>Line</th><th>Class</th><th>Length</th><th>Qty</th><th>Ordered</th><th>Computed</th><th>Slack</th></tr></thead><tbody>';
+  var q=0,om=0,rm=0;
+  rows.forEach(function(r,i){
+    var ord=r.len*1000*r.n; q+=r.n; om+=ord; rm+=r.raw;
+    h+='<tr><td>'+(i+1)+'</td><td><span class="dot" style="background:'+r.cls.col+'"></span>'+r.cls.name
+      +(r.kind==='power'?' <span style="color:var(--faint);font-size:10px">derived</span>':'')+'</td>';
+    h+='<td class="n">'+r.len+' m</td><td class="n">'+r.n+'</td><td>'+fmt(ord)+'</td><td>'+fmt(r.raw)+'</td>';
+    h+='<td>'+(ord>0?((ord-r.raw)/ord*100).toFixed(0):'0')+'%</td></tr>';
+  });
+  h+='</tbody></table><div class="tot"><span>'+rows.length+' SKUs</span><span><b>'+q+'</b> pieces</span>'
+    +'<span>ordered <b>'+fmt(om)+'</b></span><span>slack carried <b>'+(om>0?((om-rm)/om*100).toFixed(0):'0')+'%</b></span></div>';
+  el.innerHTML=h;
+}
+
+/* ---- XLS EXPORT ---------------------------------------------------------------------
+ * SpreadsheetML 2003 (.xls), not CSV and not a library. Reasons, in order:
+ *  - Excel opens it natively with real sheets, types and column widths; CSV loses all three
+ *    and mangles a leading zero in a part number.
+ *  - It is plain XML we can build in a string, so this file keeps its one-file, no-CDN,
+ *    works-off-a-USB-stick property. A 400 KB xlsx writer would break the only rule the
+ *    tool has.
+ * Three sheets, because the reader is three different people: BOM for procurement, the
+ * schedule for whoever pulls and labels, power for whoever signs off the feeds.
+ */
+function xmlEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]; }); }
+function cell(v,t){ t=t||'String';
+  return '<Cell><Data ss:Type="'+t+'">'+xmlEsc(v)+'</Data></Cell>'; }
+function rowXml(cells){ return '<Row>'+cells.join('')+'</Row>'; }
+function sheet(name,cols,rows){
+  return '<Worksheet ss:Name="'+xmlEsc(name)+'"><Table>'
+    + cols.map(function(w){return '<Column ss:Width="'+w+'"/>';}).join('')
+    + rows.join('') + '</Table></Worksheet>';
+}
+/* ---- SVG EXPORT — THE DRAWING YOU HAND TO DELIVERY -------------------------------------
+ * The screen view is for thinking. This is for the person on site with a pallet of kit and
+ * no context, and it is built from the MODEL rather than scraped from the DOM so it is a
+ * clean standalone file: opens in a browser, imports into Visio/Illustrator/AutoCAD, prints.
+ *
+ * It answers three questions in one sheet, which is the whole reason it exists:
+ *   WHERE DOES IT GO   — every device at its real U height, named, with its U range.
+ *   WHERE DOES IT PLUG — PDU rails coloured by fault zone, A/B side per rack, cord stubs
+ *                        per PSU, and the region's actual input connector in the title block.
+ *   WHAT LANDS WHERE   — every run drawn from device to device, coloured by class.
+ *
+ * Nothing is silently omitted: the title block states how many runs are drawn out of how
+ * many exist, the same way the screen does.
+ */
+function exportSvg(){
+  var UH=12, RW=132, GAP=26, PAD=34, TOP=196, LEG=86;
+  var PATH_Y=156;   /* tray/pathway band — below the title block, above the cabinets */
+  var H=TOP+S.rackU*UH+LEG+PAD+34, W=PAD*2+S.cabs*RW+(S.cabs-1)*GAP;
+  var R=region(S.region);
+  var e=xmlEsc;
+  function x0(i){ return PAD+i*(RW+GAP); }
+  function yU(u){ return TOP+(S.rackU-u)*UH; }
+  var o=[];
+  o.push('<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" font-family="Helvetica,Arial,sans-serif">');
+  o.push('<rect width="'+W+'" height="'+H+'" fill="#0a0e14"/>');
+  /* title block */
+  var kwTot=0; for(var i=0;i<S.cabs;i++) kwTot+=rackKw(i);
+  o.push('<text x="'+PAD+'" y="30" fill="#e6edf3" font-size="17" font-weight="700">'+e(PRESETS[S.preset]?PRESETS[S.preset].label:'Rack elevation')+'</text>');
+  o.push('<text x="'+PAD+'" y="50" fill="#8a9bb0" font-size="11">'+e(S.cabs+' cabinets · '+S.rackU+'U · '+kwTot.toFixed(1)+' kW total · '+S.pv+'V 3ph · '+S.feeds+' feed pair'+(S.feeds===1?'':'s')+' per rack · breaker '+S.pb+'A at 80%')+'</text>');
+  o.push('<text x="'+PAD+'" y="66" fill="#8a9bb0" font-size="11">'+e('Region: '+R.name+' · rack input '+R.input[0]+' · outlets '+R.outlet)+'</text>');
+  var drawn=0, noteIdx=o.length;
+  o.push('');   /* placeholder — the runs line is written once the bundles are counted */
+  o.push('<text x="'+(W-PAD)+'" y="30" fill="#5b6b7e" font-size="10" text-anchor="end">'+e(new Date().toISOString().slice(0,10))+'</text>');
+  /* racks */
+  for(var i=0;i<S.cabs;i++){
+    var r=S.racks[i], X=x0(i), m=layout(i);
+    var zl=zone(r.aSide==='l'?r.zA:r.zB), zr=zone(r.aSide==='l'?r.zB:r.zA);
+    var fl=(r.aSide==='l'?'A':'B'), fr=(r.aSide==='l'?'B':'A');
+    o.push('<text x="'+(X+RW/2)+'" y="'+(TOP-16)+'" fill="#e6edf3" font-size="11" font-weight="600" text-anchor="middle">'+e((r.net?'NET ':'CAB ')+(i+1))+'</text>');
+    o.push('<text x="'+(X+RW/2)+'" y="'+(TOP-5)+'" fill="#8a9bb0" font-size="9" text-anchor="middle">'+e(rackKw(i).toFixed(1)+' kW · '+fl+'←'+zl.name+' '+fr+'←'+zr.name)+'</text>');
+    o.push('<rect x="'+X+'" y="'+TOP+'" width="'+RW+'" height="'+(S.rackU*UH)+'" fill="#080d13" stroke="#1e2a38"/>');
+    /* PDU rails, coloured by zone, on their real sides */
+    o.push('<rect x="'+(X-7)+'" y="'+TOP+'" width="5" height="'+(S.rackU*UH)+'" fill="'+zl.col+'" opacity=".85"/>');
+    o.push('<rect x="'+(X+RW+2)+'" y="'+TOP+'" width="5" height="'+(S.rackU*UH)+'" fill="'+zr.col+'" opacity=".85"/>');
+    o.push('<text x="'+(X-4)+'" y="'+(TOP-5)+'" fill="'+zl.col+'" font-size="8" text-anchor="middle">'+fl+'</text>');
+    o.push('<text x="'+(X+RW+5)+'" y="'+(TOP-5)+'" fill="'+zr.col+'" font-size="8" text-anchor="middle">'+fr+'</text>');
+    for(var u=1;u<=S.rackU;u++){
+      var sl=m[u];
+      if(!sl){ o.push('<line x1="'+X+'" y1="'+yU(u)+'" x2="'+(X+RW)+'" y2="'+yU(u)+'" stroke="#0d141d"/>'); continue; }
+      if(sl.first!==u) continue;
+      var hgt=sl.u*UH-1, d=sl.dev, top=yU(sl.first+sl.u-1);
+      o.push('<rect x="'+(X+1)+'" y="'+top+'" width="'+(RW-2)+'" height="'+hgt+'" fill="'+(sl.u>1?'#22303f':'#1a2632')+'" stroke="#2b3b4d"/>');
+      var nm=(d.name||'Device')+(d.q>1?' '+sl.n:'');
+      o.push('<text x="'+(X+5)+'" y="'+(top+Math.min(hgt,UH)-3)+'" fill="#c6d3e0" font-size="'+(sl.u>1?9:7.5)+'">'+e(nm.slice(0,26))+'</text>');
+      o.push('<text x="'+(X+RW-4)+'" y="'+(top+8)+'" fill="#5b6b7e" font-size="7" text-anchor="end">'+e(sl.u>1?('U'+sl.first+'-'+(sl.first+sl.u-1)):('U'+sl.first))+'</text>');
+      /* cord stubs — which side each PSU lands on */
+      if(d.psu){
+        for(var k=0;k<d.psu;k++){
+          var isA=(k%2===0), toLeft=(isA?(r.aSide==='l'):(r.aSide!=='l'));
+          var yy=top+hgt/2+(k-(d.psu-1)/2)*2.4;
+          var xa=toLeft?X:(X+RW), xb=toLeft?(X-7):(X+RW+7);
+          o.push('<line x1="'+xa+'" y1="'+yy+'" x2="'+xb+'" y2="'+yy+'" stroke="'+cls(isA?'pwrA':'pwrB').col+'" stroke-width="1.2"/>');
+        }
+      }
+    }
+  }
+  /* ---- BUNDLES, NOT SPAGHETTI ---------------------------------------------------------
+   * The first render drew 260 individual strands and they stacked into one solid band of
+   * colour that told you nothing. It is also not how the industry draws it: NVIDIA's own
+   * reference figures show ONE line labelled "18x 400G", because a bundle is what leaves
+   * the rack and a bundle is what gets pulled.
+   *
+   * Runs merge by (source rack, source U, destination rack, destination U, class) and draw
+   * once with a count. Termination is unchanged — each bundle still lands on the exact
+   * device at the exact U, which is the point of the drawing. The BOM still counts every
+   * individual run; this is a rendering decision, not a data one.
+   */
+  var bmap={};
+  S.saved.forEach(function(c){
+    var ua=parseInt(String(c.a).split('U')[1],10), ub=parseInt(String(c.b).split('U')[1],10);
+    if(!ua||!ub) return;
+    /* CROSS-RACK runs aggregate to RACK level, not U level. Eighteen trays each sending
+     * eight links to the same leaf is one pull of 144 in the tray, and drawing it as 18
+     * lines reproduced the slab this was meant to fix. Same-rack runs stay per-U because
+     * inside a cabinet the U is the useful information. This is the level NVIDIA's own
+     * figures draw at: "144x 400G" on one line, and the count carries the detail. */
+    var k, ent;
+    if(c.ra===c.rb){ k=c.ra+'|'+ua+'|'+c.rb+'|'+ub+'|'+c.c; ent={ra:c.ra,ua:ua,rb:c.rb,ub:ub,c:c.c,n:0}; }
+    else { k=c.ra+'|*|'+c.rb+'|'+ub+'|'+c.c; ent={ra:c.ra,ua:null,rb:c.rb,ub:ub,c:c.c,n:0,agg:true}; }
+    if(!bmap[k]) bmap[k]=ent;
+    if(bmap[k].ua===null && ua){ bmap[k].uaLo=Math.min(bmap[k].uaLo||99,ua); bmap[k].uaHi=Math.max(bmap[k].uaHi||0,ua); }
+    bmap[k].n++;
+  });
+  var bundles=Object.keys(bmap).map(function(k){return bmap[k];});
+  var lanes={}, li=0;
+  bundles.forEach(function(b){ if(!(b.c in lanes)) lanes[b.c]=li++; });
+  drawn=bundles.length;
+  bundles.forEach(function(b,bi){
+    var C=cls(b.c), lane=lanes[b.c]*9 + (bi%9)*1.4;
+    /* An aggregated bundle leaves the rack at the mid-point of the U span it came from —
+     * which is where the vertical manager takes it anyway. */
+    var uaEff = (b.ua!==null) ? b.ua : Math.round(((b.uaLo||1)+(b.uaHi||S.rackU))/2);
+    var Xa=x0(b.ra), Xb=x0(b.rb), ya=yU(uaEff)+UH/2, yb=yU(b.ub)+UH/2;
+    var d, lx, ly2;
+    if(b.ra===b.rb){ var xv=Xa+RW+11+(lane%14); d='M '+(Xa+RW)+' '+ya+' H '+xv+' V '+yb+' H '+(Xb+RW); lx=xv+9; ly2=(ya+yb)/2; }
+    else {
+      var yp=PATH_Y-lane, l2r=(b.ra<b.rb);
+      var ax=l2r?(Xa+RW):Xa, bx=l2r?Xb:(Xb+RW);
+      d='M '+ax+' '+ya+' H '+(ax+(l2r?6:-6))+' V '+yp+' H '+(bx+(l2r?-6:6))+' V '+yb+' H '+bx;
+      /* Stagger along the run: every bundle labelled at the midpoint put 22 labels in
+       * the same 40 px. Spread them across the span instead. */
+      var t=0.18+((bi%7)/7)*0.64;
+      lx=ax+(bx-ax)*t; ly2=yp-2.5;
+    }
+    o.push('<path d="'+d+'" fill="none" stroke="'+C.col+'" stroke-width="1.3" stroke-opacity=".9"/>');
+    if(b.n>1) o.push('<text x="'+lx+'" y="'+ly2+'" fill="'+C.col+'" font-size="8.5" font-weight="600" text-anchor="middle">'+b.n+'x</text>');
+  });
+  o[noteIdx]='<text x="'+PAD+'" y="82" fill="#5b6b7e" font-size="10">'
+    +e(drawn+' bundles drawn, carrying all '+S.saved.length+' runs (cross-rack bundles aggregate per rack, per class) · '
+      +(S.cooling==='dlc'?'DIRECT LIQUID COOLED — manifolds and hoses share the rear channel with the PDUs':'air cooled')
+      +' · sizing-grade, not an electrical stamp · 95% confidence cap')+'</text>';
+  /* ---- SMART-HANDS MANIFEST -------------------------------------------------------
+   * The person installing this is not reading the whole row. They are standing at ONE
+   * cabinet with a box of optics asking two questions: what leaves here, and where does
+   * it land. So each cabinet gets its own line under it, in plain counts, naming the
+   * destination rack. This is the part of the drawing that gets pointed at.
+   */
+  var manY=TOP+S.rackU*UH+14;
+  for(var mi=0;mi<S.cabs;mi++){
+    var outs={};
+    S.saved.forEach(function(c){
+      if(c.ra!==mi || c.rb===mi) return;
+      var k=c.c+'>'+c.rb; outs[k]=(outs[k]||0)+1;
+    });
+    var keys=Object.keys(outs);
+    var mx=x0(mi)+RW/2;
+    if(!keys.length){
+      o.push('<text x="'+mx+'" y="'+manY+'" fill="#3d4a5c" font-size="7.5" text-anchor="middle">no runs leave this rack</text>');
+      continue;
+    }
+    keys.sort(function(a,b){return outs[b]-outs[a];});
+    keys.slice(0,4).forEach(function(k,ki){
+      var parts=k.split('>'), C=cls(parts[0]), dest=+parts[1];
+      var dn=(S.racks[dest]&&S.racks[dest].net?'NET ':'CAB ')+(dest+1);
+      o.push('<text x="'+mx+'" y="'+(manY+ki*9)+'" fill="'+C.col+'" font-size="7.5" text-anchor="middle">'
+        +e(outs[k]+'x '+C.name.replace('Fiber — ','').replace('Ethernet — ','')+' \u2192 '+dn)+'</text>');
+    });
+  }
+
+  /* legend */
+  var ly=TOP+S.rackU*UH+26+34, lx=PAD;
+  o.push('<text x="'+PAD+'" y="'+(ly-9)+'" fill="#8a9bb0" font-size="10" font-weight="600">KEY</text>');
+  CLASS.forEach(function(c){
+    o.push('<rect x="'+lx+'" y="'+(ly-4)+'" width="14" height="3" fill="'+c.col+'"/>');
+    o.push('<text x="'+(lx+19)+'" y="'+ly+'" fill="#8a9bb0" font-size="9.5">'+e(c.name)+'</text>');
+    lx+=Math.max(96,c.name.length*6.1+34);
+    if(lx>W-160){ lx=PAD; ly+=15; }
+  });
+  ZONES.forEach(function(z){
+    var inuse=S.racks.some(function(r){return r.zA===z.id||r.zB===z.id;});
+    if(!inuse) return;
+    o.push('<rect x="'+lx+'" y="'+(ly-7)+'" width="9" height="9" fill="'+z.col+'"/>');
+    o.push('<text x="'+(lx+14)+'" y="'+ly+'" fill="#8a9bb0" font-size="9.5">'+e('Fault zone '+z.name)+'</text>');
+    lx+=104; if(lx>W-140){ lx=PAD; ly+=15; }
+  });
+  o.push('</svg>');
+  var blob=new Blob([o.join('\n')],{type:'image/svg+xml'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='rack-install-map-'+new Date().toISOString().slice(0,10)+'.svg';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },0);
+}
+
+function exportXls(){
+  var d=new Date().toISOString().slice(0,10);
+  var bom=bomRows();
+  var s1=[rowXml([cell('Line'),cell('Class'),cell('Kind'),cell('Ordered length (m)'),cell('Qty'),
+                  cell('Ordered total (m)'),cell('Computed total (m)'),cell('Slack %')])];
+  bom.forEach(function(r,i){
+    var ord=r.len*r.n;
+    s1.push(rowXml([cell(i+1,'Number'),cell(r.cls.name),cell(r.kind),cell(r.len,'Number'),cell(r.n,'Number'),
+      cell(ord.toFixed(2),'Number'),cell((r.raw/1000).toFixed(2),'Number'),
+      cell(ord>0?(((ord*1000-r.raw)/(ord*1000))*100).toFixed(0):'0','Number')]));
+  });
+  var s2=[rowXml([cell('#'),cell('Class'),cell('From'),cell('To'),cell('Computed (m)'),cell('Order (m)'),cell('In BOM')])];
+  S.saved.forEach(function(r,i){
+    s2.push(rowXml([cell(i+1,'Number'),cell(cls(r.c).name),cell(r.a),cell(r.b),
+      cell((r.raw/1000).toFixed(2),'Number'),cell(stock(r.raw)||'>50','Number'),cell(r.bom?'yes':'no')]));
+  });
+  var s3=[rowXml([cell('Cabinet'),cell('kW'),cell('A feed (A)'),cell('B feed (A)'),cell('A zone'),cell('B zone'),
+                  cell('A side'),cell('Single-corded kW')])];
+  for(var i=0;i<S.cabs;i++){
+    var r=S.racks[i], sp=rackPsuSplit(i);
+    s3.push(rowXml([cell((r.net?'Network ':'Cabinet ')+(i+1)),cell(rackKw(i).toFixed(2),'Number'),
+      cell(feedAmps(sp.a).toFixed(1),'Number'),cell(feedAmps(sp.b).toFixed(1),'Number'),
+      cell(zone(r.zA).name),cell(zone(r.zB).name),cell(r.aSide==='l'?'left':'right'),
+      cell(sp.single.toFixed(2),'Number')]));
+  }
+  s3.push(rowXml([cell('')]));
+  s3.push(rowXml([cell('SINGLE ZONE LOSS — worst surviving feed per zone')]));
+  s3.push(rowXml([cell('Zone'),cell('Worst surviving kW'),cell('Amps'),cell('Breaker limit (A)'),
+                  cell('Dark kW'),cell('Dropped kW'),cell('Verdict')]));
+  zoneLoss().forEach(function(z){
+    s3.push(rowXml([cell(z.z.name),cell(z.worst.toFixed(2),'Number'),cell(z.amps.toFixed(1),'Number'),
+      cell((S.pb*PWR.derate).toFixed(0),'Number'),cell(z.dark.toFixed(2),'Number'),
+      cell(z.dropped.toFixed(2),'Number'),cell(z.ok?'survives':(z.dark>0?'RACKS GO DARK':'OVER BREAKER'))]));
+  });
+  s3.push(rowXml([cell('')]));
+  s3.push(rowXml([cell('Basis'),cell('per-phase A = kW*1000 / (V*sqrt(3)*PF); breaker at 80% continuous; V='
+    +S.pv+' PF='+S.pf+' breaker='+S.pb+'A. Sizing-grade, not an electrical stamp.')]));
+
+  var wb='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n'
+   +'<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" '
+   +'xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+   + sheet('BOM',[46,150,60,110,50,120,120,60],s1)
+   + sheet('Cable schedule',[36,150,80,80,110,90,60],s2)
+   + sheet('Power & zones',[110,60,90,90,80,80,70,120],s3)
+   + '</Workbook>';
+  var blob=new Blob([wb],{type:'application/vnd.ms-excel'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='rack-cable-power-'+d+'.xls';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },0);
+}
+
+/* ---- RENDER: DEVICE EDITOR ------------------------------------------------------------ */
 function drawDevs(){
-  document.getElementById('lEdit').textContent='Cabinet '+(S.edit+1);
-  var l=S.racks[S.edit]||[], h='';
+  var r=S.racks[S.edit];
+  document.getElementById('lEdit').textContent=(r.net?'Network ':'Cabinet ')+(S.edit+1);
+  var l=r.devs||[], h='';
   l.forEach(function(d,i){
-    h+='<div class="devrow"><input type="number" min="1" max="52" value="'+d.q+'" data-f="q" data-i="'+i+'"/>';
+    h+='<div class="devrow">';
+    h+='<input type="number" min="1" max="52" value="'+d.q+'" data-f="q" data-i="'+i+'" title="quantity"/>';
     h+='<span style="color:var(--faint);font-size:12px">×</span>';
-    h+='<input type="number" min="1" max="10" value="'+d.u+'" data-f="u" data-i="'+i+'"/>';
+    h+='<input type="number" min="1" max="12" value="'+d.u+'" data-f="u" data-i="'+i+'" title="U each"/>';
     h+='<span style="color:var(--faint);font-size:12px">U</span>';
+    h+='<input type="text" value="'+(d.name||'').replace(/"/g,'&quot;')+'" data-f="name" data-i="'+i+'" title="name"/>';
+    h+='<input type="number" min="0" max="8" value="'+(d.psu||0)+'" data-f="psu" data-i="'+i+'" style="width:52px" title="PSUs per device"/>';
+    h+='<span style="color:var(--faint);font-size:12px">PSU</span>';
+    h+='<span class="psu">';
+    for(var k=0;k<(d.psu||0);k++) h+='<i style="background:'+(k%2?cls('pwrB').col:cls('pwrA').col)+'"></i>';
+    h+='</span>';
+    h+='<input type="number" min="0" max="30000" step="50" value="'+(d.w||0)+'" data-f="w" data-i="'+i+'" style="width:74px" title="watts per device"/>';
+    h+='<span style="color:var(--faint);font-size:12px">W</span>';
+    if(d.ports&&d.ports.length){
+      h+='<span style="margin-left:6px">';
+      d.ports.forEach(function(pt){ h+='<span class="dot" style="background:'+cls(pt.c).col+'" title="'+cls(pt.c).name+'"></span>'
+        +'<span style="font-size:10.5px;color:var(--faint);margin-right:7px">'+pt.n+'</span>'; });
+      h+='</span>';
+    }
     h+='<button class="btn" data-x="'+i+'" style="padding:3px 8px;font-size:11px">×</button></div>';
   });
   document.getElementById('devs').innerHTML=h||'<div class="empty">Empty cabinet.</div>';
-  var d=document.getElementById('devs');
-  Array.prototype.forEach.call(d.querySelectorAll('[data-f]'),function(el){
-    el.onchange=function(){ S.racks[S.edit][+el.getAttribute('data-i')][el.getAttribute('data-f')]=Math.max(1,+el.value||1); all(); };
+  var dv=document.getElementById('devs');
+  Array.prototype.forEach.call(dv.querySelectorAll('[data-f]'),function(el){
+    el.onchange=function(){
+      var f=el.getAttribute('data-f'), i=+el.getAttribute('data-i');
+      S.racks[S.edit].devs[i][f] = (f==='name') ? el.value : Math.max(f==='psu'||f==='w'?0:1, +el.value||0);
+      all();
+    };
   });
-  Array.prototype.forEach.call(d.querySelectorAll('[data-x]'),function(b){
-    b.onclick=function(){ S.racks[S.edit].splice(+b.getAttribute('data-x'),1); all(); };
+  Array.prototype.forEach.call(dv.querySelectorAll('[data-x]'),function(b){
+    b.onclick=function(){ S.racks[S.edit].devs.splice(+b.getAttribute('data-x'),1); all(); };
   });
 }
-function all(){ drawRow(); drawOut(); drawDevs(); drawList(); }
+function all(){ drawRow(); drawOut(); drawDevs(); drawList(); drawBom(); }
 
+/* ---- WIRING ---------------------------------------------------------------------------- */
+function segSet(id,v){
+  var el=document.getElementById(id); if(!el) return;
+  Array.prototype.forEach.call(el.querySelectorAll('button'),function(x){
+    x.classList.toggle('on', x.getAttribute('data-v')===v); });
+}
 function seg(id,key,after){
   var el=document.getElementById(id);
   el.onclick=function(e){ var b=e.target.closest('button'); if(!b)return;
     Array.prototype.forEach.call(el.querySelectorAll('button'),function(x){x.classList.remove('on');});
     b.classList.add('on'); S[key]=b.getAttribute('data-v'); if(after)after(); all(); };
 }
-function rng(id,key,lbl){
+function rng(id,key,lbl,scale){
   var el=document.getElementById(id);
-  el.oninput=function(){ S[key]=+el.value; if(lbl)document.getElementById(lbl).textContent=el.value; all(); };
+  el.oninput=function(){ S[key]=scale?(+el.value*scale):(+el.value);
+    if(lbl)document.getElementById(lbl).textContent=scale?S[key].toFixed(2):el.value; all(); };
 }
+document.getElementById('preset').onchange=function(){ S.preset=this.value; applyPreset(this.value); all(); };
 document.getElementById('cabs').oninput=function(){
-  S.cabs=+this.value; document.getElementById('lCabs').textContent=S.cabs; S.racks=mk(S.cabs);
+  S.cabs=+this.value; document.getElementById('lCabs').textContent=S.cabs; S.racks=mk(S.cabs); applyPolicy();
   if(S.edit>=S.cabs)S.edit=S.cabs-1;
   if(S.A&&S.A.rack>=S.cabs)S.A=null; if(S.B&&S.B.rack>=S.cabs)S.B=null; all();
 };
@@ -319,10 +1367,31 @@ document.getElementById('rackU').onchange=function(){
   if(S.A&&S.A.u>S.rackU)S.A=null; if(S.B&&S.B.u>S.rackU)S.B=null; all();
 };
 document.getElementById('pitch').onchange=function(){ S.pitch=+this.value; all(); };
-seg('path','path'); seg('units','units');
+document.getElementById('pv').onchange=function(){ S.pv=+this.value; all(); };
+document.getElementById('feeds').onchange=function(){ S.feeds=+this.value; all(); };
+document.getElementById('region').onchange=function(){
+  S.region=this.value; var R=region(S.region);
+  S.pv=R.v; var pvs=document.getElementById('pv');
+  if(pvs){ var has=false; Array.prototype.forEach.call(pvs.options,function(o){ if(+o.value===R.v) has=true; });
+    if(has) pvs.value=String(R.v); }
+  all();
+};
+seg('view','view');
+document.getElementById('riserM').oninput=function(){
+  S.riserM=+this.value; document.getElementById('lRiser').textContent=this.value; all(); };
+seg('riserSeg','riserSegV',function(){ S.riserOn=(S.riserSegV==='on'); });
+document.getElementById('pb').onchange=function(){ S.pb=+this.value; all(); };
+rng('pf','pf','lPf',0.01);
+seg('path','path'); seg('units','units'); seg('tor','tor');
+seg('aside','aside',applyPolicy); seg('zsplit','zsplit',applyPolicy);
 rng('off','off','lOff'); rng('slack','slack','lSlack'); rng('loop','loop','lLoop');
 
+document.getElementById('row').onchange=function(e){
+  var rb=e.target.closest('[data-riser]'); if(!rb) return;
+  S.racks[+rb.getAttribute('data-riser')].riser=rb.checked; all();
+};
 document.getElementById('row').onclick=function(e){
+  if(e.target.closest('[data-riser]')) return;          // the tick is not a U click
   var l=e.target.closest('[data-l]'); if(l){ S.edit=+l.getAttribute('data-l'); all(); return; }
   var s=e.target.closest('[data-u]'); if(!s) return;
   var p={rack:+s.getAttribute('data-r'),u:+s.getAttribute('data-u')};
@@ -331,17 +1400,26 @@ document.getElementById('row').onclick=function(e){
   else { S.B=p; }
   drawRow(); drawOut();
 };
-document.getElementById('add').onclick=function(){
-  S.racks[S.edit].push({q:Math.max(1,+document.getElementById('dQty').value||1),
-                        u:Math.max(1,+document.getElementById('dU').value||1)}); all();
+/* The hand-build controls (add / apply-to-all / clear) were removed with the custom rack
+ * builder — reference architectures only until those are right. Their handlers went with
+ * them; leaving them bound to absent elements threw on load and blanked the whole row,
+ * which is how this note came to be written. */
+document.getElementById('xls').onclick=exportXls;
+{ var tt=document.getElementById('toTop');
+  tt.onclick=function(){ window.scrollTo({top:0,behavior:'smooth'}); };
+  var onScroll=function(){ tt.style.display = (window.scrollY>500) ? 'block' : 'none'; };
+  window.addEventListener('scroll',onScroll,{passive:true}); onScroll(); }
+document.getElementById('svg').onclick=exportSvg;
+document.getElementById('bomAll').onclick=function(){
+  S.saved.forEach(function(s){ s.bom=true; }); drawList(); drawBom();
 };
-document.getElementById('all').onclick=function(){
-  var src=JSON.stringify(S.racks[S.edit]);
-  for(var i=0;i<S.cabs;i++) S.racks[i]=JSON.parse(src); all();
-};
-document.getElementById('clr').onclick=function(){ S.racks[S.edit]=[]; all(); };
 
-all(); drawList();
+/* Open on the NVL72 pod: it is the layout most people arrive here to plan, it exercises
+ * every feature at once (liquid, 0U PDUs both sides, dual-corded trays, IB + fibre + OOB),
+ * and an empty grid teaches nobody what the tool is for. */
+document.getElementById('preset').value='nv576';
+applyPreset('nv576');
+all();
 })();
 </script>
 </body>

@@ -1,6 +1,7 @@
 # Documentation
 
-Four documents. Read them in this order if you are new; jump straight to the one you need if you are not.
+Five documents. Read them in this order if you are new; jump straight to the one you need if you are not.
+The fifth covers the companion install map, which is scoped to standardized deployments rather than to the generic sizer.
 
 | Document | Answers |
 |---|---|
@@ -8,6 +9,8 @@ Four documents. Read them in this order if you are new; jump straight to the one
 | **[MODEL-AND-FLOW.md](MODEL-AND-FLOW.md)** | How does a GPU target become a floor plan? What decides nodes per rack? |
 | **[BUSINESS-RULES.md](BUSINESS-RULES.md)** | What does it refuse to let you build, and on what authority? All 21 rules. |
 | **[BOM-AND-ORDERING.md](BOM-AND-ORDERING.md)** | What comes out the other end, and how does it reach a purchase order? |
+| **[INSTALL-MAP.md](INSTALL-MAP.md)** | Where does it physically go, plug in and land — the cabling breakout for standardized deployments. |
+| **[AI-PROMPTS.md](AI-PROMPTS.md)** | Working with these tools alongside an AI assistant — prompts that ask for the basis, not just the number. |
 
 ## The one idea underneath all four
 

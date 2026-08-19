@@ -22,6 +22,31 @@ every cable with its length and endpoint, and a SKU request sheet to send the ve
 | **[docs/BUSINESS-RULES.md](docs/BUSINESS-RULES.md)** | All 21 consistency rules and what they refuse |
 | **[docs/BOM-AND-ORDERING.md](docs/BOM-AND-ORDERING.md)** | The BOM, its summary, and the `penguin-bom/1` order seam |
 | **[docs/VENDOR-DOCS.md](docs/VENDOR-DOCS.md)** | All 21 Penguin GPU datasheets — the citation trail |
+| **[docs/INSTALL-MAP.md](docs/INSTALL-MAP.md)** | The cabling breakout for standardized deployments — power, fault zones, bundles, SVG |
+
+## Install Map — the cabling breakout
+
+**[`cable.html`](cable.html)** is a companion page, not a second sizer.
+
+The sizer is generic: any GPU count, any architecture, any rack feed. The install map takes
+a **standardized deployment** — a published reference architecture, built the way the vendor
+documents it — and breaks out the detail the sizer summarises: which U, which side, which
+fault zone, which bundle, which connector.
+
+It answers three questions on one sheet and exports an SVG you can hand to smart hands:
+
+- **Where does it go** — every device at its real U height, named, with its U range
+- **Where does it plug in** — A/B side per rack, PDU rails coloured by fault zone, a cord
+  stub per PSU, and the region's actual input connector (CS8365C, IEC 60309, busway tap)
+- **What lands where** — every run drawn device-to-device, aggregated into per-class bundles
+  with counts, plus a per-cabinet manifest: `180x OM4 MMF → NET 9 · 18x Cat6A → NET 10`
+
+The check that justifies it: **lose any single fault zone** — does every rack still have
+power, and does the surviving feed stay inside its breaker at 80% continuous? A rack at 60%
+per feed passes every normal-day drawing and browns out the moment its partner zone drops.
+
+Standardized deployments only, deliberately. A drawing of a documented architecture can be
+checked against the document; a drawing of whatever you typed cannot.
 
 ## Architectures
 - **Penguin Solutions Relion XE4418GTS-DTC** — Intel Xeon 6 + B300 HGX (4U, direct-to-chip liquid)
